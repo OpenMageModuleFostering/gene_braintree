@@ -9,6 +9,7 @@ if (Mage::helper('core')->isModuleEnabled('AnattaDesign_AwesomeCheckout')) {
     $whiteListConfigXmlPath = 'awesomecheckout/advanced/whitelisted_css_js';
     $whiteList = array(
         'gene/braintree/vzero-0.7-min.js',
+        'gene/braintree/vzero-0.7.js',
         'css/gene/braintree/awesomecheckout.css'
     );
 
