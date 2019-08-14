@@ -196,6 +196,9 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
             )
         );
 
+        // Handle any fraud response from Braintree
+        $this->handleFraud($result, $payment);
+
         // Store the PayPal token if we have one
         if (isset($result->transaction->paypal['token']) && !empty($result->transaction->paypal['token'])) {
             $payment->setAdditionalInformation('token', $result->transaction->paypal['token']);

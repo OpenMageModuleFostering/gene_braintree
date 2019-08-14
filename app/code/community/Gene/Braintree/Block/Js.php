@@ -52,16 +52,11 @@ class Gene_Braintree_Block_Js extends Mage_Core_Block_Template
     /**
      * is 3D secure enabled?
      *
-     * @return int
+     * @return string
      */
     protected function is3DEnabled()
     {
-        // Return an int
-        if(Mage::getModel('gene_braintree/paymentmethod_creditcard')->is3DEnabled()) {
-            return 1;
-        } else {
-            return 0;
-        }
+        return var_export(Mage::getModel('gene_braintree/paymentmethod_creditcard')->is3DEnabled(), true);
     }
 
     /**

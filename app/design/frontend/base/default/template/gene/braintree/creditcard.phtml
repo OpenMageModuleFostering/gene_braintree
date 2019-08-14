@@ -158,6 +158,14 @@ $_code = $this->getMethodCode()
 
             // Set the accepted cards
             vzero.setAcceptedCards(<?php echo $this->getCcAvailableTypes(); ?>);
+
+            <?php
+            // Dynamically swap the 3Ds flag in the JS class
+            if($this->getMethod()->is3DEnabled()): ?>
+                vzero.setThreeDSecure(true);
+            <?php else: ?>
+                vzero.setThreeDSecure(false);
+            <?php endif; ?>
         }
 
         // Loop through each saved card being selected

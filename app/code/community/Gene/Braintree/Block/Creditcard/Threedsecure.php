@@ -15,9 +15,9 @@ class Gene_Braintree_Block_Creditcard_Threedsecure extends Mage_Core_Block_Templ
     protected function _toHtml()
     {
         // Check the payment method is active
-        if (Mage::getModel('gene_braintree/paymentmethod_creditcard')->isAvailable()
-            && Mage::getModel('gene_braintree/paymentmethod_creditcard')->is3DEnabled()
-        ) {
+        if (Mage::getSingleton('gene_braintree/paymentmethod_creditcard')->isAvailable()) {
+
+            // Due to the introduction of the 3Ds threshold we need this block to always be present
             return parent::_toHtml();
         }
 

@@ -19,7 +19,7 @@
     AdminOrder.prototype.submit = function() {
 
         // Check we're using the braintree card method
-        if(order.paymentMethod == 'gene_braintree_creditcard') {
+        if(order.paymentMethod == 'gene_braintree_creditcard' && $('p_method_free') == null) {
 
             // Validate the form contents
             if (editForm.validate()) {

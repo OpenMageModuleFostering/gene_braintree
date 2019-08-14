@@ -28,7 +28,13 @@ class Gene_Braintree_Block_Creditcard_Info extends Mage_Payment_Block_Info
             return Mage::registry('current_order');
         } else if(Mage::registry('current_invoice')) {
             return Mage::registry('current_invoice')->getOrder();
+        } else if(Mage::registry('current_shipment')) {
+            return Mage::registry('current_shipment')->getOrder();
+        } else if(Mage::registry('current_creditmemo')) {
+            return Mage::registry('current_creditmemo')->getOrder();
         }
+
+        return false;
     }
 
     /**
@@ -55,16 +61,20 @@ class Gene_Braintree_Block_Creditcard_Info extends Mage_Payment_Block_Info
             // Transaction ID won't matter for customers
             $data[$this->__('Braintree Transaction ID')] = $this->getInfo()->getLastTransId();
 
-            // Add in the current status
-            try {
-                $transaction = Mage::getModel('gene_braintree/wrapper_braintree')->init($this->getOrder()->getStoreId())->findTransaction($this->getInfo()->getLastTransId());
-                if ($transaction) {
-                    $data[$this->__('Status')] = $this->convertStatus($transaction->status);
-                } else {
-                    $data[$this->__('Status')] = $this->__('<span style="color:red;"><strong>Warning:</strong> Cannot load payment in Braintree.</span>');
+            // Only display transaction if we can load the order
+            if($this->getOrder()) {
+
+                // Add in the current status
+                try {
+                    $transaction = Mage::getModel('gene_braintree/wrapper_braintree')->init($this->getOrder()->getStoreId())->findTransaction($this->getInfo()->getLastTransId());
+                    if ($transaction) {
+                        $data[$this->__('Status')] = $this->convertStatus($transaction->status);
+                    } else {
+                        $data[$this->__('Status')] = $this->__('<span style="color:red;"><strong>Warning:</strong> Cannot load payment in Braintree.</span>');
+                    }
+                } catch (Exception $e) {
+                    $data[$this->__('Status')] = $this->__('<span style="color:red;"><strong>Warning:</strong> Unable to connect to Braintree to load transaction.</span>');
                 }
-            } catch (Exception $e) {
-                $data[$this->__('Status')] = $this->__('<span style="color:red;"><strong>Warning:</strong> Unable to connect to Braintree to load transaction.</span>');
             }
 
             // What additional information should we show

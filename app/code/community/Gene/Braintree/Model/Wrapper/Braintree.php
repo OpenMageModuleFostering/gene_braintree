@@ -149,7 +149,9 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function generateToken()
     {
         // Use the class to generate the token
-        return Braintree_ClientToken::generate();
+        return Braintree_ClientToken::generate(
+            array("merchantAccountId" => $this->getMerchantAccountId())
+        );
     }
 
 
@@ -252,7 +254,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
      *
      * @return bool
      */
-    public function validateCredentials($prettyResponse = false, $alreadyInit = false, $merchantAccountId = false)
+    public function validateCredentials($prettyResponse = false, $alreadyInit = false, $merchantAccountId = false, $throwException = false)
     {
         // Try to init the environment
         try {
@@ -268,11 +270,23 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
                     $this->init();
                 }
             }
+
+            // Attempt to retrieve the gateway plans to check
+            Braintree_Configuration::gateway()->plan()->all();
+
         } catch (Exception $e) {
 
+            // Do we want to rethrow the exception?
+            if($throwException) {
+                throw $e;
+            }
+
+            // Otherwise give the user a little bit more information
             if($prettyResponse) {
                 return '<span style="color: red;font-weight: bold;" id="braintree-valid-config">' . Mage::helper('gene_braintree')->__('Invalid Credentials') . '</span><br />' . Mage::helper('gene_braintree')->__('Payments cannot be processed until this is resolved, due to this the methods will be hidden within the checkout');
             }
+
+            // Otherwise return with a boolean
             return false;
         }
 
@@ -289,9 +303,18 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         try {
             Braintree_Configuration::gateway()->merchantAccount()->find($merchantAccountId);
         } catch (Exception $e) {
+
+            // Do we want to rethrow the exception?
+            if($throwException) {
+                throw $e;
+            }
+
+            // Otherwise do we want a pretty response?
             if($prettyResponse) {
                 return '<span style="color: orange;font-weight: bold;" id="braintree-valid-config">' . Mage::helper('gene_braintree')->__('Invalid Merchant Account ID') . '</span><br />' . Mage::helper('gene_braintree')->__('Payments cannot be processed until this is resolved. We cannot find your merchant account ID associated with the other credentials you\'ve provided, please update this field');
             }
+
+            // Finally return a boolean
             return false;
         }
 
@@ -326,36 +349,32 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
 
                 } else {
 
-                    // Try and validate the stored credentials
-                    if (!Mage::getModel('gene_braintree/wrapper_braintree')->validateCredentials()) {
+                    // Attempt to validate credentials
+                    try {
 
-                        // Only add this in if it's not the last notice
-                        $latestNotice = Mage::getModel('adminnotification/inbox')->loadLatestNotice();
+                        // Passing true will cause the system to rethrow exceptions
+                        if(Mage::getModel('gene_braintree/wrapper_braintree')->validateCredentials(false, false, false, true)) {
 
-                        // Validate there is a latest notice
-                        if ($latestNotice && $latestNotice->getId()) {
-
-                            // Check to see if the title contains our error
-                            // Magento does not provide a nice way of doing this that I'm aware of
-                            if (strpos($latestNotice->getTitle(), 'Braintree Configuration Invalid') === false) {
-
-                                // If it doesn't add it again!
-                                Mage::getModel('adminnotification/inbox')->addMajor(Mage::helper('gene_braintree')->__('Braintree Configuration Invalid - %s - This could be stopping payments', Mage::app()->getStore()->getFrontendName()), Mage::helper('gene_braintree')->__('The configuration values in the Magento Braintree v.zero module are incorrect, until these values are corrected the system can not function. This occurred on store %s - ID: %s', Mage::app()->getStore()->getFrontendName(), Mage::app()->getStore()->getId()));
-                            }
+                            // Mark our flag as true
+                            $this->validated = true;
 
                         } else {
 
-                            // Otherwise there hasn't been any other notices
-                            Mage::getModel('adminnotification/inbox')->addMajor(Mage::helper('gene_braintree')->__('Braintree Configuration Invalid - %s - This could be stopping payments', Mage::app()->getStore()->getFrontendName()), Mage::helper('gene_braintree')->__('The configuration values in the Magento Braintree v.zero module are incorrect, until these values are corrected the system can not function. This occurred on store %s - ID: %s', Mage::app()->getStore()->getFrontendName(), Mage::app()->getStore()->getId()));
+                            // Mark our flag as false, this shouldn't even return false it should always throw an
+                            // Exception but just in case
+                            $this->validated = false;
                         }
 
+                    } catch (Exception $e) {
+
+                        // If it fails log it
+                        Gene_Braintree_Model_Debug::log('CRITICAL ERROR: The system was unable to connect to Braintree, error is below');
+                        Gene_Braintree_Model_Debug::log($e);
+
+                        // If the validateCredentials throws an exception it has failed
                         $this->validated = false;
-
-                    } else {
-
-                        // Otherwise the method validated
-                        $this->validated = true;
                     }
+
                 }
             }
         }

@@ -62,6 +62,15 @@ vZero.prototype = {
     },
 
     /**
+     * Set the 3Ds flag
+     *
+     * @param flag a boolean value
+     */
+    setThreeDSecure: function(flag) {
+        this.threeDSecure = flag;
+    },
+
+    /**
      * Set the amount within the checkout, this is only used in the default integration
      * For any other checkouts see the updateData method, this is used by 3D secure
      *
@@ -132,7 +141,7 @@ vZero.prototype = {
     /**
      * Push through the selected accepted cards from the admin
      *
-     * @param cards
+     * @param cards an array of accepted cards
      */
     setAcceptedCards: function(cards) {
         this.acceptedCards = cards;
@@ -253,14 +262,16 @@ vZero.prototype = {
      * Make an Ajax request to the server and request up to date information regarding the quote
      *
      * @param callback A defined callback function if needed
+     * @param params any extra data to be passed to the controller
      */
-    updateData: function(callback) {
+    updateData: function(callback, params) {
 
         // Make a new ajax request to the server
         new Ajax.Request(
             this.quoteUrl,
             {
                 method:'post',
+                parameters: params,
                 onSuccess: function(transport) {
 
                     // Verify we have some response text
@@ -283,11 +294,14 @@ vZero.prototype = {
                         if(response.grandTotal != undefined) {
                             this.amount = response.grandTotal;
                         }
+                        if(response.threeDSecure != undefined) {
+                            this.setThreeDSecure(response.threeDSecure);
+                        }
 
                         // If PayPal is active update it
                         if(typeof vzeroPaypal != "undefined") {
 
-                            // Totals
+                            // Update the totals within the PayPal system
                             if(response.grandTotal != undefined && response.currencyCode != undefined) {
                                 vzeroPaypal.setPricing(response.grandTotal, response.currencyCode);
                             }
@@ -415,16 +429,20 @@ vZero.prototype = {
                 number: $$('[data-genebraintree-name="number"]').first().value,
                 expirationMonth: $$('[data-genebraintree-name="expiration_month"]').first().value,
                 expirationYear: $$('[data-genebraintree-name="expiration_year"]').first().value,
-                cardholderName: this.getBillingName(),
-                billingAddress: {
-                    postalCode: this.getBillingPostcode()
-                }
+                cardholderName: this.getBillingName()
             }
         };
 
         // If the CVV field exists include it
         if($$('[data-genebraintree-name="cvv"]').first() != undefined) {
             threeDSecureRequest.creditCard.cvv = $$('[data-genebraintree-name="cvv"]').first().value;
+        }
+
+        // If we have the billing postcode add it into the request
+        if(this.getBillingPostcode() != "") {
+            threeDSecureRequest.creditCard.billingAddress = {
+                postalCode: this.getBillingPostcode()
+            };
         }
 
         // Run the verify function on the braintree client
@@ -517,15 +535,19 @@ vZero.prototype = {
             number: $$('[data-genebraintree-name="number"]').first().value,
             cardholderName: this.getBillingName(),
             expirationMonth: $$('[data-genebraintree-name="expiration_month"]').first().value,
-            expirationYear: $$('[data-genebraintree-name="expiration_year"]').first().value,
-            billingAddress: {
-                postalCode: this.getBillingPostcode()
-            }
+            expirationYear: $$('[data-genebraintree-name="expiration_year"]').first().value
         };
 
         // If the CVV field exists include it
         if($$('[data-genebraintree-name="cvv"]').first() != undefined) {
             tokenizeRequest.cvv = $$('[data-genebraintree-name="cvv"]').first().value;
+        }
+
+        // If we have the billing postcode add it into the request
+        if(this.getBillingPostcode() != "") {
+            tokenizeRequest.billingAddress = {
+                postalCode: this.getBillingPostcode()
+            };
         }
 
         // Attempt to tokenize the card

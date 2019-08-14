@@ -7,20 +7,42 @@
  */
 class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Action
 {
+
     /**
      * The front-end is requesting the grand total of the quote
+     *
+     * @return bool
      */
     public function quoteTotalAction()
     {
         // Grab the quote
         $quote = Mage::getSingleton('checkout/type_onepage')->getQuote();
 
+        // Retrieve the billing information from the quote
+        $billingName = $quote->getBillingAddress()->getName();
+        $billingPostcode = $quote->getBillingAddress()->getPostcode();
+
+        // Has the request supplied the billing address ID?
+        if($addressId = $this->getRequest()->getParam('addressId') && Mage::getSingleton('customer/session')->isLoggedIn()) {
+
+            // Retrieve the address
+            $billingAddress = $quote->getCustomer()->getAddressById($addressId);
+
+            // If the address loads override the values
+            if($billingAddress && $billingAddress->getId()) {
+                $billingName = $billingAddress->getName();
+                $billingPostcode = $billingAddress->getPostcode();
+            }
+
+        }
+
         // Build up our JSON response
         $jsonResponse = array(
-            'billingName' => $quote->getBillingAddress()->getName(),
-            'billingPostcode' => $quote->getBillingAddress()->getPostcode(),
+            'billingName' => $billingName,
+            'billingPostcode' => $billingPostcode,
             'grandTotal' => number_format($quote->getGrandTotal(), 2),
-            'currencyCode' => $quote->getQuoteCurrencyCode()
+            'currencyCode' => $quote->getQuoteCurrencyCode(),
+            'threeDSecure' => Mage::getSingleton('gene_braintree/paymentmethod_creditcard')->is3DEnabled()
         );
 
         // Set the response
@@ -30,6 +52,8 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
 
     /**
      * Tokenize the card tokens via Ajax
+     *
+     * @return bool
      */
     public function tokenizeCardAction()
     {

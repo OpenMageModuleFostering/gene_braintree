@@ -68,9 +68,23 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             return false;
         }
 
+        // Is 3Ds enabled within the configuration?
         if($this->_getConfig('threedsecure')) {
+
+            // Do we have a requirement on the threshold
+            if($this->_getConfig('threedsecure_threshold') > 0) {
+
+                // Check to see if the base grand total is bigger then the threshold
+                if(Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getBaseGrandTotal() > $this->_getConfig('threedsecure_threshold')) {
+                    return true;
+                }
+
+                return false;
+            }
+
             return true;
         }
+
         return false;
     }
 
@@ -224,6 +238,13 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         // Log the initial sale array, no protected data is included
         Gene_Braintree_Model_Debug::log(array('_authorize:result' => $result));
 
+        // If the transaction was 3Ds but doesn't contain a 3Ds response
+        if(($this->is3DEnabled() && isset($saleArray['options']['three_d_secure']['required']) && $saleArray['options']['three_d_secure']['required'] == true) && (!isset($result->transaction->threeDSecureInfo) || (isset($result->transaction->threeDSecureInfo) && is_null($result->transaction->threeDSecureInfo)))) {
+
+            // Inform the user that their payment didn't go through 3Ds and thus failed
+            Mage::throwException($this->_getHelper()->__('This transaction must be passed through 3D secure, please try again or consider using an alternate payment method.'));
+        }
+
         // If the sale has failed
         if ($result->success != true) {
 
@@ -231,30 +252,30 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             Mage::dispatchEvent('gene_braintree_creditcard_failed', array('payment' => $payment, 'result' => $result));
 
             // Return a different message for declined cards
-            if(isset($result->transaction->status) && $result->transaction->status == Braintree_Transaction::PROCESSOR_DECLINED) {
-                Mage::throwException($this->_getHelper()->__('Your transaction has been declined, please try another payment method or contacting your issuing bank.'));
+            if(isset($result->transaction->status)) {
+
+                // Return a custom response for processor declined messages
+                if($result->transaction->status == Braintree_Transaction::PROCESSOR_DECLINED) {
+
+                    Mage::throwException($this->_getHelper()->__('Your transaction has been declined, please try another payment method or contacting your issuing bank.'));
+
+                } else if($result->transaction->status == Braintree_Transaction::GATEWAY_REJECTED
+                    && isset($result->transaction->gatewayRejectionReason)
+                    && $result->transaction->gatewayRejectionReason == Braintree_Transaction::THREE_D_SECURE)
+                {
+
+                    // An event for when 3D secure fails
+                    Mage::dispatchEvent('gene_braintree_creditcard_failed_threed', array('payment' => $payment, 'result' => $result));
+
+                    // Log it
+                    Gene_Braintree_Model_Debug::log('Transaction failed with 3D secure');
+
+                    // Politely inform the user
+                    Mage::throwException($this->_getHelper()->__('Your card has failed 3D secure validation, please try again or consider using an alternate payment method.'));
+                }
             }
 
             Mage::throwException($this->_getHelper()->__('%s. Please try again or attempt refreshing the page.', $result->message));
-        }
-
-        // If 3D is enabled and the transaction gets a rejection reason
-        if($this->is3DEnabled()) {
-
-            // Check the rejection reason
-            if (isset($result->transaction) && $result->transaction->gatewayRejectionReason == Braintree_Transaction::THREE_D_SECURE) {
-
-                // An event for when 3D secure fails
-                Mage::dispatchEvent('gene_braintree_creditcard_failed_threed', array('payment' => $payment, 'result' => $result));
-
-                // Log it
-                Gene_Braintree_Model_Debug::log('Transaction failed with 3D secure');
-
-                // Politely inform the user
-                Mage::throwException(
-                    $this->_getHelper()->__('Your 3D secure verification has failed, please try using another card, or payment method.')
-                );
-            }
         }
 
         $this->_processSuccessResult($payment, $result, $amount);
@@ -352,6 +373,9 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             'processorResponseText',
             'threeDSecure'
         );
+
+        // Handle any fraud response from Braintree
+        $this->handleFraud($result, $payment);
 
         // If 3D secure is enabled, presume it's passed
         if($this->is3DEnabled()) {

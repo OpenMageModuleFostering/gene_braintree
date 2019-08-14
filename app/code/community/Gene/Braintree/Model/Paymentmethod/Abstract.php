@@ -7,6 +7,11 @@
  */
 abstract class Gene_Braintree_Model_Paymentmethod_Abstract extends Mage_Payment_Model_Method_Abstract
 {
+    /**
+     * The decision responses from braintree
+     */
+    const ADVANCED_FRAUD_REVIEW = 'Review';
+    const ADVANCED_FRAUD_DECLINE = 'Decline';
 
     /**
      * Verify that the module has been setup
@@ -70,6 +75,35 @@ abstract class Gene_Braintree_Model_Paymentmethod_Abstract extends Mage_Payment_
     public function isVaultEnabled()
     {
         return $this->_getConfig('use_vault');
+    }
+
+    /**
+     * Handle any risk decision returned from Braintree
+     *
+     * @param                $result
+     * @param \Varien_Object $payment
+     *
+     * @return $this
+     */
+    protected function handleFraud($result, Varien_Object $payment)
+    {
+        // Verify we have risk data
+        if(isset($result->transaction) && isset($result->transaction->riskData) && isset($result->transaction->riskData->decision)) {
+
+            // If the decision is to review the payment mark the payment as such
+            if($result->transaction->riskData->decision == self::ADVANCED_FRAUD_REVIEW || $result->transaction->riskData->decision == self::ADVANCED_FRAUD_DECLINE) {
+
+                // Mark the payment as pending
+                $payment->setIsTransactionPending(true);
+
+                // If the payment got marked as fraud/decline, we mark it as fraud
+                if($result->transaction->riskData->decision == self::ADVANCED_FRAUD_DECLINE) {
+                    $payment->setIsFraudDetected(true);
+                }
+            }
+        }
+
+        return $this;
     }
 
 }

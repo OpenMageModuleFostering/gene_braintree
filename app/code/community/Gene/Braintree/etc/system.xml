@@ -404,11 +404,26 @@
                             ]]></comment>
                         </threedsecure>
 
+                        <threedsecure_threshold translate="label comment">
+                            <label>3D Secure Threshold</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>77</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                The threshold which requires a transaction to be passed through 3D secure. Set this to 0 to pass all transactions through 3D secure.
+                            ]]></comment>
+                            <depends>
+                                <threedsecure>1</threedsecure>
+                            </depends>
+                        </threedsecure_threshold>
+
                         <useccv translate="label comment">
                             <label>CVV Verification</label>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>76</sort_order>
+                            <sort_order>78</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
@@ -420,7 +435,7 @@
                         <kount_merchant_id translate="label comment">
                             <label>Kount Merchant ID</label>
                             <frontend_type>text</frontend_type>
-                            <sort_order>78</sort_order>
+                            <sort_order>79</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>

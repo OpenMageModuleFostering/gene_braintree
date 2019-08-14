@@ -2,7 +2,7 @@
 <config>
     <modules>
         <Gene_Braintree>
-            <version>1.0.1</version>
+            <version>1.0.2</version>
         </Gene_Braintree>
     </modules>
     <global>
@@ -87,6 +87,8 @@
                 <environment>sandbox</environment>
                 <allowspecific>0</allowspecific>
                 <use_vault>0</use_vault>
+                <threedsecure>0</threedsecure>
+                <threedsecure_threshold>0</threedsecure_threshold>
                 <useccv>1</useccv>
             </gene_braintree_creditcard>
 

@@ -15,7 +15,7 @@ class Gene_Braintree_Model_System_Config_Backend_Currency extends Mage_Core_Mode
     {
         if (!is_array($this->getValue())) {
             $value = $this->getValue();
-            $this->setValue(empty($value) ? false : json_decode($value));
+            $this->setValue(empty($value) ? false : Mage::helper('core')->jsonDecode($value, Zend_Json::TYPE_OBJECT));
         }
     }
 
@@ -25,7 +25,7 @@ class Gene_Braintree_Model_System_Config_Backend_Currency extends Mage_Core_Mode
     protected function _beforeSave()
     {
         if (is_array($this->getValue())) {
-            $this->setValue(json_encode($this->getValue()));
+            $this->setValue(Mage::helper('core')->jsonEncode($this->getValue()));
         }
     }
 

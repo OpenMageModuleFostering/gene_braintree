@@ -48,52 +48,69 @@
 
                         startLoading();
 
+                        // Do we want to pass any extra paramters into the updateData request
+                        var parameters = {};
+
+                        // If the billing address is selected and we're wanting to ship to that address we need to pass the addressId
+                        if($('billing-address-select') != undefined && $('billing-address-select').value != '')
+                        {
+                            parameters.addressId = $('billing-address-select').value;
+                        }
+
                         // Update the data as we're in a one step
-                        vzero.updateData(function() {
+                        vzero.updateData(
+                            function() {
 
-                            // Grab these directly from the form and update
-                            if ($('billing:firstname') != undefined && $('billing:lastname') != undefined) {
-                                vzero.setBillingName($('billing:firstname').value + ' ' + $('billing:lastname').value);
-                            }
-                            if ($('billing:postcode') != undefined) {
-                                vzero.setBillingPostcode($('billing:postcode').value);
-                            }
+                                // Verify we're not using a saved address
+                                if($('billing-address-select') != undefined && $('billing-address-select').value == '' || $('billing-address-select') == undefined) {
 
-                            // Process the card
-                            vzero.process({
-                                onSuccess: function () {
-
-                                    // Disable the standard credit card form so the values don't get passed through to the checkout
-                                    $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
-                                        if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault' && formElement.id != 'device_data') {
-                                            formElement.setAttribute('disabled', 'disabled');
-                                        }
-                                    });
-
-                                    stopLoading();
-
-                                    // Set the flag to true
-                                    processedVZero = true;
-
-                                    // We're no longer stopping the events
-                                    already_placing_order = false;
-
-                                    // Fire the same event over again
-                                    $(elem).click();
-                                },
-                                onFailure: function() {
-
-                                    // Set the flag to true
-                                    processedVZero = false;
-
-                                    stopLoading();
-
-                                    // We're no longer stopping the events
-                                    already_placing_order = false;
+                                    // Grab these directly from the form and update
+                                    if ($('billing:firstname') != undefined && $('billing:lastname') != undefined) {
+                                        vzero.setBillingName($('billing:firstname').value + ' ' + $('billing:lastname').value);
+                                    }
+                                    if ($('billing:postcode') != undefined) {
+                                        vzero.setBillingPostcode($('billing:postcode').value);
+                                    }
 
                                 }
-                            });
-                        });
+
+                                // Process the card
+                                vzero.process({
+                                    onSuccess: function () {
+
+                                        // Disable the standard credit card form so the values don't get passed through to the checkout
+                                        $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
+                                            if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault' && formElement.id != 'device_data') {
+                                                formElement.setAttribute('disabled', 'disabled');
+                                            }
+                                        });
+
+                                        stopLoading();
+
+                                        // Set the flag to true
+                                        processedVZero = true;
+
+                                        // We're no longer stopping the events
+                                        already_placing_order = false;
+
+                                        // Fire the same event over again
+                                        $(elem).click();
+                                    },
+                                    onFailure: function() {
+
+                                        // Set the flag to true
+                                        processedVZero = false;
+
+                                        stopLoading();
+
+                                        // We're no longer stopping the events
+                                        already_placing_order = false;
+
+                                    }
+                                });
+                            },
+                            parameters
+                        );
 
                     }
                 }
