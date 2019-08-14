@@ -12,7 +12,7 @@ class Gene_Braintree_Model_Paymentmethod_Legacy_Paypal extends Gene_Braintree_Mo
      *
      * @var string
      */
-    protected $_code = 'braintree_paypal';
+    protected $_code = 'braintree_paypal_legacy';
 
     /**
      * This method is never available and only used by the RocketWeb orders

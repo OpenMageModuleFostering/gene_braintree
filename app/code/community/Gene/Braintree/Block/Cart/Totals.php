@@ -16,7 +16,7 @@ class Gene_Braintree_Block_Cart_Totals extends Mage_Checkout_Block_Cart_Totals
     public function needDisplayBaseGrandtotal()
     {
         // If we have a mapped currency code never display base grand total
-        if(Mage::getSingleton('gene_braintree/wrapper_braintree')->hasMappedCurrencyCode()) {
+        if (Mage::getSingleton('gene_braintree/wrapper_braintree')->hasMappedCurrencyCode()) {
             return false;
         }
 

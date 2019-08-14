@@ -60,6 +60,14 @@
         },
 
         /**
+         * Ensure the load counter only reaches 1 from Braintree
+         */
+        setLoading: function () {
+            checkout.setLoadWaiting(true);
+            checkout.loadCounter = 1;
+        },
+
+        /**
          * Override the loading function to set the counter to 0 so the loader actually gets hidden
          */
         resetLoading: function() {

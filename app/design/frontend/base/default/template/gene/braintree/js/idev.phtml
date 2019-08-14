@@ -32,6 +32,11 @@
             // Add in our loader event
             if ($$('.onestepcheckout-place-order-loading').first() !== undefined) {
                 $$('.onestepcheckout-place-order-loading').first().show();
+            } else {
+                var loaderElement = new Element('span').
+                addClassName('onestepcheckout-place-order-loading').
+                update('<?php echo $this->__('Please wait, processing your order...'); ?>');
+                submitElement.parentNode.appendChild(loaderElement);
             }
         },
 
@@ -39,6 +44,9 @@
          * Reset the loading state of the checkout
          */
         resetLoading: function() {
+            // Reset the placing order flag
+            already_placing_order = false;
+
             // Grab the submit button
             var submitElement = $('onestepcheckout-place-order');
 
@@ -48,7 +56,7 @@
 
             // Remove the loader element
             if ($$('.onestepcheckout-place-order-loading').first() !== undefined) {
-                $$('.onestepcheckout-place-order-loading').first().hide();
+                $$('.onestepcheckout-place-order-loading').first().remove();
             }
         },
 

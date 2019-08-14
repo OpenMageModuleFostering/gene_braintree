@@ -29,25 +29,42 @@ class Gene_Braintree_Block_Paypal_Info extends Gene_Braintree_Block_Info
         // Get the original transport data
         $transport = parent::_prepareSpecificInformation($transport);
 
+        // Start out data array
+        $data = array();
+
         // Build up the data we wish to pass through
-        $data = array(
-            $this->__('PayPal Email') => $this->getInfo()->getAdditionalInformation('paypal_email')
-        );
+        if ($this->getInfo()->getAdditionalInformation('paypal_email')) {
+            $data[$this->__('PayPal Email')] = $this->getInfo()->getAdditionalInformation('paypal_email');
+        }
 
         // Check we're in the admin area
-        if(Mage::app()->getStore()->isAdmin()) {
+        if (Mage::app()->getStore()->isAdmin()) {
 
             // Include live details for this transaction
-            $this->includeLiveDetails($data);
+            $transaction = $this->includeLiveDetails($data);
 
-            // Show these details to the admin only
-            $data = array_merge(
-                $data, array(
-                    $this->__('Payment ID')               => $this->getInfo()->getAdditionalInformation('payment_id'),
-                    $this->__('Authorization ID')         => $this->getInfo()->getAdditionalInformation('authorization_id')
-                )
-            );
+            // Insert these values if they're present
+            if ($this->getInfo()->getAdditionalInformation('payment_id')) {
+                $data[$this->__('Payment ID')] = $this->getInfo()->getAdditionalInformation('payment_id');
+            }
+            if ($this->getInfo()->getAdditionalInformation('authorization_id')) {
+                $data[$this->__('Authorization ID')] = $this->getInfo()->getAdditionalInformation('authorization_id');
+            }
 
+            // If the additional information doens't contain certain data, than retrieve it from Braintree
+            if ($transaction && $transaction instanceof Braintree_Transaction) {
+                if (!isset($data[$this->__('PayPal Email')]) && isset($transaction->paypalDetails->payerEmail)) {
+                    $data[$this->__('PayPal Email')] = $transaction->paypalDetails->payerEmail;
+                }
+                if (!isset($data[$this->__('Payment ID')]) && isset($transaction->paypalDetails->paymentId)) {
+                    $data[$this->__('Payment ID')] = $transaction->paypalDetails->paymentId;
+                }
+                if (!isset($data[$this->__('Authorization ID')])
+                    && isset($transaction->paypalDetails->authorizationId)
+                ) {
+                    $data[$this->__('Authorization ID')] = $transaction->paypalDetails->authorizationId;
+                }
+            }
         }
 
         // Add the data to the class variable

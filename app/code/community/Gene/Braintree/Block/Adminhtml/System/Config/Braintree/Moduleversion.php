@@ -38,7 +38,7 @@ class Gene_Braintree_Block_Adminhtml_System_Config_Braintree_Moduleversion
      * Inform the user there version will not work
      * @return string
      */
-    private function getVersionHtml()
+    protected function getVersionHtml()
     {
         $response = Mage::getConfig()->getModuleConfig('Gene_Braintree')->version;
         $response.= '

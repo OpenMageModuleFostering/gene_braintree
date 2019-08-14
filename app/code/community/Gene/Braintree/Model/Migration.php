@@ -32,6 +32,18 @@ class Gene_Braintree_Model_Migration extends Mage_Core_Model_Abstract
     }
 
     /**
+     * Should we update legacy orders with a new payment method?
+     *
+     * @param $bool
+     *
+     * @return \Varien_Object
+     */
+    public function setRunOrderTransactionInfo($bool)
+    {
+        return $this->setData('run_order_transaction_info', $bool);
+    }
+
+    /**
      * Should we disable the legacy module?
      *
      * @param $bool
@@ -43,6 +55,11 @@ class Gene_Braintree_Model_Migration extends Mage_Core_Model_Abstract
     {
         $this->setData('disable_legacy', $bool);
         $this->setData('delete_legacy', $deleteLegacy);
+
+        // We have to update the orders if they're removing the legacy RocketWeb extension
+        if ($deleteLegacy) {
+            $this->setRunOrderTransactionInfo(true);
+        }
     }
 
     /**
@@ -60,6 +77,10 @@ class Gene_Braintree_Model_Migration extends Mage_Core_Model_Abstract
 
         if ($this->getData('run_customer_data')) {
             $result->setCustomerData($this->_runCustomerData());
+        }
+
+        if ($this->getData('run_order_transaction_info')) {
+            $result->setOrderTransactionInfo($this->_runOrderTransactionInfo());
         }
 
         if ($this->getData('disable_legacy')) {
@@ -263,6 +284,23 @@ class Gene_Braintree_Model_Migration extends Mage_Core_Model_Abstract
         }
 
         return false;
+    }
+
+    /**
+     * Update legacy orders with new payment method codes to ensure info screen behaves
+     *
+     * @return bool
+     */
+    public function _runOrderTransactionInfo()
+    {
+        /* @var $resource Mage_Core_Model_Resource */
+        $resource = Mage::getModel('core/resource');
+        $dbWrite = $resource->getConnection('core_write');
+
+        $dbWrite->update($resource->getTableName('sales/order_payment'), array('method' => 'braintree_legacy'), "method = 'braintree'");
+        $dbWrite->update($resource->getTableName('sales/order_payment'), array('method' => 'braintree_paypal_legacy'), "method = 'braintree_paypal'");
+
+        return true;
     }
 
     /**

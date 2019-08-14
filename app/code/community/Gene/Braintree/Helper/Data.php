@@ -136,13 +136,23 @@ class Gene_Braintree_Helper_Data extends Mage_Core_Helper_Abstract
     }
 
     /**
-     * Should the system run the migration tool?
+     * Can we run the migration? Requires the Braintree_Payments module to be installed
+     *
+     * @return bool
+     */
+    public function canRunMigration()
+    {
+        return Mage::helper('core')->isModuleEnabled('Braintree_Payments');
+    }
+
+    /**
+     * Should the system run the migration tool automatically
      *
      * @return bool
      */
     public function shouldRunMigration()
     {
-        return Mage::helper('core')->isModuleEnabled('Braintree_Payments')
+        return $this->canRunMigration()
             && !Mage::getStoreConfigFlag(self::MIGRATION_COMPLETE)
             && !Mage::getStoreConfig('payment/gene_braintree/merchant_id')
             && !Mage::getStoreConfig('payment/gene_braintree/sandbox_merchant_id');

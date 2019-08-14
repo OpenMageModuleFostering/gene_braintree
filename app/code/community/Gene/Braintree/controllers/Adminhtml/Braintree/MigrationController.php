@@ -15,7 +15,7 @@ class Gene_Braintree_Adminhtml_Braintree_MigrationController extends Mage_Adminh
     public function runAction()
     {
         // If the system shouldn't run the migration don't allow this controller to initialize
-        if (!Mage::helper('gene_braintree')->shouldRunMigration()) {
+        if (!Mage::helper('gene_braintree')->canRunMigration()) {
             $this->norouteAction();
             return $this;
         }
@@ -35,6 +35,9 @@ class Gene_Braintree_Adminhtml_Braintree_MigrationController extends Mage_Adminh
         $migration->setDisableLegacy(
             (isset($actions['disable-legacy']) && $actions['disable-legacy'] == 'on'),
             (isset($actions['remove-legacy']) && $actions['remove-legacy'] == 'on')
+        );
+        $migration->setRunOrderTransactionInfo(
+            (isset($actions['order-transaction-info']) && $actions['order-transaction-info'] == 'on')
         );
 
         // Run the migration process

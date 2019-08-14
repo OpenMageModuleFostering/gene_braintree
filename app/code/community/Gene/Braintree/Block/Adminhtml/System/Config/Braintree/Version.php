@@ -33,7 +33,7 @@ class Gene_Braintree_Block_Adminhtml_System_Config_Braintree_Version
      * Inform the user there version will not work
      * @return string
      */
-    private function getVersionHtml()
+    protected function getVersionHtml()
     {
         if(@class_exists('Braintree_Version')) {
             $version = Braintree_Version::get();

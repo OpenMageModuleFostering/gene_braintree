@@ -55,6 +55,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
      * Place Braintree specific data into the additional information of the payment instance object
      *
      * @param   mixed $data
+     *
      * @return  Mage_Payment_Model_Info
      */
     public function assignData($data)
@@ -115,18 +116,18 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
     public function is3DEnabled()
     {
         // 3D secure can never be enabled for the admin
-        if(Mage::app()->getStore()->isAdmin()) {
+        if (Mage::app()->getStore()->isAdmin()) {
             return false;
         }
 
         // Is 3Ds enabled within the configuration?
-        if($this->_getConfig('threedsecure')) {
-
+        if ($this->_getConfig('threedsecure')) {
             // Do we have a requirement on the threshold
-            if($this->_getConfig('threedsecure_threshold') > 0) {
-
+            if ($this->_getConfig('threedsecure_threshold') > 0) {
                 // Check to see if the base grand total is bigger then the threshold
-                if(Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getBaseGrandTotal() > $this->_getConfig('threedsecure_threshold')) {
+                if (Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getBaseGrandTotal() >
+                    $this->_getConfig('threedsecure_threshold')
+                ) {
                     return true;
                 }
 
@@ -143,7 +144,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
      * Should we save this method in the database?
      *
      * @param \Varien_Object $payment
-     * @param $skipMultishipping
+     * @param                $skipMultishipping
      *
      * @return mixed
      */
@@ -153,7 +154,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             // We must always save the method for multi shipping requests
             if ($payment->getMultiShipping() && !$this->_getOriginalToken()) {
                 return true;
-            } else if ($this->_getOriginalToken()) {
+            } elseif ($this->_getOriginalToken()) {
                 // If we have an original token, there is no need to save the same payment method again
                 return false;
             }
@@ -166,7 +167,10 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         $object->setResponse(($this->isVaultEnabled() && $saveCard == 1));
 
         // Specific event for this method
-        Mage::dispatchEvent('gene_braintree_creditcard_should_save_method', array('object' => $object, 'payment' => $payment));
+        Mage::dispatchEvent('gene_braintree_creditcard_should_save_method', array(
+            'object' => $object,
+            'payment' => $payment
+        ));
 
         // General event if we want to enforce saving of all payment methods
         Mage::dispatchEvent('gene_braintree_save_method', array('object' => $object, 'payment' => $payment));
@@ -210,8 +214,9 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         }
 
         // Confirm that we have a nonce from Braintree
-        if (!$this->getPaymentMethodToken() || ($this->getPaymentMethodToken() && $this->getPaymentMethodToken() == 'threedsecure')) {
-
+        if (!$this->getPaymentMethodToken() ||
+            ($this->getPaymentMethodToken() && $this->getPaymentMethodToken() == 'threedsecure')
+        ) {
             if (!$this->getPaymentMethodNonce()) {
                 Gene_Braintree_Model_Debug::log('Card payment has failed, missing token/nonce');
                 Gene_Braintree_Model_Debug::log($_SERVER['HTTP_USER_AGENT']);
@@ -220,8 +225,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
                     $this->_getHelper()->__('Your card payment has failed, please try again.')
                 );
             }
-        } else if (!$this->getPaymentMethodToken()) {
-
+        } elseif (!$this->getPaymentMethodToken()) {
             Gene_Braintree_Model_Debug::log('No saved card token present');
             Gene_Braintree_Model_Debug::log($_SERVER['HTTP_USER_AGENT']);
 
@@ -254,7 +258,6 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
 
         // Attempt to create the sale
         try {
-
             // Build up the sale array
             $saleArray = $this->_getWrapper()->buildSale(
                 $amount,
@@ -272,44 +275,48 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             );
 
         } catch (Exception $e) {
-
             // Handle an exception being thrown
-            Mage::dispatchEvent('gene_braintree_creditcard_failed_exception', array('payment' => $payment, 'exception' => $e));
+            Mage::dispatchEvent('gene_braintree_creditcard_failed_exception', array(
+                'payment' => $payment,
+                'exception' => $e
+            ));
 
             return $this->_processFailedResult($this->_getHelper()->__('There was an issue whilst trying to process your card payment, please try again or another method.'), $e);
-
         }
 
         // Log the initial sale array, no protected data is included
         Gene_Braintree_Model_Debug::log(array('_authorize:result' => $result));
 
         // If the transaction was 3Ds but doesn't contain a 3Ds response
-        if (($this->is3DEnabled() && isset($saleArray['options']['three_d_secure']['required']) && $saleArray['options']['three_d_secure']['required'] == true) && (!isset($result->transaction->threeDSecureInfo) || (isset($result->transaction->threeDSecureInfo) && is_null($result->transaction->threeDSecureInfo)))) {
-
+        if (($this->is3DEnabled() && isset($saleArray['options']['three_d_secure']['required']) &&
+                $saleArray['options']['three_d_secure']['required'] == true) &&
+            (!isset($result->transaction->threeDSecureInfo) || (isset($result->transaction->threeDSecureInfo) &&
+                    is_null($result->transaction->threeDSecureInfo)))
+        ) {
             return $this->_processFailedResult($this->_getHelper()->__('This transaction must be passed through 3D secure, please try again or consider using an alternate payment method.'), false, $result);
 
         }
 
         // If the sale has failed
         if ($result->success != true) {
-
             // Dispatch an event for when a payment fails
             Mage::dispatchEvent('gene_braintree_creditcard_failed', array('payment' => $payment, 'result' => $result));
 
             // Return a different message for declined cards
-            if(isset($result->transaction->status)) {
-
+            if (isset($result->transaction->status)) {
                 // Return a custom response for processor declined messages
-                if($result->transaction->status == Braintree_Transaction::PROCESSOR_DECLINED) {
-
+                if ($result->transaction->status == Braintree_Transaction::PROCESSOR_DECLINED) {
                     return $this->_processFailedResult($this->_getHelper()->__('Your transaction has been declined, please try another payment method or contacting your issuing bank.'), false, $result);
 
-                } else if($result->transaction->status == Braintree_Transaction::GATEWAY_REJECTED
+                } elseif ($result->transaction->status == Braintree_Transaction::GATEWAY_REJECTED
                     && isset($result->transaction->gatewayRejectionReason)
-                    && $result->transaction->gatewayRejectionReason == Braintree_Transaction::THREE_D_SECURE)
-                {
+                    && $result->transaction->gatewayRejectionReason == Braintree_Transaction::THREE_D_SECURE
+                ) {
                     // An event for when 3D secure fails
-                    Mage::dispatchEvent('gene_braintree_creditcard_failed_threed', array('payment' => $payment, 'result' => $result));
+                    Mage::dispatchEvent('gene_braintree_creditcard_failed_threed', array(
+                        'payment' => $payment,
+                        'result' => $result
+                    ));
 
                     return $this->_processFailedResult($this->_getHelper()->__('Your card has failed 3D secure validation, please try again or consider using an alternate payment method.'), 'Transaction failed with 3D secure', false, $result);
                 }
@@ -337,34 +344,30 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         // If we have an original token use that for the subsequent requests
         if ($originalToken = $this->_getOriginalToken()) {
             $paymentArray['paymentMethodToken'] = $originalToken;
+
             return $paymentArray;
         }
 
         // Check to see whether we're using a payment method token?
-        if($this->getPaymentMethodToken() && !in_array($this->getPaymentMethodToken(), array('other', 'threedsecure'))) {
-
+        if ($this->getPaymentMethodToken() &&
+            !in_array($this->getPaymentMethodToken(), array('other', 'threedsecure'))
+        ) {
             // Build our payment array
             $paymentArray['paymentMethodToken'] = $this->getPaymentMethodToken();
             unset($paymentArray['cvv']);
-
         } else {
-
             // Build our payment array with a nonce
             $paymentArray['paymentMethodNonce'] = $this->getPaymentMethodNonce();
-
         }
 
         // If the user is using a stored card with 3D secure, enable it in the request and remove CVV
         if ($this->getPaymentMethodToken() && $this->getPaymentMethodToken() == 'threedsecure') {
-
             // If we're using 3D secure token card don't send CVV
             unset($paymentArray['cvv']);
-
         }
 
         // If a token is present in the request use that
         if ($token) {
-
             // Remove this unneeded data
             unset($paymentArray['paymentMethodNonce'], $paymentArray['cvv']);
 
@@ -423,64 +426,22 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
     }
 
     /**
-     * Void payment abstract method
-     *
-     * @param Varien_Object $payment
-     *
-     * @return Mage_Payment_Model_Abstract
-     */
-    public function void(Varien_Object $payment)
-    {
-        try {
-            // Init the environment
-            $this->_getWrapper()->init($payment->getOrder()->getStoreId());
-
-            // Retrieve the transaction ID
-            $transactionId = $this->_getWrapper()->getCleanTransactionId($payment->getLastTransId());
-
-            // Load the transaction from Braintree
-            $transaction = Braintree_Transaction::find($transactionId);
-
-            // We can only void authorized and submitted for settlement transactions
-            if ($transaction->status == Braintree_Transaction::AUTHORIZED || $transaction->status == Braintree_Transaction::SUBMITTED_FOR_SETTLEMENT) {
-
-                // Swap between refund and void
-                $result = Braintree_Transaction::void($transactionId);
-
-                // If it's a success close the transaction
-                if ($result->success) {
-                    $payment->setIsTransactionClosed(1);
-                } else {
-                    if ($result->errors->deepSize() > 0) {
-                        Mage::throwException($this->_getWrapper()->parseErrors($result->errors->deepAll()));
-                    } else {
-                        Mage::throwException('Unknown');
-                    }
-                }
-
-            } else {
-                Mage::throwException($this->_getHelper()->__('You can only void authorized/submitted for settlement payments, please setup a credit memo if you wish to refund this order.'));
-            }
-
-        } catch (Exception $e) {
-            Mage::throwException($this->_getHelper()->__('An error occurred whilst trying to void the transaction: ') . $e->getMessage());
-        }
-
-        return $this;
-    }
-
-    /**
      * Processes successful authorize/clone result
      *
-     * @param Varien_Object $payment
+     * @param Varien_Object               $payment
      * @param Braintree_Result_Successful $result
-     * @param float $amount
+     * @param float                       $amount
+     *
      * @return Varien_Object
      */
     protected function _processSuccessResult(Varien_Object $payment, $result, $amount)
     {
         // Pass an event if the payment was a success
-        Mage::dispatchEvent('gene_braintree_creditcard_success', array('payment' => $payment, 'result' => $result, 'amount' => $amount));
+        Mage::dispatchEvent('gene_braintree_creditcard_success', array(
+            'payment' => $payment,
+            'result' => $result,
+            'amount' => $amount
+        ));
 
         // Set some basic information about the payment
         $payment->setStatus(self::STATUS_APPROVED)
@@ -527,13 +488,13 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         foreach ($storeFields as $storeField) {
             if (isset($result->transaction->{$storeField}) && !empty($result->transaction->{$storeField})) {
                 $additionalInfo[$storeField] = $result->transaction->{$storeField};
-            } else if ($value = $payment->getAdditionalInformation($storeField)) {
+            } elseif ($value = $payment->getAdditionalInformation($storeField)) {
                 $additionalInfo[$storeField] = $value;
             }
         }
 
         // Check it's not empty and store it
-        if(!empty($additionalInfo)) {
+        if (!empty($additionalInfo)) {
             $payment->setAdditionalInformation($additionalInfo);
         }
 
@@ -544,9 +505,12 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             if ($payment->getMultiShipping() && !$this->_getOriginalToken()) {
                 $this->_setOriginalToken($result->transaction->creditCard['token']);
 
-                // If we shouldn't have this method saved, add it into the session to be removed once the request is complete
+                // If we shouldn't have this method saved, add it into the session to be removed once the request is
+                // complete
                 if (!$this->shouldSaveMethod($payment, true)) {
-                    Mage::getSingleton('checkout/session')->setTemporaryPaymentToken($result->transaction->creditCard['token']);
+                    Mage::getSingleton('checkout/session')->setTemporaryPaymentToken(
+                        $result->transaction->creditCard['token']
+                    );
                 }
             }
         }

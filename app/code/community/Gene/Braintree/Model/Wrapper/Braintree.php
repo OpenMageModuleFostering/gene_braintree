@@ -464,7 +464,6 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     {
         // Create the payment method with this data
         $paymentMethodCreate = array(
-            'customerId'         => $this->getBraintreeId(),
             'paymentMethodNonce' => $nonce,
             'options'            => array(
                 'verifyCard'                    => true,

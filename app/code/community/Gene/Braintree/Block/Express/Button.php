@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Class Gene_Braintree_Block_Express_Button
  *
@@ -8,6 +9,7 @@ class Gene_Braintree_Block_Express_Button extends Mage_Core_Block_Template
 {
     /**
      * Braintree token
+     *
      * @var string
      */
     protected $_token = null;
@@ -23,6 +25,7 @@ class Gene_Braintree_Block_Express_Button extends Mage_Core_Block_Template
 
     /**
      * Get braintree token
+     *
      * @return string
      */
     public function getToken()
@@ -32,11 +35,12 @@ class Gene_Braintree_Block_Express_Button extends Mage_Core_Block_Template
 
     /**
      * Is the express mode enabled
+     *
      * @return bool
      */
     public function isEnabled()
     {
-        if( Mage::getStoreConfig('payment/gene_braintree_paypal/express_active') ) {
+        if (Mage::getStoreConfig('payment/gene_braintree_paypal/express_active')) {
             return true;
         }
 
@@ -45,7 +49,7 @@ class Gene_Braintree_Block_Express_Button extends Mage_Core_Block_Template
 
     public function isEnabledPdp()
     {
-        if( Mage::getStoreConfig('payment/gene_braintree_paypal/express_pdp') ) {
+        if (Mage::getStoreConfig('payment/gene_braintree_paypal/express_pdp')) {
             return true;
         }
 
@@ -54,7 +58,7 @@ class Gene_Braintree_Block_Express_Button extends Mage_Core_Block_Template
 
     public function isEnabledCart()
     {
-        if( Mage::getStoreConfig('payment/gene_braintree_paypal/express_cart') ) {
+        if (Mage::getStoreConfig('payment/gene_braintree_paypal/express_cart')) {
             return true;
         }
 
@@ -62,9 +66,9 @@ class Gene_Braintree_Block_Express_Button extends Mage_Core_Block_Template
     }
 
 
-
     /**
      * Get store currency code.
+     *
      * @return string
      */
     public function getStoreCurrency()
@@ -74,6 +78,7 @@ class Gene_Braintree_Block_Express_Button extends Mage_Core_Block_Template
 
     /**
      * Get the store locale.
+     *
      * @return string
      */
     public function getStoreLocale()
@@ -83,6 +88,7 @@ class Gene_Braintree_Block_Express_Button extends Mage_Core_Block_Template
 
     /**
      * Get the current product
+     *
      * @return mixed
      */
     public function getProduct()
@@ -92,24 +98,28 @@ class Gene_Braintree_Block_Express_Button extends Mage_Core_Block_Template
 
     /**
      * Registry entry to determine if block has been instantiated yet
+     *
      * @return bool
      */
     public function hasBeenSetup()
     {
-        if( Mage::registry('gene_braintree_btn_loaded') ) {
+        if (Mage::registry('gene_braintree_btn_loaded')) {
             return true;
         }
+
         return false;
     }
 
     /**
      * Registry entry to mark this block as instantiated
+     *
      * @param string $html
+     *
      * @return string
      */
     public function _afterToHtml($html)
     {
-        if( !$this->hasBeenSetup() ) {
+        if (!$this->hasBeenSetup()) {
             Mage::register('gene_braintree_btn_loaded', true);
         }
 

@@ -32,7 +32,7 @@ class Gene_Braintree_Block_Adminhtml_System_Config_Braintree_Config
      * Inform the user there version will not work
      * @return string
      */
-    private function getValidConfigHtml()
+    protected function getValidConfigHtml()
     {
         $response = Mage::getModel('gene_braintree/wrapper_braintree')->validateCredentials(true);
         $response.= '

@@ -32,6 +32,6 @@ class Gene_Braintree_Block_Adminhtml_System_Config_Migration extends Mage_Core_B
     protected function _runMigration()
     {
         return Mage::app()->getRequest()->getParam('section') == 'payment'
-            && Mage::helper('gene_braintree')->shouldRunMigration();
+            && Mage::helper('gene_braintree')->canRunMigration();
     }
 }

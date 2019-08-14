@@ -32,6 +32,13 @@
         </reference>
     </adminhtml_sales_order_create_index>
 
+    <!-- Include styling for the order view page -->
+    <adminhtml_sales_order_view>
+        <reference name="head">
+            <action method="addCss"><file>css/gene/braintree/adminhtml.css</file></action>
+        </reference>
+    </adminhtml_sales_order_view>
+
     <!-- Include our migration wizard on the system config page -->
     <adminhtml_system_config_edit>
         <reference name="head">

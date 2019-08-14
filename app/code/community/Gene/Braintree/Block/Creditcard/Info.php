@@ -30,7 +30,7 @@ class Gene_Braintree_Block_Creditcard_Info extends Gene_Braintree_Block_Info
         $transport = parent::_prepareSpecificInformation($transport);
 
         // Only display this information if it's a single invoice
-        if($this->isSingleInvoice() || ($this->getInfo()->getCcLast4() && $this->getInfo()->getCcType())) {
+        if ($this->isSingleInvoice() || ($this->getInfo()->getCcLast4() && $this->getInfo()->getCcType())) {
 
             // Build up the data we wish to pass through
             $data = array(
@@ -45,13 +45,13 @@ class Gene_Braintree_Block_Creditcard_Info extends Gene_Braintree_Block_Info
         }
 
         // Check we're in the admin area
-        if(Mage::app()->getStore()->isAdmin()) {
+        if (Mage::app()->getStore()->isAdmin()) {
 
             // Include the transaction statuses
             $this->includeLiveDetails($data);
 
             // Only include extra information when viewing a single invoice
-            if($this->isSingleInvoice()) {
+            if ($this->isSingleInvoice()) {
 
                 // What additional information should we show
                 $additionalInfoHeadings = array(

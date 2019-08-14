@@ -23,7 +23,7 @@ class Gene_Braintree_Block_Adminhtml_System_Config_Braintree_Currency
      * Inform the user there version will not work
      * @return string
      */
-    private function getCurrencyTableHtml(Varien_Data_Form_Element_Abstract $element)
+    protected function getCurrencyTableHtml(Varien_Data_Form_Element_Abstract $element)
     {
         $currencies = array();
 

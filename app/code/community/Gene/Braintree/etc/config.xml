@@ -2,7 +2,7 @@
 <config>
     <modules>
         <Gene_Braintree>
-            <version>2.0.3</version>
+            <version>2.0.4</version>
         </Gene_Braintree>
     </modules>
     <global>
@@ -108,6 +108,16 @@
                 <useccv>1</useccv>
                 <kount_ens_ips>209.81.12.0/24,64.128.91.0/24,64.128.87.0/24</kount_ens_ips>
             </gene_braintree_creditcard>
+
+            <!-- Legacy methods used by the migration tool -->
+            <braintree_legacy>
+                <active>0</active>
+                <model>gene_braintree/paymentmethod_legacy_creditcard</model>
+            </braintree_legacy>
+            <braintree_paypal_legacy>
+                <active>0</active>
+                <model>gene_braintree/paymentmethod_legacy_paypal</model>
+            </braintree_paypal_legacy>
 
         </payment>
 

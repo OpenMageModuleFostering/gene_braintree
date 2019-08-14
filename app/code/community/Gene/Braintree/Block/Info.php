@@ -20,13 +20,13 @@ class Gene_Braintree_Block_Info extends Mage_Payment_Block_Info
     protected function getViewedObject()
     {
         // Return the invoice first
-        if(Mage::registry('current_invoice')) {
+        if (Mage::registry('current_invoice')) {
             return Mage::registry('current_invoice');
-        } else if(Mage::registry('current_creditmemo')) {
+        } else if (Mage::registry('current_creditmemo')) {
             return Mage::registry('current_creditmemo');
-        } else if(Mage::registry('current_order')) {
+        } else if (Mage::registry('current_order')) {
             return Mage::registry('current_order');
-        } else if(Mage::registry('current_shipment')) {
+        } else if (Mage::registry('current_shipment')) {
             return Mage::registry('current_shipment')->getOrder();
         }
 
@@ -47,27 +47,23 @@ class Gene_Braintree_Block_Info extends Mage_Payment_Block_Info
         $transactionIds = array();
 
         // If we're viewing a single invoice change the response
-        if($this->isSingleInvoice()) {
-
+        if ($this->isSingleInvoice()) {
             // Transaction ID won't matter for customers
             $data[$this->__('Braintree Transaction ID')] = $this->getTransactionId();
 
             // Build an array of transaction ID's
             $transactionIds = array($this->getTransactionId());
 
-        } else if($order) {
+        } elseif ($order) {
 
             /* @var $invoices Mage_Sales_Model_Resource_Order_Invoice_Collection */
             $invoices = $order->getInvoiceCollection();
             if($invoices->getSize() > 1) {
-
                 // Build up our array
                 foreach($invoices as $invoice) {
                     $transactionIds[] = $invoice->getTransactionId();
                 }
-
             } else {
-
                 // Transaction ID won't matter for customers
                 $data[$this->__('Braintree Transaction ID')] = $this->getTransactionId();
             }
@@ -76,13 +72,11 @@ class Gene_Braintree_Block_Info extends Mage_Payment_Block_Info
 
         // Do we have any transaction ID's
         if(!empty($transactionIds)) {
-
             // Start a count
             $count = 1;
 
             // Iterate through transaction ID's
             foreach ($transactionIds as $transactionId) {
-
                 // Add in another label
                 if(count($transactionIds) > 1) {
                     $data[$this->__('Braintree Transaction #%d', $count)] = '';
@@ -104,10 +98,14 @@ class Gene_Braintree_Block_Info extends Mage_Payment_Block_Info
                 }
 
                 ++$count;
-
             }
         }
 
+        if(count($transactionIds) == 1 && isset($transaction)) {
+            return $transaction;
+        }
+
+        return null;
     }
 
     /**

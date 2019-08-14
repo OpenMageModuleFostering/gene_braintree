@@ -36,10 +36,17 @@
                     </label>
                 </li>
                 <li>
+                    <input type="checkbox" id="order-transaction-info" name="migration[order-transaction-info]" checked="checked">
+                    <label for="order-transaction-info">
+                        <?php echo $this->__('Import Order Transaction Information'); ?>
+                        <span><?php echo $this->__('Ensure any orders created with the old extension can still be viewed with only the new extension installed. <strong>This is required if you remove all legacy files.</strong>'); ?></span>
+                    </label>
+                </li>
+                <li>
                     <input type="checkbox" id="disable-legacy" name="migration[disable-legacy]" checked="checked">
                     <label for="disable-legacy">
                         <?php echo $this->__('Disable Legacy Braintree Module'); ?>
-                        <span><input type="checkbox" id="remove-legacy" name="migration[remove-legacy]"> <?php echo $this->__('Remove all legacy module files. <strong>This step is not reversible, it will remove all legacy files and config settings.</strong>'); ?></span>
+                        <span><input type="checkbox" id="remove-legacy" name="migration[remove-legacy]" onclick="checkTransactionIsChecked();"> <?php echo $this->__('Remove all legacy module files. <strong>This step is not reversible, it will remove all legacy files and config settings. Removing the original Braintree_Payments module will also disable this migration tool from being ran again.</strong>'); ?></span>
                     </label>
                 </li>
             </ul>
@@ -52,12 +59,40 @@
     </div>
 </div>
 
+<?php if (Mage::helper('gene_braintree')->shouldRunMigration()): ?>
 <script type="text/javascript">
-    // On load add our active classes
     document.observe("dom:loaded", function() {
+        showMigration();
+    });
+</script>
+<?php endif; ?>
+
+<script type="text/javascript">
+    /**
+     * Show the migration
+     *
+     * @returns {boolean}
+     */
+    function showMigration() {
+        $$('.braintree-migration-loading h3').first().show();
+        $$('.braintree-migration-loading p').first().show();
+        $('braintree-migration').removeClassName('loading');
+
         $('braintree-migration-overlay').addClassName('active');
         $('braintree-migration').addClassName('active');
-    });
+        return false;
+    }
+
+    /**
+     * Automatically check the order transaction info box if they opt to remove the legacy module
+     *
+     * @returns {boolean}
+     */
+    function checkTransactionIsChecked() {
+        if ($('remove-legacy').checked) {
+            $('order-transaction-info').checked = true;
+        }
+    }
 
     // Migration submit action
     Element.observe($$('.braintree-migration-content').first(), 'submit', function (event) {
@@ -105,8 +140,8 @@
                 onSuccess: function (transport) {
                     if (transport && transport.responseJSON) {
                         if (transport.responseJSON.success == true) {
-                            $('braintree-migration-overlay').hide();
-                            $('braintree-migration').hide();
+                            $('braintree-migration-overlay').removeClassName('active');
+                            $('braintree-migration').removeClassName('active');
                         }
                     }
                 },
