@@ -17,7 +17,8 @@
             // Store a pointer to the vZero integration
             var vzeroIntegration = this;
 
-            // As the default checkout submits more data on the review step, we need to make sure various elements are disabled
+            // As the default checkout submits more data on the review step, we need to make sure various elements
+            // are disabled
             var _originalReviewSave = Review.prototype.save;
             Review.prototype.save = function() {
 
@@ -39,6 +40,39 @@
                 }
             };
 
+            // Override the next step functionality to handle failed payments
+            var _originalNextStep = Review.prototype.nextStep;
+            Review.prototype.nextStep = function (transport) {
+                // Parse the transport
+                var response;
+                if (transport && transport.responseText) {
+                    try {
+                        response = eval('(' + transport.responseText + ')');
+                    }
+                    catch (e) {
+                        response = {};
+                    }
+                }
+
+                // Retrieve any error messages
+                var errorMessage = response.error_messages;
+                if (typeof(errorMessage)=='object') {
+                    errorMessage = errorMessage.join("\n");
+                }
+
+                // Determine if the error message contains a generic message from a payment failure
+                if (errorMessage.indexOf('attempt refreshing the page') !== -1 ||
+                    errorMessage.indexOf('please try another payment method or contacting your issuing bank') !== -1 ||
+                    errorMessage.indexOf('please try again or consider using an alternate payment method') !== -1 ||
+                    errorMessage.indexOf('Your card payment has failed') !== -1
+                ) {
+                    response.goto_section = 'payment';
+                    transport.responseText = JSON.stringify(response);
+                }
+
+                // Run the original action
+                return _originalNextStep.call(this, transport);
+            };
         },
 
         /**

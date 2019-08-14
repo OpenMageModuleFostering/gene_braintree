@@ -141,10 +141,15 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
         // Build the address
         list($firstName, $lastName) = explode(" ", $paypalData['shippingAddress']['recipientName'], 2);
 
+        $street = $paypalData['shippingAddress']['line1'];
+        if (isset($paypalData['shippingAddress']['line2'])) {
+            $street .= ' ' . $paypalData['shippingAddress']['line2'];
+        }
+
         $address = Mage::getModel('sales/quote_address');
         $address->setFirstname($firstName)
             ->setLastname($lastName)
-            ->setStreet($paypalData['shippingAddress']['line1'] . ' ' . $paypalData['shippingAddress']['line2'])
+            ->setStreet($street)
             ->setCity($paypalData['shippingAddress']['city'])
             ->setCountryId($paypalData['shippingAddress']['countryCode'])
             ->setPostcode($paypalData['shippingAddress']['postalCode'])

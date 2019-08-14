@@ -7,7 +7,6 @@
  */
 class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Action
 {
-
     /**
      * The front-end is requesting the grand total of the quote
      *
@@ -23,13 +22,14 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
         $billingPostcode = $quote->getBillingAddress()->getPostcode();
 
         // Has the request supplied the billing address ID?
-        if($addressId = $this->getRequest()->getParam('addressId') && Mage::getSingleton('customer/session')->isLoggedIn()) {
-
+        if ($addressId = $this->getRequest()->getParam('addressId') &&
+            Mage::getSingleton('customer/session')->isLoggedIn()
+        ) {
             // Retrieve the address
             $billingAddress = $quote->getCustomer()->getAddressById($addressId);
 
             // If the address loads override the values
-            if($billingAddress && $billingAddress->getId()) {
+            if ($billingAddress && $billingAddress->getId()) {
                 $billingName = $billingAddress->getName();
                 $billingPostcode = $billingAddress->getPostcode();
             }
@@ -37,22 +37,21 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
         }
 
         // Currency mapping
-        if(Mage::getSingleton('gene_braintree/wrapper_braintree')->hasMappedCurrencyCode()) {
+        if (Mage::getSingleton('gene_braintree/wrapper_braintree')->hasMappedCurrencyCode()) {
             $grandTotal = $quote->getGrandTotal();
             $currencyCode = $quote->getQuoteCurrencyCode();
-        }
-        else {
+        } else {
             $grandTotal = $quote->getBaseGrandTotal();
             $currencyCode = $quote->getBaseCurrencyCode();
         }
 
         // Build up our JSON response
         $jsonResponse = array(
-            'billingName' => $billingName,
+            'billingName'     => $billingName,
             'billingPostcode' => $billingPostcode,
-            'grandTotal' => Mage::helper('gene_braintree')->formatPrice( $grandTotal ),
-            'currencyCode' => $currencyCode,
-            'threeDSecure' => Mage::getSingleton('gene_braintree/paymentmethod_creditcard')->is3DEnabled()
+            'grandTotal'      => Mage::helper('gene_braintree')->formatPrice($grandTotal),
+            'currencyCode'    => $currencyCode,
+            'threeDSecure'    => Mage::getSingleton('gene_braintree/paymentmethod_creditcard')->is3DEnabled()
         );
 
         return $this->_returnJson($jsonResponse);
@@ -66,21 +65,20 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
     public function tokenizeCardAction()
     {
         // Are tokens set in the request
-        if($tokens = $this->getRequest()->getParam('tokens')) {
-
+        if ($tokens = $this->getRequest()->getParam('tokens')) {
             // Build up our response
             $jsonResponse = array(
                 'success' => true,
-                'tokens' => array()
+                'tokens'  => array()
             );
 
             // Json decode the tokens
             $tokens = Mage::helper('core')->jsonDecode($tokens);
-            if(is_array($tokens)) {
-
+            if (is_array($tokens)) {
                 // Loop through each token and tokenize it again
-                foreach($tokens as $token) {
-                    $jsonResponse['tokens'][$token] = Mage::getSingleton('gene_braintree/wrapper_braintree')->getThreeDSecureVaultNonce($token);
+                foreach ($tokens as $token) {
+                    $jsonResponse['tokens'][$token] = Mage::getSingleton('gene_braintree/wrapper_braintree')
+                        ->getThreeDSecureVaultNonce($token);
                 }
 
                 // Set the response
@@ -98,19 +96,18 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
     {
         // Check we have a nonce in the request
         if ($nonce = $this->getRequest()->getParam('nonce')) {
-
             // Retrieve the billing address
             if (!$this->getRequest()->getParam('billing')) {
                 return $this->_returnJson(array(
                     'success' => false,
-                    'error' => 'Billing address is not present'
+                    'error'   => 'Billing address is not present'
                 ));
             }
 
             // Pull the billing address from the multishipping experience
             if ($this->getRequest()->getParam('billing') == 'multishipping') {
                 $billing = Mage::getSingleton('checkout/type_multishipping')->getQuote()->getBillingAddress();
-            } else if ($this->getRequest()->getParam('billing') == 'quote') {
+            } elseif ($this->getRequest()->getParam('billing') == 'quote') {
                 $billing = Mage::getSingleton('checkout/session')->getQuote()->getBillingAddress();
             } else {
                 $billing = $this->getRequest()->getParam('billing');
@@ -131,17 +128,25 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
             try {
                 if ($wrapper->checkIsCustomer()) {
                     $response = $wrapper->storeInVault($nonce, $billingAddress);
-                    if (isset($response->success) && $response->success == true && isset($response->paymentMethod->token)) {
+                    if (isset($response->success) && $response->success == true &&
+                        isset($response->paymentMethod->token)
+                    ) {
                         $token = $response->paymentMethod->token;
                         Mage::getSingleton('checkout/session')->setTemporaryPaymentToken($token);
                     }
                 } else {
                     $response = $wrapper->storeInGuestVault($nonce, $billingAddress);
-                    if (isset($response->success) && $response->success == true && isset($response->customer->creditCards) && count($response->customer->creditCards) >= 1) {
-
-                        // Store this customers ID in the session so we can remove the customer at the end of the checkout
+                    if (isset($response->success) &&
+                        $response->success == true &&
+                        isset($response->customer->creditCards) &&
+                        count($response->customer->creditCards) >= 1
+                    ) {
+                        // Store this customers ID in the session so we can remove the customer at the end of the
+                        // checkout
                         if (isset($response->customer->id)) {
-                            Mage::getSingleton('checkout/session')->setGuestBraintreeCustomerId($response->customer->id);
+                            Mage::getSingleton('checkout/session')->setGuestBraintreeCustomerId(
+                                $response->customer->id
+                            );
                         }
 
                         $method = $response->customer->creditCards[0];
@@ -155,38 +160,39 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
             } catch (Exception $e) {
                 return $this->_returnJson(array(
                     'success' => false,
-                    'error' => $e->getMessage()
+                    'error'   => $e->getMessage()
                 ));
             }
 
             // Was the request to store this in the vault a success?
-            if($token) {
-
+            if ($token) {
                 // Build up our response
                 $response = array(
                     'success' => true,
-                    'nonce' => $wrapper->getThreeDSecureVaultNonce($token)
+                    'nonce'   => $wrapper->getThreeDSecureVaultNonce($token)
                 );
 
             } else {
-
                 // Return a different message for declined cards
-                if(isset($response->transaction->status)) {
-
+                if (isset($response->transaction->status)) {
                     // Return a custom response for processor declined messages
-                    if($response->transaction->status == Braintree_Transaction::PROCESSOR_DECLINED) {
-
+                    if ($response->transaction->status == Braintree_Transaction::PROCESSOR_DECLINED) {
                         return $this->_returnJson(array(
                             'success' => false,
-                            'error' => Mage::helper('gene_braintree')->__('Your transaction has been declined, please try another payment method or contacting your issuing bank.')
+                            'error'   => Mage::helper('gene_braintree')->__(
+                                'Your transaction has been declined, please try another payment method or contacting ' .
+                                'your issuing bank.'
+                            )
                         ));
-
                     }
                 }
 
                 return $this->_returnJson(array(
                     'success' => false,
-                    'error' => Mage::helper('gene_braintree')->__('%s. Please try again or attempt refreshing the page.', $wrapper->parseMessage($response->message))
+                    'error'   => Mage::helper('gene_braintree')->__(
+                        '%s. Please try again or attempt refreshing the page.',
+                        $wrapper->parseMessage($response->message)
+                    )
                 ));
 
             }
@@ -211,5 +217,4 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
 
         return $this;
     }
-
 }

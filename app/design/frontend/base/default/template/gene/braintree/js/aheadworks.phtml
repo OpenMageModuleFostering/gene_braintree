@@ -9,6 +9,7 @@
 <script type="text/javascript">
 
     vZeroIntegration.addMethods({
+        currentMethod: false,
 
         /**
          * Validate the entire checkout
@@ -21,7 +22,7 @@
          * Return the payment method from the checkouts methods
          */
         getPaymentMethod: function() {
-            return awOSCPayment.currentMethod;
+            return awOSCPayment.currentMethod || this.currentMethod;
         },
 
         /**
@@ -92,6 +93,8 @@
             // Intercept the save function
             AWOnestepcheckoutPayment.prototype.switchToMethod = function (method) {
 
+                vzeroIntegration.currentMethod = method;
+
                 // Run our method switch function
                 vzeroIntegration.paymentMethodSwitch(method);
 
@@ -141,7 +144,10 @@
         '#aw-onestepcheckout-place-order-button',
         true,
         {
-            ignoreAjax: ['onestepcheckout/ajax/saveOrder']
+            ignoreAjax: [
+                'onestepcheckout/ajax/saveFormValues',
+                'onestepcheckout/ajax/saveOrder'
+            ]
         }
     );
 

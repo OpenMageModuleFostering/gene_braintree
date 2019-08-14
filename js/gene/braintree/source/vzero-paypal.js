@@ -210,10 +210,14 @@ vZeroPayPalButton.prototype = {
      * @private
      */
     _tokenizePayPal: function (paypalInstance, options) {
+        var tokenizeOptions = this._buildOptions();
+        if (typeof options.tokenizeRequest === 'object') {
+            tokenizeOptions = Object.extend(tokenizeOptions, options.tokenizeRequest);
+        }
 
         // Because tokenization opens a popup, this has to be called as a result of
         // customer action, like clicking a button—you cannot call this at any time.
-        paypalInstance.tokenize(this._buildOptions(), function (tokenizeErr, payload) {
+        paypalInstance.tokenize(tokenizeOptions, function (tokenizeErr, payload) {
             // Stop if there was an error.
             if (tokenizeErr) {
                 if (tokenizeErr.type !== 'CUSTOMER') {
@@ -241,7 +245,8 @@ vZeroPayPalButton.prototype = {
         var options = {
             displayName: this.storeFrontName,
             amount: this.amount,
-            currency: this.currency
+            currency: this.currency,
+            useraction: 'commit' /* The user is committing to the order on submission of PayPal */
         };
 
         // Pass over the locale

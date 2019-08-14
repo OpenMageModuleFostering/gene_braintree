@@ -977,7 +977,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     }
 
     /**
-     * Determine whether ot not currency mapping is enabled
+     * Determine whether or not currency mapping is enabled
      *
      * @param \Mage_Sales_Model_Order|null $order
      *

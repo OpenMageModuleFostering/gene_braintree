@@ -34,7 +34,10 @@ var BraintreePayPalExpress = Class.create(BraintreeExpressAbstract, {
                 }
 
                 this.initModal(params);
-            }.bind(this)
+            }.bind(this),
+            tokenizeRequest: {
+                enableShippingAddress: true /* Request shipping address from customer */
+            }
         };
 
         // Add a class to the parents of the buttons

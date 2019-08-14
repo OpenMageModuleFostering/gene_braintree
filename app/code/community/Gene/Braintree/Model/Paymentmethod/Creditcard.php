@@ -322,7 +322,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
                 }
             }
 
-            return $this->_processFailedResult($this->_getHelper()->__('%s. Please try again or attempt refreshing the page.', $this->_getWrapper()->parseMessage($result->message)), $result);
+            return $this->_processFailedResult($this->_getHelper()->__('%s Please try again or attempt refreshing the page.', $this->_getWrapper()->parseMessage($result->message)), $result);
         }
 
         $this->_processSuccessResult($payment, $result, $amount);
