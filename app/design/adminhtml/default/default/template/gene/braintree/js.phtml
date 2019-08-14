@@ -10,6 +10,9 @@
         ['order-billing_address_postcode']
     );
 
+    // Pass the supported card types over to the front-end
+    vzero.setSupportedCards('<?php echo $this->getSupportedCardTypes(); ?>');
+
     vZero.addMethods({
         /**
          * Update data has no value in the admin
