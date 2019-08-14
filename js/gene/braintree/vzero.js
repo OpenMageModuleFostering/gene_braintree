@@ -248,7 +248,7 @@ vZero.prototype = {
 
                     // Some checkout implementations may require custom callbacks
                     if(callback) {
-                        callback();
+                        callback(transport);
                     } else {
                         this.updateData();
                     }
@@ -733,7 +733,7 @@ vZeroPayPalButton.prototype = {
 
             },
             onUnsupported: function() {
-                alert('Sadly your browser does not support purchasing with PayPal.');
+                alert('You need to link your PayPal account with your Braintree account in your Braintree control panel to utilise the PayPal functionality of this extension.');
             }
         };
 

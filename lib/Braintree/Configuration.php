@@ -16,6 +16,9 @@ class Braintree_Configuration
     private $_merchantId = null;
     private $_publicKey = null;
     private $_privateKey = null;
+    private $_clientId = null;
+    private $_clientSecret = null;
+    private $_accessToken = null;
 
     /**
      * Braintree API version to use
@@ -27,17 +30,31 @@ class Braintree_Configuration
     {
         foreach ($attribs as $kind => $value) {
             if ($kind == 'environment') {
-                $this->setEnvironment($value);
+                Braintree_CredentialsParser::assertValidEnvironment($value);
+                $this->_environment = $value;
             }
             if ($kind == 'merchantId') {
-                $this->setMerchantId($value);
+                $this->_merchantId = $value;
             }
             if ($kind == 'publicKey') {
-                $this->setPublicKey($value);
+                $this->_publicKey = $value;
             }
             if ($kind == 'privateKey') {
-                $this->setPrivateKey($value);
+                $this->_privateKey = $value;
             }
+        }
+
+        if (isset($attribs['clientId']) || isset($attribs['accessToken'])) {
+            if (isset($attribs['environment']) || isset($attribs['merchantId']) || isset($attribs['publicKey']) || isset($attribs['privateKey'])) {
+                throw new Braintree_Exception_Configuration('Cannot mix OAuth credentials (clientId, clientSecret, accessToken) with key credentials (publicKey, privateKey, environment, merchantId).');
+            }
+            $parsedCredentials = new Braintree_CredentialsParser($attribs);
+
+            $this->_environment = $parsedCredentials->getEnvironment();
+            $this->_merchantId = $parsedCredentials->getMerchantId();
+            $this->_clientId = $parsedCredentials->getClientId();
+            $this->_clientSecret = $parsedCredentials->getClientSecret();
+            $this->_accessToken = $parsedCredentials->getAccessToken();
         }
     }
 
@@ -55,29 +72,12 @@ class Braintree_Configuration
         return new Braintree_Gateway(self::$global);
     }
 
-    /**
-     *
-     * @access protected
-     * @static
-     * @var array valid environments, used for validation
-     */
-    private static $_validEnvironments = array(
-                    'development',
-                    'sandbox',
-                    'production',
-                    'qa',
-                    );
-
-    /**
-     * resets configuration to default
-     * @access public
-     * @static
-     */
     public static function environment($value=null)
     {
         if (empty($value)) {
             return self::$global->getEnvironment();
         }
+        Braintree_CredentialsParser::assertValidEnvironment($value);
         self::$global->setEnvironment($value);
     }
 
@@ -105,31 +105,56 @@ class Braintree_Configuration
         self::$global->setPrivateKey($value);
     }
 
-    public function assertValid()
+    public static function assertGlobalHasAccessTokenOrKeys()
     {
-        if (empty($this->_environment)) {
-            throw new Braintree_Exception_Configuration('environment needs to be set.');
-        } else if (empty($this->_merchantId)) {
-            throw new Braintree_Exception_Configuration('merchantId needs to be set.');
-        } else if (empty($this->_publicKey)) {
-            throw new Braintree_Exception_Configuration('publicKey needs to be set.');
-        } else if (empty($this->_privateKey)) {
-            throw new Braintree_Exception_Configuration('privateKey needs to be set.');
+        self::$global->assertHasAccessTokenOrKeys();
+    }
+
+    public function assertHasAccessTokenOrKeys()
+    {
+        if (empty($this->_accessToken)) {
+            if (empty($this->_merchantId)) {
+                throw new Braintree_Exception_Configuration('Braintree_Configuration::merchantId needs to be set (or accessToken needs to be passed to Braintree_Gateway).');
+            } else if (empty($this->_environment)) {
+                throw new Braintree_Exception_Configuration('Braintree_Configuration::environment needs to be set.');
+            } else if (empty($this->_publicKey)) {
+                throw new Braintree_Exception_Configuration('Braintree_Configuration::publicKey needs to be set.');
+            } else if (empty($this->_privateKey)) {
+                throw new Braintree_Exception_Configuration('Braintree_Configuration::privateKey needs to be set.');
+            }
         }
     }
 
+    public function assertHasClientCredentials()
+    {
+        $this->assertHasClientId();
+        $this->assertHasClientSecret();
+    }
+
+    public function assertHasClientId()
+    {
+        if (empty($this->_clientId)) {
+            throw new Braintree_Exception_Configuration('clientId needs to be passed to Braintree_Gateway.');
+        }
+    }
+
+    public function assertHasClientSecret()
+    {
+        if (empty($this->_clientSecret)) {
+            throw new Braintree_Exception_Configuration('clientSecret needs to be passed to Braintree_Gateway.');
+        }
+    }
 
     public function getEnvironment()
     {
         return $this->_environment;
     }
 
+    /**
+     * Do not use this method directly. Pass in the environment to the constructor.
+     */
     public function setEnvironment($value)
     {
-        if (!in_array($value, self::$_validEnvironments)) {
-            throw new Braintree_Exception_Configuration('"' .
-                                    $value . '" is not a valid environment.');
-        }
         $this->_environment = $value;
     }
 
@@ -138,6 +163,9 @@ class Braintree_Configuration
         return $this->_merchantId;
     }
 
+    /**
+     * Do not use this method directly. Pass in the merchantId to the constructor.
+     */
     public function setMerchantId($value)
     {
         $this->_merchantId = $value;
@@ -148,6 +176,14 @@ class Braintree_Configuration
         return $this->_publicKey;
     }
 
+    public function getClientId()
+    {
+        return $this->_clientId;
+    }
+
+    /**
+     * Do not use this method directly. Pass in the publicKey to the constructor.
+     */
     public function setPublicKey($value)
     {
         $this->_publicKey = $value;
@@ -158,11 +194,33 @@ class Braintree_Configuration
         return $this->_privateKey;
     }
 
+    public function getClientSecret()
+    {
+        return $this->_clientSecret;
+    }
+
+    /**
+     * Do not use this method directly. Pass in the privateKey to the constructor.
+     */
     public function setPrivateKey($value)
     {
         $this->_privateKey = $value;
     }
 
+    public function getAccessToken()
+    {
+        return $this->_accessToken;
+    }
+
+    public function isAccessToken()
+    {
+        return !empty($this->_accessToken);
+    }
+
+    public function isClientCredentials()
+    {
+        return !empty($this->_clientId);
+    }
     /**
      * returns the base braintree gateway URL based on config values
      *
@@ -172,9 +230,16 @@ class Braintree_Configuration
      */
     public function baseUrl()
     {
-        return $this->protocol() . '://' .
-                  $this->serverName() . ':' .
-                  $this->portNumber();
+        static $defaultPorts = array(
+            'http' => 80,
+            'https' => 443,
+        );
+
+        if ($this->portNumber() === $defaultPorts[$this->protocol()]) {
+            return sprintf('%s://%s', $this->protocol(), $this->serverName());
+        } else {
+            return sprintf('%s://%s:%d', $this->protocol(), $this->serverName(), $this->portNumber());
+        }
     }
 
     /**
@@ -261,6 +326,7 @@ class Braintree_Configuration
              $serverName = 'api.sandbox.braintreegateway.com';
              break;
          case 'development':
+         case 'integration':
          default:
              $serverName = 'localhost';
              break;
@@ -282,6 +348,7 @@ class Braintree_Configuration
              $serverName = 'https://auth.sandbox.venmo.com';
              break;
          case 'development':
+         case 'integration':
          default:
              $serverName = 'http://auth.venmo.dev:9292';
              break;
@@ -301,6 +368,7 @@ class Braintree_Configuration
     public function sslOn()
     {
         switch($this->_environment) {
+         case 'integration':
          case 'development':
              $ssl = false;
              break;

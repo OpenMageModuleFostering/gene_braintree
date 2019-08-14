@@ -1,0 +1,43 @@
+#paypal-complete {
+    padding: 20px 0;
+}
+#paypal-complete label {
+    margin-right: 16px;
+}
+#braintree-paypal-button {
+    line-height: unset;
+    padding: 0;
+    float: left;
+}
+.one-step-checkout .input-text[name="payment[cc_number]"] {
+    height: 46px!important;
+    text-indent: 56px!important;
+}
+
+.saved-cards-intro {
+    float: left;
+}
+
+#creditcard-saved-accounts .saved-card-number {
+    float: left;
+}
+#creditcard-saved-accounts .saved-expiry-date {
+    float: right;
+    display: block;
+    font-weight: normal;
+}
+
+#credit-card-form {
+    padding-bottom: 12px;
+    float: left;
+}
+#credit-card-form .form-list, #payment_form_gene_braintree_creditcard {
+    width: 100%;
+    padding: 0;
+}
+#credit-card-form label {
+    margin-top: 8px;
+}
+#credit-card-form #gene_braintree_creditcard_store_in_vault_div {
+    float: left;
+}

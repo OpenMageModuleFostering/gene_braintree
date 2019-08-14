@@ -22,17 +22,29 @@
 
     <!-- We have to use a customized version of the js.phtml file for Amasty's checkout solution -->
     <amasty_onestep_checkout>
+        <reference name="head">
+            <action method="addCss"><file>css/gene/braintree/amasty.css</file></action>
+        </reference>
         <reference name="before_body_end">
             <remove name="gene_braintree_js" />
             <block type="gene_braintree/js" name="gene_braintree_amasty_js" template="gene/braintree/js/amasty.phtml" />
+
+            <!-- We include device data at the end of the larger form -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>amscheckout-onepage</value>
+                </action>
+            </block>
         </reference>
     </amasty_onestep_checkout>
 
     <!-- Need to include the standard resources for the onestepcheckout.com solution -->
-    <onestepcheckout_index_index>
+    <idev_onestepcheckout_index>
         <reference name="head">
             <action method="addJs"><file>gene/braintree/braintree.js</file></action>
             <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addCss"><file>css/gene/braintree/idev.css</file></action>
         </reference>
         <reference name="before_body_end">
             <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
@@ -46,7 +58,91 @@
                 </action>
             </block>
         </reference>
-    </onestepcheckout_index_index>
+    </idev_onestepcheckout_index>
+
+    <!-- Add in support for Magestores's one step checkout solution -->
+    <magestore_onestepcheckout_index>
+        <reference name="head">
+            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addCss"><file>css/gene/braintree/magestore.css</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js/magestore.phtml" />
+
+            <!-- We include device data at the end of the larger form -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>one-step-checkout-form</value>
+                </action>
+            </block>
+        </reference>
+    </magestore_onestepcheckout_index>
+
+    <!-- Add in support for the Aheadworks one step checkout solution -->
+    <aw_onestepcheckout_index_index>
+        <reference name="head">
+            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addCss"><file>css/gene/braintree/aheadworks.css</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js/aheadworks.phtml" />
+
+            <!-- We include device data at the end of the larger form -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>aw-onestepcheckout-general-form</value>
+                </action>
+            </block>
+        </reference>
+    </aw_onestepcheckout_index_index>
+
+    <!-- Add in support for IWD's one step checkout solution -->
+    <opc_index_index>
+        <reference name="head">
+            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addCss"><file>css/gene/braintree/iwd.css</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js/iwd.phtml" />
+
+            <!-- We include device data at the end of the larger form -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>co-payment-form</value>
+                </action>
+            </block>
+        </reference>
+    </opc_index_index>
+
+    <!-- Add in support for Fire Checkouts solution -->
+    <firecheckout_index_index>
+        <reference name="head">
+            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addCss"><file>css/gene/braintree/firecheckout.css</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js/firecheckout.phtml" />
+
+            <!-- We include device data at the end of the larger form -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>firecheckout-form</value>
+                </action>
+            </block>
+        </reference>
+    </firecheckout_index_index>
 
     <checkout_onepage_paymentmethod>
         <reference name="root">

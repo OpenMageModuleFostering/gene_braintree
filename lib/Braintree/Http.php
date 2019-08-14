@@ -8,6 +8,7 @@
 class Braintree_Http
 {
     protected $_config;
+    private $_useClientCredentials = false;
 
     public function __construct($config)
     {
@@ -38,7 +39,7 @@ class Braintree_Http
     {
         $response = $this->_doRequest('POST', $path, $this->_buildXml($params));
         $responseCode = $response['status'];
-        if($responseCode === 200 || $responseCode === 201 || $responseCode === 422) {
+        if($responseCode === 200 || $responseCode === 201 || $responseCode === 422 || $responseCode == 400) {
             return Braintree_Xml::buildArrayFromXml($response['body']);
         } else {
             Braintree_Util::throwStatusCodeException($responseCode);
@@ -49,7 +50,7 @@ class Braintree_Http
     {
         $response = $this->_doRequest('PUT', $path, $this->_buildXml($params));
         $responseCode = $response['status'];
-        if($responseCode === 200 || $responseCode === 201 || $responseCode === 422) {
+        if($responseCode === 200 || $responseCode === 201 || $responseCode === 422 || $responseCode == 400) {
             return Braintree_Xml::buildArrayFromXml($response['body']);
         } else {
             Braintree_Util::throwStatusCodeException($responseCode);
@@ -59,6 +60,38 @@ class Braintree_Http
     private function _buildXml($params)
     {
         return empty($params) ? null : Braintree_Xml::buildXmlFromArray($params);
+    }
+
+    private function _getHeaders()
+    {
+        return array(
+            'Accept: application/xml',
+            'Content-Type: application/xml',
+        );
+    }
+
+    private function _getAuthorization()
+    {
+        if ($this->_useClientCredentials) {
+            return array(
+                'user' => $this->_config->getClientId(),
+                'password' => $this->_config->getClientSecret(),
+            );
+        } else if ($this->_config->isAccessToken()) {
+            return array(
+                'token' => $this->_config->getAccessToken(),
+            );
+        } else {
+            return array(
+                'user' => $this->_config->getPublicKey(),
+                'password' => $this->_config->getPrivateKey(),
+            );
+        }
+    }
+
+    public function useClientCredentials()
+    {
+        $this->_useClientCredentials = true;
     }
 
     private function _doRequest($httpVerb, $path, $requestBody = null)
@@ -73,14 +106,20 @@ class Braintree_Http
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $httpVerb);
         curl_setopt($curl, CURLOPT_URL, $url);
         curl_setopt($curl, CURLOPT_ENCODING, 'gzip');
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-            'Accept: application/xml',
-            'Content-Type: application/xml',
-            'User-Agent: Braintree PHP Library ' . Braintree_Version::get(),
-            'X-ApiVersion: ' . Braintree_Configuration::API_VERSION
-        ));
-        curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($curl, CURLOPT_USERPWD, $this->_config->getPublicKey() . ':' . $this->_config->getPrivateKey());
+
+        $headers = $this->_getHeaders($curl);
+        $headers[] = 'User-Agent: Braintree PHP Library ' . Braintree_Version::get();
+        $headers[] = 'X-ApiVersion: ' . Braintree_Configuration::API_VERSION;
+
+        $authorization = $this->_getAuthorization();
+        if (isset($authorization['user'])) {
+            curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+            curl_setopt($curl, CURLOPT_USERPWD, $authorization['user'] . ':' . $authorization['password']);
+        } else if (isset($authorization['token'])) {
+            $headers[] = 'Authorization: Bearer ' . $authorization['token'];
+        }
+        curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+
         // curl_setopt($curl, CURLOPT_VERBOSE, true);
         if ($this->_config->sslOn()) {
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);

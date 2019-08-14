@@ -149,6 +149,7 @@
  * @property-read object $billingDetails transaction billing address
  * @property-read string $createdAt transaction created timestamp
  * @property-read object $applePayCardDetails transaction Apple Pay card info
+ * @property-read object $androidPayCardDetails transaction Android Pay card info
  * @property-read object $creditCardDetails transaction credit card info
  * @property-read object $coinbaseDetails transaction Coinbase account info
  * @property-read object $paypalDetails transaction paypal account info
@@ -166,7 +167,7 @@
  *
  */
 
-final class Braintree_Transaction extends Braintree
+final class Braintree_Transaction extends Braintree_Base
 {
     // Transaction Status
     const AUTHORIZATION_EXPIRED    = 'authorization_expired';
@@ -210,6 +211,7 @@ final class Braintree_Transaction extends Braintree
     const DUPLICATE      = 'duplicate';
     const FRAUD          = 'fraud';
     const THREE_D_SECURE = 'three_d_secure';
+    const APPLICATION_INCOMPLETE = 'application_incomplete';
 
     // Industry Types
     const LODGING_INDUSTRY           = 'lodging';
@@ -231,6 +233,14 @@ final class Braintree_Transaction extends Braintree
             $this->_set('applePayCardDetails',
                 new Braintree_Transaction_ApplePayCardDetails(
                     $transactionAttribs['applePay']
+                )
+            );
+        }
+
+        if (isset($transactionAttribs['androidPayCard'])) {
+            $this->_set('androidPayCardDetails',
+                new Braintree_Transaction_AndroidPayCardDetails(
+                    $transactionAttribs['androidPayCard']
                 )
             );
         }
@@ -341,6 +351,9 @@ final class Braintree_Transaction extends Braintree
 
         if(isset($transactionAttribs['riskData'])) {
             $this->_set('riskData', Braintree_RiskData::factory($transactionAttribs['riskData']));
+        }
+        if(isset($transactionAttribs['threeDSecureInfo'])) {
+            $this->_set('threeDSecureInfo', Braintree_ThreeDSecureInfo::factory($transactionAttribs['threeDSecureInfo']));
         }
     }
 

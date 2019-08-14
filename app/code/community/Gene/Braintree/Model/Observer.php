@@ -33,6 +33,24 @@ class Gene_Braintree_Model_Observer
 
         }
 
+        // As some 3rd party checkouts use the same handles, and URL we have to dynamically add new handles
+        if($action->getFullActionName() == 'onestepcheckout_index_index') {
+
+            // Attempt to detect Magestore_Onestepcheckout
+            if (Mage::helper('core')->isModuleEnabled('Magestore_Onestepcheckout')) {
+                if(Mage::helper('onestepcheckout')->enabledOnestepcheckout()) {
+                    $layout->getUpdate()->addHandle('magestore_onestepcheckout_index');
+                }
+            }
+
+            // Attempt to detect Idev_OneStepCheckout
+            // @todo add new handle for idev
+            if (Mage::helper('core')->isModuleEnabled('Idev_OneStepCheckout')) {
+                $layout->getUpdate()->addHandle('idev_onestepcheckout_index');
+            }
+
+        }
+
         return $this;
     }
 

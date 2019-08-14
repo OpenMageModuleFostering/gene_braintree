@@ -7,13 +7,13 @@ $_code = $this->getMethodCode()
     <?php if($this->hasSavedDetails() && $this->getMethod()->isVaultEnabled()): ?>
 
     <label><?php echo $this->__('Saved Cards'); ?></label><br />
-    <p style="padding-left: 0;"><?php echo $this->__('The following credit cards accounts are currently linked with your account.'); ?></p>
+    <p style="padding-left: 0;" class="saved-cards-intro"><?php echo $this->__('The following credit cards accounts are currently linked with your account.'); ?></p>
     <table cellspacing="0" cellpadding="0" id="creditcard-saved-accounts">
         <?php
         $count = 0;
         foreach($this->getSavedDetails() as $savedDetail):
             ?>
-            <tr>
+            <tr valign="middle">
                 <td width="20">
                     <?php if($this->getMethod()->is3DEnabled()): ?>
                         <input type="radio" name="payment[card_payment_method_token]" id="<?php echo $savedDetail->token; ?>" data-token="<?php echo $savedDetail->token; ?>" data-threedsecure-nonce="<?php echo $this->getMethod()->getThreeDSecureVaultNonce($savedDetail->token); ?>" value="threedsecure"<?php echo ($count == 0 ? ' checked="checked"' : ''); ?>/>
@@ -21,9 +21,9 @@ $_code = $this->getMethodCode()
                         <input type="radio" name="payment[card_payment_method_token]" id="<?php echo $savedDetail->token; ?>" value="<?php echo $savedDetail->token; ?>"<?php echo ($count == 0 ? ' checked="checked"' : ''); ?>/>
                     <?php endif; ?>
                 </td>
-                <td valign="middle">
+                <td>
                     <label for="<?php echo $savedDetail->token; ?>" style="line-height: 48px;width: auto;">
-                        <img src="<?php echo $this->getSkinUrl('images/gene/braintree/' . $this->getCardIcon($savedDetail->cardType)) ?>" align="left" />&nbsp;&nbsp; xxxx - xxxx - xxxx - <?php echo $savedDetail->last4; ?> &nbsp;&nbsp;&nbsp; <em><?php echo $this->__('Expires:'); ?></em> <?php echo $savedDetail->expirationMonth; ?>/<?php echo $savedDetail->expirationYear; ?>
+                        <img src="<?php echo $this->getSkinUrl('images/gene/braintree/' . $this->getCardIcon($savedDetail->cardType)) ?>" align="left" /><span class="saved-card-number">&nbsp;&nbsp; xxxx - xxxx - xxxx - <?php echo $savedDetail->last4; ?></span> &nbsp;&nbsp;&nbsp; <span class="saved-expiry-date"><em><?php echo $this->__('Expires:'); ?></em> <?php echo $savedDetail->expirationMonth; ?>/<?php echo $savedDetail->expirationYear; ?></span>
                     </label>
                 </td>
             </tr>

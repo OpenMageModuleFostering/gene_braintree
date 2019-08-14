@@ -21,6 +21,7 @@ class Braintree_CustomerGateway
     {
         $this->_gateway = $gateway;
         $this->_config = $gateway->config;
+        $this->_config->assertHasAccessTokenOrKeys();
         $this->_http = new Braintree_Http($gateway->config);
     }
 
@@ -101,6 +102,7 @@ class Braintree_CustomerGateway
     /**
      * create a customer from a TransparentRedirect operation
      *
+     * @deprecated since version 2.3.0
      * @access public
      * @param array $attribs
      * @return object
@@ -119,6 +121,7 @@ class Braintree_CustomerGateway
 
     /**
      *
+     * @deprecated since version 2.3.0
      * @access public
      * @param none
      * @return string
@@ -139,7 +142,7 @@ class Braintree_CustomerGateway
     {
 
         $creditCardSignature = Braintree_CreditCardGateway::createSignature();
-        unset($creditCardSignature['customerId']);
+        unset($creditCardSignature[array_search('customerId', $creditCardSignature)]);
         $signature = array(
             'id', 'company', 'email', 'fax', 'firstName',
             'lastName', 'phone', 'website', 'deviceData',
@@ -202,8 +205,9 @@ class Braintree_CustomerGateway
      * credit a customer for the passed transaction
      *
      * @access public
-     * @param array $attribs
-     * @return object Braintree_Result_Successful or Braintree_Result_Error
+     * @param int $customerId
+     * @param array $transactionAttribs
+     * @return Braintree_Result_Successful|Braintree_Result_Error
      */
     public function credit($customerId, $transactionAttribs)
     {
@@ -221,8 +225,9 @@ class Braintree_CustomerGateway
      * returns a Braintree_Transaction object on success
      *
      * @access public
-     * @param array $attribs
-     * @return object Braintree_Transaction
+     * @param int $customerId
+     * @param array $transactionAttribs
+     * @return Braintree_Transaction
      * @throws Braintree_Exception_ValidationError
      */
     public function creditNoValidate($customerId, $transactionAttribs)
@@ -287,7 +292,6 @@ class Braintree_CustomerGateway
      * For more detailed information and examples, see {@link http://www.braintreepayments.com/gateway/customer-api#searching http://www.braintreepaymentsolutions.com/gateway/customer-api}
      *
      * @param mixed $query search query
-     * @param array $options options such as page number
      * @return object Braintree_ResourceCollection
      * @throws InvalidArgumentException
      */
@@ -321,8 +325,8 @@ class Braintree_CustomerGateway
      * is the 2nd attribute. customerId is not sent in object context.
      *
      * @access public
-     * @param array $attributes
      * @param string $customerId (optional)
+     * @param array $attributes
      * @return object Braintree_Result_Successful or Braintree_Result_Error
      */
     public function update($customerId, $attributes)
@@ -344,8 +348,8 @@ class Braintree_CustomerGateway
      * returns a Braintree_Customer object on success
      *
      * @access public
-     * @param array $attributes
      * @param string $customerId
+     * @param array $attributes
      * @return object Braintree_Customer
      * @throws Braintree_Exception_ValidationsFailed
      */
@@ -356,8 +360,8 @@ class Braintree_CustomerGateway
     }
     /**
      *
+     * @deprecated since version 2.3.0
      * @access public
-     * @param none
      * @return string
      */
     public function updateCustomerUrl()
@@ -370,8 +374,9 @@ class Braintree_CustomerGateway
     /**
      * update a customer from a TransparentRedirect operation
      *
+     * @deprecated since version 2.3.0
      * @access public
-     * @param array $attribs
+     * @param string $queryString
      * @return object
      */
     public function updateFromTransparentRedirect($queryString)
@@ -421,6 +426,15 @@ class Braintree_CustomerGateway
         }
         $this->_set('creditCards', $creditCardArray);
 
+        // map each coinbaseAccount into its own object
+        $coinbaseAccountArray = array();
+        if (isset($customerAttribs['coinbaseAccounts'])) {
+            foreach ($customerAttribs['coinbaseAccounts'] AS $coinbaseAccount) {
+                $coinbaseAccountArray[] = Braintree_CoinbaseAccount::factory($coinbaseAccount);
+            }
+        }
+        $this->_set('coinbaseAccounts', $coinbaseAccountArray);
+
         // map each paypalAccount into its own object
         $paypalAccountArray = array();
         if (isset($customerAttribs['paypalAccounts'])) {
@@ -438,6 +452,17 @@ class Braintree_CustomerGateway
             }
         }
         $this->_set('applePayCards', $applePayCardArray);
+
+        // map each androidPayCard into its own object
+        $androidPayCardArray = array();
+        if (isset($customerAttribs['androidPayCards'])) {
+            foreach ($customerAttribs['androidPayCards'] AS $androidPayCard) {
+                $androidPayCardArray[] = Braintree_AndroidPayCard::factory($androidPayCard);
+            }
+        }
+        $this->_set('androidPayCards', $androidPayCardArray);
+
+        $this->_set('paymentMethods', array_merge($this->creditCards, $this->paypalAccounts, $this->applePayCards, $this->coinbaseAccounts, $this->androidPayCards));
     }
 
     /**
@@ -469,17 +494,17 @@ class Braintree_CustomerGateway
      */
     public function paymentMethods()
     {
-        return array_merge($this->creditCards, $this->paypalAccounts, $this->applePayCards);
+        return $this->paymentMethods;
     }
 
     /**
      * returns the customer's default payment method
      *
-     * @return object Braintree_CreditCard or Braintree_PayPalAccount
+     * @return object Braintree_CreditCard | Braintree_PayPalAccount | Braintree_ApplePayCard | Braintree_AndroidPayCard
      */
     public function defaultPaymentMethod()
     {
-        $defaultPaymentMethods = array_filter($this->paymentMethods(), 'Braintree_Customer::_defaultPaymentMethodFilter');
+        $defaultPaymentMethods = array_filter($this->paymentMethods, 'Braintree_Customer::_defaultPaymentMethodFilter');
         return current($defaultPaymentMethods);
     }
 

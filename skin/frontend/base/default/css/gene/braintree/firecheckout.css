@@ -1,0 +1,13 @@
+#paypal-complete #paypal-label {
+    display:-moz-inline-stack;
+    display:inline-block;
+    zoom:1;
+    *display:inline;
+    margin-right: 8px;
+}
+#paypal-complete #paypal-container {
+    display:-moz-inline-stack;
+    display:inline-block;
+    zoom:1;
+    *display:inline;
+}

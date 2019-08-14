@@ -3,6 +3,7 @@
  * Intercept various functions for the default checkout flow
  */
 ?>
+<!-- DEFAULT BRAINTREE SUPPORT -->
 <script type="text/javascript">
 
     // Store the current paymentMethod
@@ -52,8 +53,10 @@
                             }
                         });
 
-                        // Always make sure device data is sent with the request
-                        $('device_data').removeAttribute('disabled');
+                        if($('device_data')) {
+                            // Always make sure device data is sent with the request
+                            $('device_data').removeAttribute('disabled');
+                        }
 
                         // Fire the original event and return the response
                         paymentResponse = paymentOriginal.apply(paymentThis, paymentArgs);
@@ -165,8 +168,10 @@
             });
         }
 
-        // Always make sure device data is sent with the request
-        $('device_data').removeAttribute('disabled');
+        if($('device_data')) {
+            // Always make sure device data is sent with the request
+            $('device_data').removeAttribute('disabled');
+        }
 
         // Do the original action
         var reviewSaveResponse = reviewSaveOriginal.apply(this, arguments);
@@ -192,3 +197,11 @@
 
     });
 </script>
+<style type="text/css">
+    #braintree-paypal-loggedin {
+        display: none!important;
+    }
+    #braintree-paypal-loggedout {
+        display: block!important;
+    }
+</style>

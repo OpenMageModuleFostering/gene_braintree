@@ -1,0 +1,13 @@
+#braintree-paypal-button {
+    line-height: unset;
+    padding: 0;
+    float: left;
+}
+#paypal-label {
+    line-height: 44px;
+    float: left;
+    margin-right: 12px;
+}
+#creditcard-saved-accounts td {
+    vertical-align: middle;
+}

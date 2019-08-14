@@ -1,17 +1,43 @@
 <?php
+
 class Braintree_SettlementBatchSummaryGateway
 {
+    /**
+     *
+     * @var Braintree_Gateway
+     */
     private $_gateway;
+    
+    /**
+     *
+     * @var Braintree_Configuration
+     */
     private $_config;
+    
+    /**
+     *
+     * @var Braintree_Http
+     */
     private $_http;
 
+    /**
+     * 
+     * @param Braintree_Gateway $gateway
+     */
     public function __construct($gateway)
     {
         $this->_gateway = $gateway;
         $this->_config = $gateway->config;
+        $this->_config->assertHasAccessTokenOrKeys();
         $this->_http = new Braintree_Http($gateway->config);
     }
 
+    /**
+     * 
+     * @param string $settlement_date
+     * @param string $groupByCustomField
+     * @return Braintree_SettlementBatchSummary|Braintree_Result_Error
+     */
     public function generate($settlement_date, $groupByCustomField = NULL)
     {
         $criteria = array('settlement_date' => $settlement_date);
@@ -34,6 +60,12 @@ class Braintree_SettlementBatchSummaryGateway
         return $this->_verifyGatewayResponse($response);
     }
 
+    /**
+     * 
+     * @param string $groupByCustomField
+     * @param array $records
+     * @return array 
+    */
     private function _underscoreCustomField($groupByCustomField, $records)
     {
         $updatedRecords = array();
@@ -49,6 +81,12 @@ class Braintree_SettlementBatchSummaryGateway
         return $updatedRecords;
     }
 
+    /**
+     * 
+     * @param array $response
+     * @return \Braintree_Result_Successful|\Braintree_Result_Error
+     * @throws Braintree_Exception_Unexpected
+     */
     private function _verifyGatewayResponse($response)
     {
         if (isset($response['settlementBatchSummary'])) {

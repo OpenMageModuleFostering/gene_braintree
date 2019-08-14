@@ -4,422 +4,435 @@
  * http://onestepcheckout.com
  */
 ?>
+<!-- IDEV BRAINTREE SUPPORT -->
 <script type="text/javascript">
 
-    // Flag to skip over our interception if needed
-    var processedVZero = false;
+    // Wrap this in some error handling, just in case some checkouts attempt to include us twice
+    if(iDevInit === undefined) {
 
-    // Hook onto the event that submits the entire form
-    // Apparently there may be more than one of these buttons
-    $$('.onestepcheckout-place-order').each(function(elem){
+        // Set our flag that we've ran the init for this checkout
+        var iDevInit = true;
 
-        // Observe the click event
-        elem.observe('click', function(e)   {
+        // Flag to skip over our interception if needed
+        var processedVZero = false;
 
-            // Device data should never be disabled
-            if($('device_data') != undefined) {
-                $('device_data').removeAttribute('disabled');
-            }
+        // Hook onto the event that submits the entire form
+        // Apparently there may be more than one of these buttons
+        $$('.onestepcheckout-place-order').each(function (elem) {
 
-            // Check to see if we've already processed the form?
-            if(!processedVZero) {
+            // Observe the click event
+            elem.observe('click', function (e) {
 
-                // Always attempt to update the card type on submission
-                if($$('[data-genebraintree-name="number"]').first() != undefined) {
-                    vzero.updateCardType($$('[data-genebraintree-name="number"]').first().value);
+                // Device data should never be disabled
+                if ($('device_data') != undefined) {
+                    $('device_data').removeAttribute('disabled');
                 }
 
-                // First validate the form
-                var form = new VarienForm('onestepcheckout-form');
+                // Check to see if we've already processed the form?
+                if (!processedVZero) {
 
-                // Validate the form like the parent method
-                if(!form.validator.validate())  {
-
-                    // We want to stop any further events
-                    Event.stop(e);
-
-                } else {
-
-                    // Are we dealing with the credit card method?
-                    if (payment.currentMethod == 'gene_braintree_creditcard') {
-
-                        // Set this flag to stop the other function from firing
-                        already_placing_order = true;
-
-                        startLoading();
-
-                        // Do we want to pass any extra paramters into the updateData request
-                        var parameters = {};
-
-                        // If the billing address is selected and we're wanting to ship to that address we need to pass the addressId
-                        if($('billing-address-select') != undefined && $('billing-address-select').value != '')
-                        {
-                            parameters.addressId = $('billing-address-select').value;
-                        }
-
-                        // Update the data as we're in a one step
-                        vzero.updateData(
-                            function() {
-
-                                // Verify we're not using a saved address
-                                if($('billing-address-select') != undefined && $('billing-address-select').value == '' || $('billing-address-select') == undefined) {
-
-                                    // Grab these directly from the form and update
-                                    if ($('billing:firstname') != undefined && $('billing:lastname') != undefined) {
-                                        vzero.setBillingName($('billing:firstname').value + ' ' + $('billing:lastname').value);
-                                    }
-                                    if ($('billing:postcode') != undefined) {
-                                        vzero.setBillingPostcode($('billing:postcode').value);
-                                    }
-
-                                }
-
-                                // Process the card
-                                vzero.process({
-                                    onSuccess: function () {
-
-                                        // Disable the standard credit card form so the values don't get passed through to the checkout
-                                        $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
-                                            if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault') {
-                                                formElement.setAttribute('disabled', 'disabled');
-                                            }
-                                        });
-
-                                        stopLoading();
-
-                                        // Always make sure device data is sent with the request
-                                        $('device_data').removeAttribute('disabled');
-
-                                        // Set the flag to true
-                                        processedVZero = true;
-
-                                        // We're no longer stopping the events
-                                        already_placing_order = false;
-
-                                        // Fire the same event over again
-                                        $(elem).click();
-                                    },
-                                    onFailure: function() {
-
-                                        // Set the flag to true
-                                        processedVZero = false;
-
-                                        stopLoading();
-
-                                        // We're no longer stopping the events
-                                        already_placing_order = false;
-
-                                    }
-                                });
-                            },
-                            parameters
-                        );
-
+                    // Always attempt to update the card type on submission
+                    if ($$('[data-genebraintree-name="number"]').first() != undefined) {
+                        vzero.updateCardType($$('[data-genebraintree-name="number"]').first().value);
                     }
-                }
 
-            }
+                    // First validate the form
+                    var form = new VarienForm('onestepcheckout-form');
 
-        });
-    });
+                    // Validate the form like the parent method
+                    if (!form.validator.validate()) {
 
-    // It's not been ran so set it to false
-    var PayPalCompleteRan = false;
+                        // We want to stop any further events
+                        Event.stop(e);
 
-    /**
-     * Wrap the functionality needed to start loading
-     **/
-    startLoading = function(noMessage) {
+                    } else {
 
-        var submitElement = $('onestepcheckout-place-order');
+                        // Are we dealing with the credit card method?
+                        if (payment.currentMethod == 'gene_braintree_creditcard') {
 
-        /* Disable button to avoid multiple clicks */
-        submitElement.removeClassName('orange').addClassName('grey');
-        submitElement.disabled = true;
+                            // Set this flag to stop the other function from firing
+                            already_placing_order = true;
 
-        // Add in our loader event
-        var loaderElement = new Element('span').
-            addClassName('onestepcheckout-place-order-loading');
+                            startLoading();
 
-        if(noMessage != true) {
-            loaderElement.update('<?php echo $this->__('Please wait, processing your order...'); ?>');
-        }
+                            // Do we want to pass any extra paramters into the updateData request
+                            var parameters = {};
 
-        // Append it into the correct area
-        submitElement.parentNode.appendChild(loaderElement);
+                            // If the billing address is selected and we're wanting to ship to that address we need to pass the addressId
+                            if ($('billing-address-select') != undefined && $('billing-address-select').value != '') {
+                                parameters.addressId = $('billing-address-select').value;
+                            }
 
-    };
+                            // Update the data as we're in a one step
+                            vzero.updateData(
+                                function () {
 
-    /**
-     * Wrap the functionality to stop things loading
-     **/
-    stopLoading = function() {
+                                    // Verify we're not using a saved address
+                                    if ($('billing-address-select') != undefined && $('billing-address-select').value == '' || $('billing-address-select') == undefined) {
 
-        // Grab the submit button
-        submitElement = $('onestepcheckout-place-order');
+                                        // Grab these directly from the form and update
+                                        if ($('billing:firstname') != undefined && $('billing:lastname') != undefined) {
+                                            vzero.setBillingName($('billing:firstname').value + ' ' + $('billing:lastname').value);
+                                        }
+                                        if ($('billing:postcode') != undefined) {
+                                            vzero.setBillingPostcode($('billing:postcode').value);
+                                        }
 
-        // Remove the loading stuff on the form
-        submitElement.addClassName('orange').removeClassName('grey');
-        submitElement.removeAttribute('disabled');
+                                    }
 
-        // Remove the loader element
-        if(submitElement.next('.onestepcheckout-place-order-loading') != undefined) {
-            submitElement.next('.onestepcheckout-place-order-loading').remove();
-        }
+                                    // Process the card
+                                    vzero.process({
+                                        onSuccess: function () {
 
-    };
+                                            // Disable the standard credit card form so the values don't get passed through to the checkout
+                                            $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
+                                                if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault') {
+                                                    formElement.setAttribute('disabled', 'disabled');
+                                                }
+                                            });
 
-    /**
-     * Function to run once PayPal has been completed
-     */
-    completePayPal = function(obj) {
+                                            stopLoading();
 
-        // Check the flag to make sure we're good to run the function
-        if(!PayPalCompleteRan) {
+                                            // Always make sure device data is sent with the request
+                                            if ($('device_data') != undefined) {
+                                                $('device_data').removeAttribute('disabled');
+                                            }
 
-            // Mark the flag as true
-            PayPalCompleteRan = true;
+                                            // As onestepcheckout.com doesn't disable other payment forms (yeah I know, annoying) disable our PayPal nonce if it exists
+                                            if($('paypal-payment-nonce') != undefined) {
+                                                $('paypal-payment-nonce').setAttribute('disabled', 'disabled');
+                                            }
 
-            // Force check
-            payment.switchMethod('gene_braintree_paypal');
+                                            // Set the flag to true
+                                            processedVZero = true;
 
-            // Re-enable the form
-            $('paypal-payment-nonce').removeAttribute('disabled');
-            $('paypal-payment-nonce').value = obj.nonce;
+                                            // We're no longer stopping the events
+                                            already_placing_order = false;
 
-            // We have to disable the credit card one
-            $('creditcard-payment-nonce').setAttribute('disabled', 'disabled');
+                                            // Fire the same event over again
+                                            $(elem).click();
+                                        },
+                                        onFailure: function () {
 
-            // Hide the button
-            hidePayPalButton();
+                                            // Set the flag to true
+                                            processedVZero = false;
 
-            // Always make sure device data is sent with the request
-            $('device_data').removeAttribute('disabled');
+                                            stopLoading();
 
-            // Submit the checkout
-            $$('.onestepcheckout-place-order').first().click();
+                                            // We're no longer stopping the events
+                                            already_placing_order = false;
 
-        }
+                                        }
+                                    });
+                                },
+                                parameters
+                            );
 
-    };
-
-    // Flag to check if the PayPal button is already loading
-    var PayPalButtonLoading = false;
-
-    /**
-     * Easily add the PayPal button into the DOM
-     */
-    addPayPalButton = function() {
-
-        // Check we can locate the submit button
-        if($('onestepcheckout-place-order') != undefined && $('paypal-complete') == undefined && PayPalButtonLoading == false) {
-
-            // The button is loading
-            PayPalButtonLoading = true;
-
-            // Start the loading process
-            startLoading(true);
-
-            // Update the data contained within the classes
-            vzero.updateData(function () {
-
-                // Cancel said loading process
-                stopLoading();
-
-                // The button is no longer loading
-                PayPalButtonLoading = false;
-
-                // Validate the payment method is still correct
-                if(payment.currentMethod == 'gene_braintree_paypal' && $('paypal-complete') == undefined) {
-
-                    // Set the flag to false as we've created a new button
-                    PayPalCompleteRan = false;
-
-                    // Hide the submit button
-                    $('onestepcheckout-place-order').hide();
-
-                    // Add in our PayPal button
-                    $('onestepcheckout-place-order').up().insert('<div id="paypal-complete"><div id="paypal-container"></div><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label></div>');
-
-                    // Always stop the window from opening
-                    $('paypal-complete').observe('click', function(event) {
-
-                        // First validate the form
-                        var form = new VarienForm('onestepcheckout-form');
-
-                        // Validate the form like the parent method
-                        if(!form.validator.validate())  {
-
-                            // Sadly we're unable to intercept the PayPal window in any other way then just hard closing it
-                            vzeroPaypal.closePayPalWindow();
                         }
-                    });
+                    }
 
-                    // Add in the PayPal button
-                    vzeroPaypal.addPayPalButton({
-                        onSuccess: completePayPal
-                    });
                 }
 
             });
+        });
 
-        } else if($('paypal-complete') != undefined && PayPalButtonLoading == false) {
+        // It's not been ran so set it to false
+        var PayPalCompleteRan = false;
 
-            // The button is loading
-            PayPalButtonLoading = true;
+        /**
+         * Wrap the functionality needed to start loading
+         **/
+        startLoading = function (noMessage) {
 
-            // Start the loading process
-            startLoading(true);
+            var submitElement = $('onestepcheckout-place-order');
 
-            // Update the data contained within the classes
-            vzero.updateData(function () {
+            /* Disable button to avoid multiple clicks */
+            submitElement.removeClassName('orange').addClassName('grey');
+            submitElement.disabled = true;
 
-                // The button is no longer loading
-                PayPalButtonLoading = false;
+            // Add in our loader event
+            var loaderElement = new Element('span').
+                addClassName('onestepcheckout-place-order-loading');
 
-                // Cancel said loading process
-                stopLoading();
-
-                // Validate the payment method is still correct
-                if(payment.currentMethod == 'gene_braintree_paypal') {
-
-                    // Set the flag to false as we've created a new button
-                    PayPalCompleteRan = false;
-
-                    // Hide the submit button
-                    $('onestepcheckout-place-order').hide();
-
-                    // Add in our PayPal button
-                    $('paypal-complete').show();
-                }
-
-            });
-
-        }
-
-    };
-
-    /**
-     * As we need to remove the PayPal button in multiple places
-     */
-    hidePayPalButton = function() {
-
-        // Just in case things are still loading
-        stopLoading();
-
-        // If the user has selected a different payment method make some modifications
-        if($('onestepcheckout-place-order') != undefined) {
-            $('onestepcheckout-place-order').show();
-        }
-
-        // Remove the PayPal element
-        if($('paypal-complete') != undefined) {
-            $('paypal-complete').hide();
-        }
-
-    };
-
-    // Check if the payment method is the default
-    if(payment != undefined) {
-        if((payment.currentMethod == 'gene_braintree_paypal' && $('paypal-saved-accounts') == undefined) || ($$('#paypal-saved-accounts input:checked[type=radio]').first() != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first().value == 'other')) {
-
-            // Verify that vzero is defined before attempting to use it
-            if(typeof vzeroPaypal !== 'undefined') {
-
-                // Set the amount for the PayPal modal window
-                vzeroPaypal.setPricing('<?php echo Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getGrandTotal(); ?>', '<?php echo Mage::getSingleton('checkout/cart')->getQuote()->getBaseCurrencyCode(); ?>');
+            if (noMessage != true) {
+                loaderElement.update('<?php echo $this->__('Please wait, processing your order...'); ?>');
             }
 
-            addPayPalButton();
-        }
-    }
+            // Append it into the correct area
+            submitElement.parentNode.appendChild(loaderElement);
 
-    // Store the original payment method
-    var paymentOriginal = Payment.prototype.switchMethod;
+        };
 
-    // Intercept the save function
-    Payment.prototype.switchMethod = function (method) {
+        /**
+         * Wrap the functionality to stop things loading
+         **/
+        stopLoading = function () {
 
-        // Detect PayPal choice
-        if(method == 'gene_braintree_paypal') {
+            // Grab the submit button
+            submitElement = $('onestepcheckout-place-order');
 
-            if($('paypal-saved-accounts') == undefined) {
-                addPayPalButton();
-            } else if($('paypal-saved-accounts') != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first() != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first().value == 'other') {
-                addPayPalButton();
-            } else {
+            // Remove the loading stuff on the form
+            submitElement.addClassName('orange').removeClassName('grey');
+            submitElement.removeAttribute('disabled');
+
+            // Remove the loader element
+            if (submitElement.next('.onestepcheckout-place-order-loading') != undefined) {
+                submitElement.next('.onestepcheckout-place-order-loading').remove();
+            }
+
+        };
+
+        /**
+         * Function to run once PayPal has been completed
+         */
+        completePayPal = function (obj) {
+
+            // Check the flag to make sure we're good to run the function
+            if (!PayPalCompleteRan) {
+
+                // Mark the flag as true
+                PayPalCompleteRan = true;
+
+                // Force check
+                payment.switchMethod('gene_braintree_paypal', true);
+
+                // Re-enable the form
+                $('paypal-payment-nonce').removeAttribute('disabled');
+                $('paypal-payment-nonce').value = obj.nonce;
+
+                if($('creditcard-payment-nonce') != null) {
+                    // We have to disable the credit card one
+                    $('creditcard-payment-nonce').setAttribute('disabled', 'disabled');
+                }
+
+                // Hide the button
                 hidePayPalButton();
+
+                // Always make sure device data is sent with the request
+                if ($('device_data') != undefined) {
+                    $('device_data').removeAttribute('disabled');
+                }
+
+                // Submit the checkout
+                $$('.onestepcheckout-place-order').first().click();
+
             }
 
-        } else {
-            hidePayPalButton();
+        };
+
+        // Flag to check if the PayPal button is already loading
+        var PayPalButtonLoading = false;
+
+        /**
+         * Easily add the PayPal button into the DOM
+         */
+        addPayPalButton = function () {
+
+            // Check we can locate the submit button
+            if ($('onestepcheckout-place-order') != undefined && $('paypal-complete') == undefined && PayPalButtonLoading == false) {
+
+                // The button is loading
+                PayPalButtonLoading = true;
+
+                // Start the loading process
+                startLoading(true);
+
+                // Update the data contained within the classes
+                vzero.updateData(function () {
+
+                    // Cancel said loading process
+                    stopLoading();
+
+                    // The button is no longer loading
+                    PayPalButtonLoading = false;
+
+                    // Validate the payment method is still correct
+                    if (payment.currentMethod == 'gene_braintree_paypal' && $('paypal-complete') == undefined) {
+
+                        // Set the flag to false as we've created a new button
+                        PayPalCompleteRan = false;
+
+                        // Hide the submit button
+                        $('onestepcheckout-place-order').hide();
+
+                        // Add in our PayPal button
+                        $('onestepcheckout-place-order').up().insert('<div id="paypal-complete"><div id="paypal-container"></div><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label></div>');
+
+                        // Always stop the window from opening
+                        $('paypal-complete').observe('click', function (event) {
+
+                            // First validate the form
+                            var form = new VarienForm('onestepcheckout-form');
+
+                            // Validate the form like the parent method
+                            if (!form.validator.validate()) {
+
+                                // Sadly we're unable to intercept the PayPal window in any other way then just hard closing it
+                                vzeroPaypal.closePayPalWindow();
+                            }
+                        });
+
+                        // Add in the PayPal button
+                        vzeroPaypal.addPayPalButton({
+                            onSuccess: completePayPal
+                        });
+                    }
+
+                });
+
+            } else if ($('paypal-complete') != undefined && PayPalButtonLoading == false) {
+
+                // The button is loading
+                PayPalButtonLoading = true;
+
+                // Start the loading process
+                startLoading(true);
+
+                // Update the data contained within the classes
+                vzero.updateData(function () {
+
+                    // The button is no longer loading
+                    PayPalButtonLoading = false;
+
+                    // Cancel said loading process
+                    stopLoading();
+
+                    // Validate the payment method is still correct
+                    if (payment.currentMethod == 'gene_braintree_paypal') {
+
+                        // Set the flag to false as we've created a new button
+                        PayPalCompleteRan = false;
+
+                        // Hide the submit button
+                        $('onestepcheckout-place-order').hide();
+
+                        // Add in our PayPal button
+                        $('paypal-complete').show();
+                    }
+
+                });
+
+            }
+
+        };
+
+        /**
+         * As we need to remove the PayPal button in multiple places
+         */
+        hidePayPalButton = function () {
+
+            // Just in case things are still loading
+            stopLoading();
+
+            // If the user has selected a different payment method make some modifications
+            if ($('onestepcheckout-place-order') != undefined) {
+                $('onestepcheckout-place-order').show();
+            }
+
+            // Remove the PayPal element
+            if ($('paypal-complete') != undefined) {
+                $('paypal-complete').hide();
+            }
+
+        };
+
+        // Check if the payment method is the default
+        if (payment != undefined) {
+            if ((payment.currentMethod == 'gene_braintree_paypal' && $('paypal-saved-accounts') == undefined) || ($$('#paypal-saved-accounts input:checked[type=radio]').first() != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first().value == 'other')) {
+
+                // Verify that vzero is defined before attempting to use it
+                if (typeof vzeroPaypal !== 'undefined') {
+
+                    // Set the amount for the PayPal modal window
+                    vzeroPaypal.setPricing('<?php echo Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getGrandTotal(); ?>', '<?php echo Mage::getSingleton('checkout/cart')->getQuote()->getBaseCurrencyCode(); ?>');
+                }
+
+                addPayPalButton();
+            }
         }
 
+        // Store the original payment method
+        var paymentOriginal = Payment.prototype.switchMethod;
 
-        // Run the original function
-        return paymentOriginal.apply(this, arguments);
+        // Intercept the save function
+        Payment.prototype.switchMethod = function (method, skipOverride) {
 
-    };
+            // Detect PayPal choice
+            if (method == 'gene_braintree_paypal' && typeof skipOverride === 'undefined') {
 
-    // If we have any saved accounts we'll need to do something jammy
-    if($$('#paypal-saved-accounts input[type=radio]').first() != undefined) {
-
-        // Loop through each radio button
-        $$('#paypal-saved-accounts input[type=radio]').each(function (savedAccount) {
-
-            // Observe them changing
-            Event.observe(savedAccount, 'click', function (ele) {
-                if(savedAccount.value == 'other') {
+                if ($('paypal-saved-accounts') == undefined) {
+                    addPayPalButton();
+                } else if ($('paypal-saved-accounts') != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first() != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first().value == 'other') {
                     addPayPalButton();
                 } else {
                     hidePayPalButton();
                 }
+
+            } else if(typeof skipOverride === 'undefined') {
+                hidePayPalButton();
+            }
+
+
+            // Run the original function
+            return paymentOriginal.apply(this, arguments);
+
+        };
+
+        // If we have any saved accounts we'll need to do something jammy
+        if ($$('#paypal-saved-accounts input[type=radio]').first() != undefined) {
+
+            // Loop through each radio button
+            $$('#paypal-saved-accounts input[type=radio]').each(function (savedAccount) {
+
+                // Observe them changing
+                Event.observe(savedAccount, 'click', function (ele) {
+                    if (savedAccount.value == 'other') {
+                        addPayPalButton();
+                    } else {
+                        hidePayPalButton();
+                    }
+                });
             });
-        });
-    }
-
-    // What should happen if the user closes the 3D secure window?
-    vzero.close3dSecureMethod(function() {
-        stopLoading();
-    });
-
-    // Observe all Ajax requests for changes
-    vzero.observeAjaxRequests(function() {
-
-        // If the method is PayPal remove and re-add the PayPal button
-        if(payment.currentMethod == 'gene_braintree_paypal') {
-            hidePayPalButton();
-            addPayPalButton();
-        } else {
-            vzero.updateData();
         }
 
-    });
+        // What should happen if the user closes the 3D secure window?
+        vzero.close3dSecureMethod(function () {
+
+            // Re-tokenize all the saved cards
+            vzero.tokenize3dSavedCards(function () {
+                stopLoading();
+            });
+
+        });
+
+        // Observe all Ajax requests for changes
+        vzero.observeAjaxRequests(function () {
+
+            // The iDev checkout has a check_email option which can break our system
+            if(transport.url && transport.url.indexOf('check_email') == -1) {
+
+                // If the method is PayPal remove and re-add the PayPal button
+                if (payment.currentMethod == 'gene_braintree_paypal') {
+                    hidePayPalButton();
+                    addPayPalButton();
+                } else {
+                    vzero.updateData();
+                }
+
+            }
+
+        });
+
+    }
 
 </script>
 
 <!-- Fix some minor styling issues with our nested form-list -->
 <style type="text/css">
-    #credit-card-form .form-list {
-        margin: 10px 0 0 0!important;
-        padding: 0!important;
-        border: 0!important;
+    #braintree-paypal-loggedin {
+        display: none!important;
     }
-    #credit-card-form .form-list:before, #credit-card-form .form-list:after {
-        border: 0!important;
-    }
-
-    #paypal-container {
-        float: right;
-    }
-    #paypal-label {
-        line-height: 44px;
-        float: right;
-        margin-right: 12px;
-    }
-    #braintree-paypal-button {
-        padding: 0!important;
-        line-height: unset!important;
-        float: left!important;
+    #braintree-paypal-loggedout {
+        display: block!important;
     }
 </style>

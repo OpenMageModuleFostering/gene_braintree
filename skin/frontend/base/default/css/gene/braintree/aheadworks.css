@@ -1,0 +1,11 @@
+/* This checkout extension has lots of fixed widths, leaving styling as default */
+
+#paypal-complete {
+    position: relative;
+    background: #fbfaf6;
+    text-align: center;
+    z-index: 6;
+}
+#paypal-complete label {
+    margin-bottom: 8px;
+}

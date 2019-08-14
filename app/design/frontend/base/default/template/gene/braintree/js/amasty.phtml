@@ -4,6 +4,7 @@
  * https://amasty.com/single-step-checkout.html
  */
 ?>
+<!-- AMASTY BRAINTREE SUPPORT -->
 <script type="text/javascript">
 
     // Older versions of the checkout don't contain this variable
@@ -20,8 +21,10 @@
         // Re-define the original method so we can do some jazz with it
         completeCheckout = function () {
 
-            // Device data should never be disabled
-            $('device_data').removeAttribute('disabled');
+            if($('device_data')) {
+                // Device data should never be disabled
+                $('device_data').removeAttribute('disabled');
+            }
 
             // Always attempt to update the card type on submission
             if($$('[data-genebraintree-name="number"]').first() != undefined) {
@@ -76,8 +79,10 @@
                                         }
                                     });
 
-                                    // Always make sure device data is sent with the request
-                                    $('device_data').removeAttribute('disabled');
+                                    if($('device_data')) {
+                                        // Always make sure device data is sent with the request
+                                        $('device_data').removeAttribute('disabled');
+                                    }
 
                                     // No longer running
                                     checkoutRunning = false;
@@ -153,8 +158,10 @@
                 // Show the loading thing
                 showLoading();
 
-                // Always make sure device data is sent with the request
-                $('device_data').removeAttribute('disabled');
+                if($('device_data')) {
+                    // Always make sure device data is sent with the request
+                    $('device_data').removeAttribute('disabled');
+                }
 
                 // Run the complete checkout method
                 return completeCheckout();
@@ -294,13 +301,13 @@
         var paymentOriginal = Payment.prototype.switchMethod;
 
         // Intercept the save function
-        Payment.prototype.switchMethod = function (method) {
+        Payment.prototype.switchMethod = function (method, skipOverride) {
 
             // Make sure the paypal complete action hasn't just ran
             if(PayPalCompleteRan != true) {
 
                 // Detect PayPal choice
-                if (method == 'gene_braintree_paypal') {
+                if (method == 'gene_braintree_paypal' && typeof skipOverride === 'undefined') {
 
                     if ($('paypal-saved-accounts') == undefined) {
                         addPayPalButton();
@@ -310,7 +317,7 @@
                         hidePayPalButton();
                     }
 
-                } else {
+                } else if(typeof skipOverride === 'undefined') {
                     hidePayPalButton();
                 }
             }
@@ -351,11 +358,16 @@
         // What should happen if the user closes the 3D secure window?
         vzero.close3dSecureMethod(function() {
 
-            // Hide the loading
-            hideLoading();
+            // Re-tokenize all the saved cards
+            vzero.tokenize3dSavedCards(function() {
 
-            // Check is running
-            checkoutRunning = false;
+                // Hide the loading
+                hideLoading();
+
+                // Check is running
+                checkoutRunning = false;
+
+            });
 
         });
 
@@ -378,16 +390,6 @@
     }
 </script>
 <style type="text/css">
-    #paypal-label {
-        line-height: 44px;
-        float: left;
-        margin-right: 12px;
-    }
-    #braintree-paypal-button {
-        line-height: unset;
-        padding: 0;
-        float: left;
-    }
     #braintree-paypal-loggedin {
         display: none!important;
     }

@@ -40,7 +40,9 @@
                         });
 
                         // Always make sure device data is sent with the request
-                        $('device_data').removeAttribute('disabled');
+                        if($('device_data')) {
+                            $('device_data').removeAttribute('disabled');
+                        }
 
                         // Fire the original event and return the response
                         adminOrderResponse = adminOrderOriginal.apply(adminThis, adminArgs);
