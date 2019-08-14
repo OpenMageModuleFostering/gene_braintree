@@ -13,11 +13,20 @@
             'gene_braintree_creditcard',
             '<?php echo $this->getClientToken(); ?>',
             <?php echo $this->is3DEnabled(); ?>,
-            <?php echo $this->isHostedFields(); ?>,
+            true,
             false,
             false,
             '<?php echo Mage::getUrl('braintree/checkout/quoteTotal', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>',
             '<?php echo Mage::getUrl('braintree/checkout/tokenizeCard', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>'
+        );
+
+        // Pass the supported card types over to the front-end
+        vzero.setSupportedCards('<?php echo $this->getSupportedCardTypes(); ?>');
+
+        // Pass over the merchants Kount credentials
+        vzero.setKount(
+            '<?php echo $this->getKountEnvironment(); ?>',
+            '<?php echo $this->getKountId(); ?>'
         );
 
         <?php if ($this->isThreeDSpecificCountries()) : ?>

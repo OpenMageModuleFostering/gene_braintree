@@ -77,22 +77,55 @@ class Gene_Braintree_Block_Js extends Mage_Core_Block_Template
      */
     protected function getThreeDSpecificCountries()
     {
-        if (!$this->isThreeDSpecificCountries()) {
-            return '';
+        if ($this->isThreeDSpecificCountries()) {
+            return Mage::getStoreConfig('payment/gene_braintree_creditcard/threedsecure_specificcountry');
         }
 
-        return Mage::getStoreConfig('payment/gene_braintree_creditcard/threedsecure_specificcountry');
+        return '';
     }
 
     /**
-     * Is the system set to use hosted fields for credit card processing?
-     * Hosted Fields is currently the only integration option
+     * Return supported credit cards
      *
-     * @return bool
+     * @return array
      */
-    protected function isHostedFields()
+    protected function getSupportedCardTypes()
     {
-        return 'true';
+        if ($this->isCreditCardActive()) {
+            return Mage::getStoreConfig('payment/gene_braintree_creditcard/cctypes');
+        }
+
+        return [];
+    }
+
+    /**
+     * Return the Kount environment
+     *
+     * @return mixed|string
+     */
+    protected function getKountEnvironment()
+    {
+        $env = Mage::getStoreConfig('payment/gene_braintree_creditcard/kount_environment');
+        if ($env) {
+            return $env;
+        }
+
+        return 'production';
+    }
+
+    /**
+     * Return the Kount ID
+     *
+     * @return bool|string
+     */
+    protected function getKountId()
+    {
+        $kountId = Mage::getStoreConfig('payment/gene_braintree_creditcard/kount_merchant_id');
+        if ($kountId) {
+            return $kountId;
+        }
+
+        return '';
     }
 
     /**
@@ -172,7 +205,7 @@ class Gene_Braintree_Block_Js extends Mage_Core_Block_Template
     protected function _toHtml()
     {
         // Check the payment method is active, block duplicate rendering of this block
-        if (($this->isCreditCardActive() || $this->isPayPalActive()) &&
+        if (Mage::helper('gene_braintree')->isSetupRequired() &&
             !Mage::registry('gene_js_loaded_' . $this->getTemplate())
         ) {
             Mage::register('gene_js_loaded_' . $this->getTemplate(), true);

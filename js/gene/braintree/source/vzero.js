@@ -23,7 +23,7 @@ vZero.prototype = {
         this.code = code;
         this.clientToken = clientToken;
         this.threeDSecure = threeDSecure;
-        this.hostedFields = hostedFields;
+        this.hostedFields = hostedFields; /* deprecated, hosted fields is the only option */
 
         if (billingName) {
             this.billingName = billingName;
@@ -47,14 +47,16 @@ vZero.prototype = {
         this._hostedFieldsTimeout = false;
 
         // Store the Ajax request for the updateData
-        this._updateDataXhr = false;
         this._updateDataCallbacks = [];
-        this._updateDataParams = {};
+        this._updateDataTimeout = null;
 
         this.client = false;
 
         this.threeDSpecificCountries = false;
         this.threeDCountries = [];
+
+        this.supportedCards = [];
+        this.cardType = false;
 
         this.initEvents();
     },
@@ -80,6 +82,31 @@ vZero.prototype = {
                 onObserveAjaxRequests: []
             }
         };
+    },
+
+    /**
+     * Set the Kount data for the data collector
+     *
+     * @param environment
+     * @param kountId
+     */
+    setKount: function (environment, kountId) {
+        this.kountEnvironment = environment;
+        if (kountId != '') {
+            this.kountId = kountId;
+        }
+    },
+
+    /**
+     * Set the supported card types
+     *
+     * @param cardTypes
+     */
+    setSupportedCards: function (cardTypes) {
+        if (typeof cardTypes === 'string') {
+            cardTypes = cardTypes.split(',');
+        }
+        this.supportedCards = cardTypes;
     },
 
     /**
@@ -388,10 +415,46 @@ vZero.prototype = {
                 'maestro': 'ME'
             };
             if (typeof cardMapping[event.cards[0].type] !== undefined) {
-                this.updateCardType(false, cardMapping[event.cards[0].type]);
+                this.cardType = cardMapping[event.cards[0].type];
+                this.updateCardType(false, this.cardType);
+
+                // Detect whether or not the card is supported
+                if (this.supportedCards.indexOf(this.cardType) == -1) {
+                    this.showCardUnsupported();
+                } else {
+                    this.removeCardUnsupported();
+                }
             } else {
+                this.removeCardUnsupported();
+                this.cardType = false;
                 this.updateCardType(false, 'card');
             }
+        }
+    },
+
+    /**
+     * Show the card unsupported message by the card field
+     */
+    showCardUnsupported: function () {
+        if ($$('.braintree-card-input-field').length > 0) {
+            var parentElement = $$('.braintree-card-input-field').first().up();
+            if (parentElement.select('.braintree-card-unsupported').length == 0) {
+                var error = new Element('div', {class: 'braintree-card-unsupported'}).update(
+                    Translator.translate('We\'re currently unable to process this card type, please try another card or payment method.')
+                );
+                parentElement.insert(error);
+            }
+        }
+    },
+
+    /**
+     * Remove the card unsupported message
+     */
+    removeCardUnsupported: function () {
+        if ($$('.braintree-card-unsupported').length > 0) {
+            $$('.braintree-card-unsupported').each(function (ele) {
+                ele.remove();
+            })
         }
     },
 
@@ -446,24 +509,22 @@ vZero.prototype = {
                 this.integration.setLoading();
             }
 
-            // Update the quote totals first
-            this.updateData(function () {
-                // Verify the nonce through 3Ds
-                this.verify3dSecureNonce(nonce, {
-                    onSuccess: function (response) {
-                        this.updateNonce(response.nonce);
 
-                        if (typeof options.onSuccess === 'function') {
-                            options.onSuccess();
-                        }
-                    }.bind(this),
-                    onFailure: function () {
-                        if (typeof options.onFailure === 'function') {
-                            options.onFailure();
-                        }
-                    }.bind(this)
-                });
-            }.bind(this));
+            // Verify the nonce through 3Ds
+            this.verify3dSecureNonce(nonce, {
+                onSuccess: function (response) {
+                    this.updateNonce(response.nonce);
+
+                    if (typeof options.onSuccess === 'function') {
+                        options.onSuccess();
+                    }
+                }.bind(this),
+                onFailure: function () {
+                    if (typeof options.onFailure === 'function') {
+                        options.onFailure();
+                    }
+                }.bind(this)
+            });
         } else {
             this.updateNonce(nonce);
 
@@ -813,85 +874,70 @@ vZero.prototype = {
      * @param params any extra data to be passed to the controller
      */
     updateData: function (callback, params) {
-
-        this.fireEvent(this, 'integration.onBeforeUpdateData', {params: params});
-
-        // Push the callbacks into our array
         this._updateDataCallbacks.push(callback);
-        this._updateDataParams = params;
 
-        // If an updateData ajax request is running, cancel it
-        if (this._updateDataXhr !== false) {
-            this._updateDataXhr.transport.abort();
-        }
+        clearTimeout(this._updateDataTimeout);
+        this._updateDataTimeout = setTimeout(function () {
+            var callbacks = this._updateDataCallbacks;
+            this._updateDataCallbacks = [];
 
-        // Make a new ajax request to the server
-        this._updateDataXhr = new Ajax.Request(
-            this.quoteUrl,
-            {
-                method: 'post',
-                parameters: this._updateDataParams,
-                onSuccess: function (transport) {
-                    // Verify we have some response text
-                    if (transport && (transport.responseJSON || transport.responseText)) {
+            this.fireEvent(this, 'integration.onBeforeUpdateData', {params: params});
 
-                        // Parse the response from the server
-                        var response = this._parseTransportAsJson(transport);
+            // Make a new ajax request to the server
+            new Ajax.Request(
+                this.quoteUrl,
+                {
+                    method: 'post',
+                    parameters: params,
+                    onSuccess: function (transport) {
+                        // Verify we have some response text
+                        if (transport && (transport.responseJSON || transport.responseText)) {
 
-                        if (response.billingName != undefined) {
-                            this.billingName = response.billingName;
-                        }
-                        if (response.billingPostcode != undefined) {
-                            this.billingPostcode = response.billingPostcode;
-                        }
-                        if (response.billingCountryId != undefined) {
-                            this.billingCountryId = response.billingCountryId;
-                        }
-                        if (response.grandTotal != undefined) {
-                            this.amount = response.grandTotal;
-                        }
-                        if (response.threeDSecure != undefined) {
-                            this.setThreeDSecure(response.threeDSecure);
-                        }
+                            // Parse the response from the server
+                            var response = this._parseTransportAsJson(transport);
 
-                        // If PayPal is active update it
-                        if (typeof vzeroPaypal != "undefined") {
-
-                            // Update the totals within the PayPal system
-                            if (response.grandTotal != undefined && response.currencyCode != undefined) {
-                                vzeroPaypal.setPricing(response.grandTotal, response.currencyCode);
+                            if (response.billingName != undefined) {
+                                this.billingName = response.billingName;
+                            }
+                            if (response.billingPostcode != undefined) {
+                                this.billingPostcode = response.billingPostcode;
+                            }
+                            if (response.billingCountryId != undefined) {
+                                this.billingCountryId = response.billingCountryId;
+                            }
+                            if (response.grandTotal != undefined) {
+                                this.amount = response.grandTotal;
+                            }
+                            if (response.threeDSecure != undefined) {
+                                this.setThreeDSecure(response.threeDSecure);
                             }
 
+                            // If PayPal is active update it
+                            if (typeof vzeroPaypal != "undefined") {
+                                // Update the totals within the PayPal system
+                                if (response.grandTotal != undefined && response.currencyCode != undefined) {
+                                    vzeroPaypal.setPricing(response.grandTotal, response.currencyCode);
+                                }
+                            }
+
+                            // Run any callbacks that have been stored
+                            if (callbacks.length > 0) {
+                                callbacks.each(function (callback) {
+                                    callback(response);
+                                }.bind(this));
+                            }
+
+                            this.fireEvent(this, 'onAfterUpdateData', {response: response});
                         }
+                    }.bind(this),
+                    onFailure: function () {
 
-                        // Reset the params
-                        this._updateDataParams = {};
+                        // Update Data failed
 
-                        // Set the flag back
-                        this._updateDataXhr = false;
-
-                        // Run any callbacks that have been stored
-                        if (this._updateDataCallbacks.length) {
-                            this._updateDataCallbacks.each(function (callback) {
-                                callback(response);
-                            }.bind(this));
-                            this._updateDataCallbacks = [];
-                        }
-
-                        this.fireEvent(this, 'onAfterUpdateData', {response: response});
-                    }
-                }.bind(this),
-                onFailure: function () {
-
-                    // Reset the params
-                    this._updateDataParams = {};
-                    this._updateDataXhr = false;
-                    this._updateDataCallbacks = [];
-
-                }.bind(this)
-            }
-        );
-
+                    }.bind(this)
+                }
+            );
+        }.bind(this), 250);
     },
 
     /**

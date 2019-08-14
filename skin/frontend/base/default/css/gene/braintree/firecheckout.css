@@ -13,6 +13,11 @@
 #credit-card-form .credit-card-loading {
   display: none;
 }
+#credit-card-form .braintree-card-unsupported {
+  color: darkred;
+  font-weight: bold;
+  padding: 6px 0 4px 0;
+}
 #credit-card-form.loading .credit-card-loading {
   position: absolute;
   top: 30%;
@@ -28,6 +33,9 @@
 }
 #credit-card-form.loading .braintree-hostedfield {
   opacity: 0;
+}
+#credit-card-form label {
+  float: none;
 }
 /* Hosted Fields */
 #braintree-hosted-submit {
@@ -143,6 +151,11 @@
   width: 100%;
   background-color: black;
   opacity: 0.75;
+}
+@media (max-width: 650px) {
+  #three-d-modal .bt-modal-frame {
+    width: 100%;
+  }
 }
 #paypal-container iframe {
   display: none;

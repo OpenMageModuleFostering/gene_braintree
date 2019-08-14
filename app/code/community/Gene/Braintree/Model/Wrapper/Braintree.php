@@ -662,11 +662,9 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
                 );
             }
         } elseif ($storeInVault && $this->checkIsCustomer() && isset($paymentDataArray['paymentMethodNonce'])) {
-            echo '2';
             // If the user is already a customer and wants to store in the vault we've gotta do something a bit special
             // Do we already have a saved token in the session?
             if ($token = Mage::getSingleton('checkout/session')->getTemporaryPaymentToken()) {
-                echo '3';
                 if ($this->checkPaymentMethod($token)) {
                     // Is the submitted nonce different?
                     if (Mage::getSingleton('checkout/session')->getVaultedNonce() == $paymentDataArray['paymentMethodNonce']) {
@@ -695,7 +693,6 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
                 }
 
             } else {
-                echo '4';
                 // Create the payment method with this data
                 $paymentMethodCreate = array(
                     'customerId'         => $this->getBraintreeId(),

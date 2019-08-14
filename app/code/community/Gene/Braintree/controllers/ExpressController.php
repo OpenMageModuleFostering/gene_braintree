@@ -114,13 +114,25 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
         } else {
             // Save the email address
             $quote->setCustomerEmail($paypalData['email']);
+
+            // Should we link guest orders to customers if they match?
+            if (Mage::getStoreConfigFlag('payment/gene_braintree_paypal/express_link_guest')) {
+                $customer = Mage::getModel('customer/customer')
+                    ->setWebsiteId(Mage::app()->getStore()->getWebsiteId())
+                    ->loadByEmail($paypalData['email']);
+                if ($customer && $customer->getId()) {
+                    $quote->setCustomer($customer);
+                }
+            }
         }
 
         // Is this express checkout request coming from the product page?
         if (isset($formData['product']) && isset($formData['qty'])) {
             $product = Mage::getModel('catalog/product')->load($formData['product']);
             if (!$product->getId()) {
-                Mage::getSingleton('core/session')->addError(Mage::helper('gene_braintree')->__('We\'re unable to load that product.'));
+                Mage::getSingleton('core/session')->addError(
+                    Mage::helper('gene_braintree')->__('We\'re unable to load that product.')
+                );
 
                 return $this->_redirect("braintree/express/error");
             }
@@ -132,7 +144,11 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
             try {
                 $quote->addProduct($product, $request);
             } catch (Exception $e) {
-                Mage::getSingleton('core/session')->addError(Mage::helper('gene_braintree')->__('Sorry, we were unable to process your request. Please try again.'));
+                Mage::getSingleton('core/session')->addError(
+                    Mage::helper('gene_braintree')->__(
+                        'Sorry, we were unable to process your request. Please try again.'
+                    )
+                );
 
                 return $this->_redirect("braintree/express/error");
             }
@@ -269,7 +285,7 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
 
         return $this->_returnJson(array(
             'success' => true,
-            'totals' => $this->_returnTotals()
+            'totals'  => $this->_returnTotals()
         ));
     }
 
@@ -380,9 +396,11 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
             $service->submitAll();
         } catch (Mage_Core_Exception $e) {
             $this->errorAction($e->getMessage());
+
             return false;
         } catch (Exception $e) {
             $this->errorAction($e->getMessage());
+
             return false;
         }
         $order = $service->getOrder();

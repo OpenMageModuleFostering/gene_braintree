@@ -157,4 +157,30 @@ class Gene_Braintree_Helper_Data extends Mage_Core_Helper_Abstract
             && !Mage::getStoreConfig('payment/gene_braintree/merchant_id')
             && !Mage::getStoreConfig('payment/gene_braintree/sandbox_merchant_id');
     }
+
+    /**
+     * Do we need to include various setup files?
+     *
+     * Utilising the 'setup_required' feature in XML files, loop through and determine if setup is required based on
+     * various modules being "available"
+     *
+     * @return bool
+     */
+    public function isSetupRequired()
+    {
+        $methodCodes = Mage::getConfig()->getNode('global/payment/setup_required')->asArray();
+        if (is_array($methodCodes) && count($methodCodes) > 0) {
+            foreach (array_keys($methodCodes) as $methodCode) {
+                $methodModel = Mage::getConfig()->getNode('default/payment/' . (string) $methodCode . '/model');
+                if ($methodModel) {
+                    $model = Mage::getModel($methodModel);
+                    if ($model && method_exists($model, 'isAvailable') && $model->isAvailable()) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
 }

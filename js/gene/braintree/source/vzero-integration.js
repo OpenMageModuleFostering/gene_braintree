@@ -50,6 +50,9 @@ vZeroIntegration.prototype = {
 
         this._originalSubmitFn = false;
 
+        this.kountEnvironment = false;
+        this.kountId = false;
+
         // Wait for the DOM to finish loading before creating observers
         document.observe("dom:loaded", function () {
 
@@ -141,14 +144,29 @@ vZeroIntegration.prototype = {
      */
     populateDeviceData: function (input) {
         this.vzero.getClient(function (clientInstance) {
-            braintree.dataCollector.create({
+            var params = {
                 client: clientInstance,
-                kount: true,
-                paypal: true
-            }, function (err, dataCollectorInstance) {
+                kount: true
+            };
+
+            // Should we generate device data for PayPal?
+            if (this.vzeroPaypal !== false) {
+                params.paypal = true;
+            }
+
+            braintree.dataCollector.create(params, function (err, dataCollectorInstance) {
                 if (err) {
-                    // Handle error in creation of data collector
-                    console.warn(err);
+                    // We don't want to console warn if the merchant isn't setup to accept Kount
+                    if (err.code != 'DATA_COLLECTOR_KOUNT_NOT_ENABLED' &&
+                        err.code != 'DATA_COLLECTOR_PAYPAL_NOT_ENABLED'
+                    ) {
+                        // Handle error in creation of data collector
+                        console.error(err);
+                    } else {
+                        // Warn the user of the issue, but it's not important
+                        console.warn('A warning occurred whilst initialisation the Braintree data collector. This warning can be safely ignored.');
+                        console.warn(err);
+                    }
                     return;
                 }
 
@@ -290,6 +308,54 @@ vZeroIntegration.prototype = {
                 }
             }
         }
+    },
+
+    /**
+     * Validate hosted fields is complete and error free
+     *
+     * @returns {boolean}
+     */
+    validateHostedFields: function () {
+        if (!this.vzero.usingSavedCard() && this.vzero._hostedIntegration) {
+            var state = this.vzero._hostedIntegration.getState(),
+                errorMsgs = [],
+                translate = {
+                    'number': Translator.translate('Card Number'),
+                    'expirationMonth': Translator.translate('Expiry Month'),
+                    'expirationYear': Translator.translate('Expiry Year'),
+                    'cvv': Translator.translate('CVV')
+                };
+
+            // Loop through each field and ensure it's validity
+            $H(state.fields).each(function (field) {
+                if (field[1].isValid == false) {
+                    errorMsgs.push(translate[field[0]] + ' ' + Translator.translate('is invalid.'));
+                }
+            }.bind(this));
+
+            // If any errors are present, alert the user and stop the checkout process
+            if (errorMsgs.length > 0) {
+                alert(
+                    Translator.translate('There are a number of errors present with the credit card form:') +
+                    "\n" +
+                    errorMsgs.join("\n")
+                );
+                return false;
+            }
+
+            // Validate the card type
+            if (this.vzero.cardType && this.vzero.supportedCards) {
+                // Detect whether or not the card is supported
+                if (this.vzero.supportedCards.indexOf(this.vzero.cardType) == -1) {
+                    alert(Translator.translate(
+                        'We\'re currently unable to process this card type, please try another card or payment method.'
+                    ));
+                    return false;
+                }
+            }
+        }
+
+        return true;
     },
 
     /**
@@ -457,81 +523,85 @@ vZeroIntegration.prototype = {
         // Check we actually want to intercept this credit card transaction?
         if (this.shouldInterceptSubmit(type)) {
 
-            // Validate the form before submission
-            if (this.validateAll()) {
+            // If the type is card, validate Hosted Fields
+            if (type != 'creditcard' || (type == 'creditcard' && this.validateHostedFields())) {
 
-                // Show the loading information
-                this.setLoading();
+                // Validate the form before submission
+                if (this.validateAll()) {
 
-                // Call the before submit function
-                this.beforeSubmit(function () {
+                    // Show the loading information
+                    this.setLoading();
 
-                    // Always attempt to update the card type on submission
-                    if ($$('[data-genebraintree-name="number"]').first() != undefined) {
-                        this.vzero.updateCardType($$('[data-genebraintree-name="number"]').first().value);
+                    // Call the before submit function
+                    this.beforeSubmit(function () {
+
+                        // Always attempt to update the card type on submission
+                        if ($$('[data-genebraintree-name="number"]').first() != undefined) {
+                            this.vzero.updateCardType($$('[data-genebraintree-name="number"]').first().value);
+                        }
+
+                        // Update the data within the vZero object
+                        this.vzero.updateData(
+                            function () {
+
+                                // Update the billing details if they're present on the page
+                                this.updateBilling();
+
+                                // Process the data on the page
+                                this.vzero.process({
+                                    onSuccess: function () {
+
+                                        // Make some modifications to the form
+                                        this.enableDeviceData();
+
+                                        // Unset the loading, as this can block success functions
+                                        this.resetLoading();
+                                        this.afterSubmit();
+
+                                        // Enable/disable the correct nonce input fields
+                                        this.enableDisableNonce();
+
+                                        this.vzero._hostedFieldsTokenGenerated = true;
+                                        this.hostedFieldsGenerated = true;
+
+                                        // Call the callback function
+                                        if (typeof successCallback === 'function') {
+                                            var response = successCallback();
+                                        }
+
+                                        // Enable loading again, as things are happening!
+                                        this.setLoading();
+
+                                        return response;
+
+                                    }.bind(this),
+                                    onFailure: function () {
+
+                                        this.vzero._hostedFieldsTokenGenerated = false;
+                                        this.hostedFieldsGenerated = false;
+
+                                        this.resetLoading();
+                                        this.afterSubmit();
+                                        if (typeof failedCallback === 'function') {
+                                            return failedCallback();
+                                        }
+                                    }.bind(this)
+                                })
+                            }.bind(this),
+                            this.getUpdateDataParams()
+                        );
+
+                    }.bind(this));
+
+                } else {
+
+                    this.vzero._hostedFieldsTokenGenerated = false;
+                    this.hostedFieldsGenerated = false;
+
+                    this.resetLoading();
+                    if (typeof validateFailedCallback === 'function') {
+                        validateFailedCallback();
                     }
-
-                    // Update the data within the vZero object
-                    this.vzero.updateData(
-                        function () {
-
-                            // Update the billing details if they're present on the page
-                            this.updateBilling();
-
-                            // Process the data on the page
-                            this.vzero.process({
-                                onSuccess: function () {
-
-                                    // Make some modifications to the form
-                                    this.enableDeviceData();
-
-                                    // Unset the loading, as this can block success functions
-                                    this.resetLoading();
-                                    this.afterSubmit();
-
-                                    // Enable/disable the correct nonce input fields
-                                    this.enableDisableNonce();
-
-                                    this.vzero._hostedFieldsTokenGenerated = true;
-                                    this.hostedFieldsGenerated = true;
-
-                                    // Call the callback function
-                                    if (typeof successCallback === 'function') {
-                                        var response = successCallback();
-                                    }
-
-                                    // Enable loading again, as things are happening!
-                                    this.setLoading();
-
-                                    return response;
-
-                                }.bind(this),
-                                onFailure: function () {
-
-                                    this.vzero._hostedFieldsTokenGenerated = false;
-                                    this.hostedFieldsGenerated = false;
-
-                                    this.resetLoading();
-                                    this.afterSubmit();
-                                    if (typeof failedCallback === 'function') {
-                                        return failedCallback();
-                                    }
-                                }.bind(this)
-                            })
-                        }.bind(this),
-                        this.getUpdateDataParams()
-                    );
-
-                }.bind(this));
-
-            } else {
-
-                this.vzero._hostedFieldsTokenGenerated = false;
-                this.hostedFieldsGenerated = false;
-
-                this.resetLoading();
-                if (typeof validateFailedCallback === 'function') {
-                    validateFailedCallback();
                 }
             }
         }

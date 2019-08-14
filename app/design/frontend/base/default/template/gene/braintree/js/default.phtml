@@ -15,6 +15,7 @@
         captureOriginalSubmitFn: function () {
             this._originalSubmitFn = Review.prototype.save;
             this._originalNextStep = Review.prototype.nextStep;
+            this._originalPaymentSaveFn = Payment.prototype.save;
             return true;
         },
 
@@ -25,6 +26,17 @@
 
             // Store a pointer to the vZero integration
             var vzeroIntegration = this;
+
+            // On payment save validate that Hosted Fields is valid
+            Payment.prototype.save = function () {
+                if (vzeroIntegration.shouldInterceptSubmit('creditcard')) {
+                    if (vzeroIntegration.validateHostedFields()) {
+                        return vzeroIntegration._originalPaymentSaveFn.apply(this, arguments);
+                    }
+                } else {
+                    return vzeroIntegration._originalPaymentSaveFn.apply(this, arguments);
+                }
+            };
 
             // As the default checkout submits more data on the review step, we need to make sure various elements
             // are disabled
@@ -98,6 +110,11 @@
 
             // Intercept the save function
             Review.prototype.initialize = function(saveUrl, successUrl, agreementsForm) {
+
+                // If the vZero class is available run an updateData to ensure our totals are correct
+                if (vzero && typeof vzero.updateData === 'function') {
+                    vzero.updateData();
+                }
 
                 // Do the original action
                 var reviewResponse = _originalReviewInitialize.apply(this, arguments);
