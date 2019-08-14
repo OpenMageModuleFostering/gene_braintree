@@ -20,7 +20,7 @@ if (!$this->isEnabledCart()) {
         document.observe("dom:loaded", function() {
             var express = new BraintreePayPalExpress(
                 false,
-                '<?php echo Mage::app()->getStore()->getFrontendName(); ?>',
+                '<?php echo addslashes(Mage::app()->getStore()->getFrontendName()); ?>',
                 '<?php echo Mage::getSingleton('core/session')->getFormKey(); ?>',
                 'cart',
                 {

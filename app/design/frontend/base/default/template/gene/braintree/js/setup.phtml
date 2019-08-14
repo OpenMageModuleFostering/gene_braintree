@@ -40,7 +40,7 @@
         // Pass some data through to the PayPal integration
         var vzeroPaypal = new vZeroPayPalButton(
             false,
-            '<?php echo Mage::app()->getStore()->getFrontendName(); ?>',
+            '<?php echo addslashes(Mage::app()->getStore()->getFrontendName()); ?>',
             <?php echo $this->getSingleUse(); ?>,
             '<?php echo $this->getLocale(); ?>',
             <?php echo $this->getSingleFutureUse(); ?>,

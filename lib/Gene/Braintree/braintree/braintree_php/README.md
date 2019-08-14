@@ -1,4 +1,4 @@
-# Braintree PHP Server Library
+# Braintree PHP library
 
 The Braintree PHP library provides integration access to the Braintree Gateway.
 
@@ -47,8 +47,9 @@ if ($result->success) {
 }
 ```
 
-Both PSR-0 and PSR-4 namespacing are supported. If you are using composer with `--classmap-authoritative` or  
+Both PSR-0 and PSR-4 namespacing are supported. If you are using composer with `--classmap-authoritative` or
 `--optimize-autoloader` enabled, you'll have to reference classes using PSR-4 namespacing:
+
 ```php
 Braintree\Configuration::environment('sandbox');
 Braintree\Configuration::merchantId('your_merchant_id');
@@ -59,6 +60,14 @@ Braintree\Configuration::privateKey('your_private_key');
 ## HHVM Support
 
 The Braintree PHP library will run on HHVM >= 3.4.2.
+
+## Google App Engine
+
+If you use Google App Engine, you'll have to turn off accepting gzip responses.
+
+```php
+Braintree\Configuration::acceptGzipEncoding(false);
+```
 
 ## Legacy PHP Support
 

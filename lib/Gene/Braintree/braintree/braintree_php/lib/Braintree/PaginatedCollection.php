@@ -20,7 +20,6 @@ use Iterator;
  *
  * @package    Braintree
  * @subpackage Utility
- * @copyright  2016 Braintree, a division of PayPal, Inc.
  */
 class PaginatedCollection implements Iterator
 {
@@ -85,7 +84,7 @@ class PaginatedCollection implements Iterator
      */
     public function valid()
     {
-        if ($this->_currentPage == 0 || $this->_index % $this->_pageSize == 0)
+        if ($this->_currentPage == 0 || $this->_index % $this->_pageSize == 0 && $this->_index < $this->_totalItems)
         {
             $this->_getNextPage();
         }

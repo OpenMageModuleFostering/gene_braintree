@@ -724,7 +724,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
                         $createdMethod = true;
                     }
                 } else {
-                    Mage::throwException($result->message . Mage::helper('gene_braintree')->__(' Please try again or attempt refreshing the page.'));
+                    Mage::throwException(Mage::helper('gene_braintree')->__('%s Please try again or attempt refreshing the page.', $result->message));
                 }
             }
         }

@@ -307,7 +307,7 @@ label[for="gene_braintree_paypal_store_in_vault"] {
 #credit-card-form .form-list,
 #payment_form_gene_braintree_creditcard,
 #payment_form_gene_braintree_paypal {
-  width: 100%;
+  width: 90%;
   padding: 0;
 }
 #payment_form_gene_braintree_creditcard,

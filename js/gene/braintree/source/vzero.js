@@ -1132,8 +1132,14 @@ vZero.prototype = {
                                 options.onSuccess(payload);
                             }
                         } else {
+                            // Allow the payment through if it's American Express
+                            if (this.cardType === "AE") {
+                                if (options.onSuccess) {
+                                    options.onSuccess(payload);
+                                }
+                            }
                             // Block the payment
-                            if (this.threeDSecureFailedAction == 1) {
+                            else if (this.threeDSecureFailedAction == 1) {
                                 if (options.onFailure) {
                                     options.onFailure(
                                         payload,

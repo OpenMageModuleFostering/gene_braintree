@@ -354,7 +354,10 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             ) {
                 switch ($this->_getConfig('threedsecure_failed_liability')) {
                     case Gene_Braintree_Model_System_Config_Source_Payment_Liabilityaction::BLOCK:
-                        return $this->processFailedThreeDResult($result);
+                        // Don't fail american express cards
+                        if ($result->transaction->creditCard['cardType'] != "American Express") {
+                            return $this->processFailedThreeDResult($result);
+                        }
                         break;
                     case Gene_Braintree_Model_System_Config_Source_Payment_Liabilityaction::FRAUD:
                         $payment->setIsTransactionPending(true);

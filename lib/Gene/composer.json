@@ -1,6 +1,6 @@
 {
   "require" : {
-    "braintree/braintree_php" : "3.21.1"
+    "braintree/braintree_php" : "3.23.0"
   },
   "config": {
     "vendor-dir": "Braintree"

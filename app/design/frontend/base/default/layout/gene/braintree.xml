@@ -19,6 +19,7 @@
             <action method="addJs"><url>gene/braintree/{MODULE_VERSION}/vzero-min.js</url></action>
             <action method="addJs"><url>gene/braintree/{MODULE_VERSION}/vzero-paypal-min.js</url></action>
             <action method="addJs"><url>gene/braintree/{MODULE_VERSION}/vzero-integration-min.js</url></action>
+            <action method="addJs"><url>gene/braintree/{MODULE_VERSION}/express/abstract-min.js</url></action>
         </reference>
         <reference name="head">
             <!-- If Braintree_Payments is enabled remove their JS -->

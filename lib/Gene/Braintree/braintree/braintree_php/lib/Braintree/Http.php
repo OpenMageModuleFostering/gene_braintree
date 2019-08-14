@@ -4,8 +4,6 @@ namespace Braintree;
 /**
  * Braintree HTTP Client
  * processes Http requests using curl
- *
- * @copyright  2015 Braintree, a division of PayPal, Inc.
  */
 class Http
 {
@@ -107,8 +105,10 @@ class Http
         curl_setopt($curl, CURLOPT_TIMEOUT, $this->_config->timeout());
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $httpVerb);
         curl_setopt($curl, CURLOPT_URL, $url);
-        curl_setopt($curl, CURLOPT_ENCODING, 'gzip');
 
+        if ($this->_config->acceptGzipEncoding()) {
+            curl_setopt($curl, CURLOPT_ENCODING, 'gzip');
+        }
         if ($this->_config->sslVersion()) {
             curl_setopt($curl, CURLOPT_SSLVERSION, $this->_config->sslVersion());
         }

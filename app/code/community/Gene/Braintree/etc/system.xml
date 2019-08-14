@@ -776,7 +776,7 @@
                             <show_in_store>1</show_in_store>
                             <comment><![CDATA[
                                 Action to complete if the liability shift fails after the 3D secure. If the liability cannot be shifted the merchant is liable for charge backs.<br />
-                                <strong>Request Alternative Payment Method</strong> - Block the payment and inform the customer to choose a different payment method. This will also block any cards that do not support 3DSecure.<br />
+                                <strong>Request Alternative Payment Method</strong> - Block the payment and inform the customer to choose a different payment method. This will also block any cards that do not support 3DSecure excluding American Express.<br />
                                 <strong>Accept & Mark as Fraud</strong> - Will accept the payment but mark as fraudulent within Magento for manual inspection.<br />
                                 <strong>Accept</strong> - Will accept the payment and be processed as a normal order (this setting is not recommended).
                             ]]></comment>

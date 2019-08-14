@@ -8,6 +8,11 @@ var vZeroIntegration = Class.create();
 vZeroIntegration.prototype = {
 
     /**
+     * Device Data instance from braintree
+     */
+    dataCollectorInstance: null,
+
+    /**
      * Create an instance of the integration
      *
      * @param vzero The vZero class that's being used by the checkout
@@ -143,6 +148,15 @@ vZeroIntegration.prototype = {
      * @param input
      */
     populateDeviceData: function (input) {
+        // Teardown if device data is already generated
+        if (this.dataCollectorInstance !== null) {
+            this.dataCollectorInstance.teardown(function () {
+                this.dataCollectorInstance = null;
+                return this.populateDeviceData(input);
+            }.bind(this));
+            return;
+        }
+
         this.vzero.getClient(function (clientInstance) {
             var params = {
                 client: clientInstance,
@@ -169,6 +183,8 @@ vZeroIntegration.prototype = {
                     }
                     return;
                 }
+
+                this.dataCollectorInstance = dataCollectorInstance;
 
                 input.value = dataCollectorInstance.deviceData;
                 input.writeAttribute('disabled', false);
