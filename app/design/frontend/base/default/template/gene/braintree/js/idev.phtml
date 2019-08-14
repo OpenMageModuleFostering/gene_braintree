@@ -70,9 +70,10 @@
 
             // Observe the click event
             var _originalSubmitEvent = $('onestepcheckout-form').submit;
-            $('onestepcheckout-form').submit = function braintreeOverride() {
+            $('onestepcheckout-form').submit = function braintreeOverride(forceOriginal) {
+                forceOriginal = forceOriginal || false;
 
-                if (vzeroIntegration.shouldInterceptSubmit('creditcard')) {
+                if (!forceOriginal && vzeroIntegration.shouldInterceptSubmit('creditcard')) {
 
                     // If everything was a success on the checkout end, let's submit the vZero integration
                     vzeroIntegration.submit('creditcard', function () {
@@ -92,7 +93,7 @@
          */
         submitCheckout: function() {
             // Submit the checkout
-            return $('onestepcheckout-form').submit();
+            return $('onestepcheckout-form').submit(true);
         }
 
     });

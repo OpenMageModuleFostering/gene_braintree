@@ -92,6 +92,58 @@
 .braintree-hostedfield .cvv-what-is-this {
   margin-left: 0;
 }
+#three-d-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  z-index: 100000;
+  visibility: visible;
+  transition: 0.4s;
+  opacity: 1;
+}
+#three-d-modal.hidden {
+  visibility: hidden;
+  transition: 0.4s;
+  opacity: 0;
+}
+#three-d-modal.hidden .bt-modal-frame {
+  transition: 0.4s;
+  transform: translateY(80px);
+}
+#three-d-modal .bt-modal-frame {
+  height: 450px;
+  width: 440px;
+  margin: auto;
+  background-color: #ffffff;
+  z-index: 2;
+  border-radius: 6px;
+  transition: 0.4s;
+  transform: translateY(0);
+}
+#three-d-modal .bt-modal-body {
+  height: 380px;
+  margin: 0 20px;
+  background-color: white;
+  border: 1px solid lightgray;
+}
+#three-d-modal .bt-modal-header {
+  height: 40px;
+  text-align: center;
+  line-height: 40px;
+}
+#three-d-modal .bt-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background-color: black;
+  opacity: 0.75;
+}
 #paypal-container iframe {
   display: none;
 }
@@ -118,6 +170,7 @@ button.braintree-paypal-button.braintree-paypal-loading > span {
 }
 button.braintree-paypal-button.braintree-paypal-loading:hover {
   background: #014c6b url('../../../images/gene/braintree/paypal-loading.gif') center center no-repeat;
+  background-size: 32px;
 }
 button.braintree-paypal-button:hover {
   background: #0175a6;

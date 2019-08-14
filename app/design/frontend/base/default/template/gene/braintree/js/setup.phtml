@@ -5,9 +5,8 @@
 /* @var $this Gene_Braintree_Block_Js */
 ?>
 <script type="text/javascript">
-
     // Only init the vzero class once
-    if(vzero === undefined) {
+    if (typeof vzero === 'undefined') {
 
         // Pass some data over to vZero integration JS
         var vzero = new vZero(
@@ -22,22 +21,19 @@
             '<?php echo Mage::getUrl('braintree/checkout/vaultToNonce', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>'
         );
 
-        <?php if($this->isPayPalActive()): ?>
-        // Pass some data through to the PayPal integration
-        var vzeroPaypal = new vZeroPayPalButton(
-            '<?php echo $this->getClientToken(); ?>',
-            '<?php echo Mage::app()->getStore()->getFrontendName(); ?>',
-            <?php echo $this->getSingleUse(); ?>,
-            '<?php echo $this->getLocale(); ?>',
-            <?php echo $this->getSingleFutureUse(); ?>
-        );
+        <?php if ($this->isPayPalActive()) : ?>
+            // Pass some data through to the PayPal integration
+            var vzeroPaypal = new vZeroPayPalButton(
+                '<?php echo $this->getClientToken(); ?>',
+                '<?php echo Mage::app()->getStore()->getFrontendName(); ?>',
+                <?php echo $this->getSingleUse(); ?>,
+                '<?php echo $this->getLocale(); ?>',
+                <?php echo $this->getSingleFutureUse(); ?>,
+                vzero
+            );
         <?php endif; ?>
 
-        // Init the environment
-        vzero.init();
-
     }
-
 </script>
 
 <script type="text/html" id="braintree-paypal-button">
@@ -49,6 +45,16 @@
         </span>
     </button>
 </script>
+
+<div id="three-d-modal" class="hidden">
+    <div class="bt-mask"></div>
+    <div class="bt-modal-frame">
+        <div class="bt-modal-header">
+            <div class="header-text"><?php echo $this->__('Authentication'); ?></div>
+        </div>
+        <div class="bt-modal-body"></div>
+    </div>
+</div>
 
 <?php
 /**

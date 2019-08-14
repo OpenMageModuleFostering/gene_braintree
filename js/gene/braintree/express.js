@@ -81,13 +81,7 @@ var ppExpress = (function() {
                  * @returns {*}
                  */
                 buyButtonPlacement: function() {
-                    var placement = document.getElementsByClassName("add-to-cart");
-                    if (placement.length > 0) {
-                        placement = placement[0];
-                        return placement;
-                    }
-
-                    return false;
+                    return '.add-to-cart';
                 }
             };
 
@@ -100,7 +94,6 @@ var ppExpress = (function() {
             }
 
             initBraintree(config);
-            initDom(config);
             return true;
         },
 
@@ -320,28 +313,23 @@ var ppExpress = (function() {
      * Setup braintree
      */
     function initBraintree(config) {
-        braintree.setup(config.get('token'), "custom", {
-            paypal: {
-                container: "pp-express-container",
-                singleUse: false,
-                currency: config.get('currency'),
-                locale: config.get('locale'),
-                enableShippingAddress: true,
-                headless: true
-            },
+        var vzeroPaypal = new vZeroPayPalButton(
+            config.get('token'),
+            '',
+            false,
+            config.get('locale')
+        );
 
-            onReady: function (integration) {
-                paypalIntegration = integration;
-            },
-
-            onPaymentMethodReceived: function (obj) {
+        var options = {
+            validate: validateForm(),
+            onSuccess: function (payload) {
                 api.showModal();
 
                 /* Build the order */
                 new Ajax.Request(config.get('authUrl'), {
                     method: 'POST',
                     parameters: {
-                        'paypal': JSON.stringify(obj),
+                        'paypal': JSON.stringify(payload),
                         'product_id': config.get('productId'),
                         'form_data': $('product_addtocart_form') ? $('product_addtocart_form').serialize() : $('pp_express_form').serialize()
                     },
@@ -355,11 +343,18 @@ var ppExpress = (function() {
 
                     onFailure: function () {
                         api.hideModal();
-                        alert( typeof Translator === "object" ? Translator.translate("We were unable to complete the request. Please try again.") : "We were unable to complete the request. Please try again." );
+                        alert(typeof Translator === "object" ? Translator.translate("We were unable to complete the request. Please try again.") : "We were unable to complete the request. Please try again.");
                     }
                 });
-
+            },
+            onReady: function (integration) {
+                paypalIntegration = integration;
             }
+        };
+
+        // Initialize the PayPal button logic on any valid buttons on the page
+        $$('[data-paypalexpress]').each(function (button) {
+            vzeroPaypal.attachPayPalButtonEvent(button, options);
         });
     }
 
@@ -403,41 +398,6 @@ var ppExpress = (function() {
                 });
             }
         }
-    }
-
-    /**
-     * Add the buy button and modal events
-     */
-    function initDom(config) {
-        /* Hide the overlay on click */
-        api.getOverlay().addEventListener('click', function () {
-            api.hideModal();
-        });
-
-        /* Append the buy button container next the cart button */
-        var placement = config.get('buyButtonPlacement')(),
-            buyButton = config.get('buyButton')();
-
-        if( !placement ) {
-            console.error("Invalid Braintree PayPal express placement element");
-            return;
-        }
-
-        if( !buyButton ) {
-            console.error("Invalid Braintree PayPal button element");
-            return;
-        }
-
-        buyButton.addEventListener('click', function (event) {
-            event.preventDefault();
-
-            /* Validate product options and start the paypal flow */
-            if (validateForm()) {
-                paypalIntegration.paypal.initAuthFlow();
-            }
-        }, false);
-
-        placement.appendChild(buyButton);
     }
 
     /**

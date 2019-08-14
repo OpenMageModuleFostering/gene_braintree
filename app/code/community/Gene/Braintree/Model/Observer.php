@@ -252,8 +252,19 @@ class Gene_Braintree_Model_Observer
      */
     public function addIncludePath()
     {
-        set_include_path(BP . DS . 'lib' . DS . 'Gene' . PS . get_include_path());
+        self::initIncludePath();
 
         return $this;
+    }
+
+    /**
+     * Add the include path needed for the new location of the SDK
+     */
+    public static function initIncludePath()
+    {
+        // Check to see if the system can resolve the Braintree_Version class
+        if (!stream_resolve_include_path('Braintree/Version.php')) {
+            set_include_path(BP . DS . 'lib' . DS . 'Gene' . PS . get_include_path());
+        }
     }
 }

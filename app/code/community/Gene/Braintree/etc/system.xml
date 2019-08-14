@@ -621,7 +621,7 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                             <comment><![CDATA[
-                                The 3D Secure feature enables the shopper to enter a password to confirm their identity with the card issuer. If accepted they then complete their order, and when received by you, you have much more confidence that is genuine and real.
+                                The 3D Secure feature enables the shopper to enter a password to confirm their identity with the card issuer. If accepted they then complete their order, and when received by you, you have much more confidence that is genuine and real.<br /><strong>Notice:</strong> To use 3D secure your checkout must run over HTTPs, this is required for both production and sandbox configurations.
                             ]]></comment>
                         </threedsecure>
 

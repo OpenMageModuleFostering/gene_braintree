@@ -134,3 +134,23 @@
         padding: 25px;
     }
 }
+
+/* If the element contains a PayPal express button don't force the buttons to width 100% */
+.product-view {
+    .add-to-cart-buttons.braintree-paypal-express-container {
+        .button {
+            width: auto;
+        }
+    }
+}
+
+@media (max-width: 450px) {
+    .product-view {
+        .add-to-cart-buttons.braintree-paypal-express-container {
+            width: 100%;
+            .button {
+                width: 100%;
+            }
+        }
+    }
+}

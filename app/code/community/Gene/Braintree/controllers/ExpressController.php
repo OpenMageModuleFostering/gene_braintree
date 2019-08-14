@@ -67,8 +67,14 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
     {
         parse_str($this->getRequest()->getParam('form_data'), $formData);
 
+        // Retrieve the form_key from the request
+        $formKey = $this->getRequest()->getParam(
+            'form_key',
+            (isset($formData['form_key']) ? $formData['form_key'] : false)
+        );
+
         // Validate form key
-        if (Mage::getSingleton('core/session')->getFormKey() != $formData['form_key']) {
+        if (Mage::getSingleton('core/session')->getFormKey() != $formKey) {
             Mage::getSingleton('core/session')->addError(Mage::helper('gene_braintree')->__('We were unable to start the express checkout.'));
 
             return $this->_redirect("braintree/express/error");
@@ -79,10 +85,9 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
         Mage::getSingleton('core/session')->setBraintreeNonce(null);
 
         // Where the user came from - product or cart page
-        if (!isset($formData['source'])) {
-            $formData['source'] = "product";
-        }
-        Mage::getSingleton('core/session')->setBraintreeExpressSource($formData['source']);
+        Mage::getSingleton('core/session')->setBraintreeExpressSource(
+            $this->getRequest()->getParam('source', 'product')
+        );
 
         $paypal = json_decode($this->getRequest()->getParam('paypal'), true);
         // Check for a valid nonce
@@ -139,15 +144,15 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
         $address = Mage::getModel('sales/quote_address');
         $address->setFirstname($firstName)
             ->setLastname($lastName)
-            ->setStreet($paypalData['shippingAddress']['extendedAddress'] . ' ' . $paypalData['shippingAddress']['streetAddress'])
-            ->setCity($paypalData['shippingAddress']['locality'])
-            ->setCountryId($paypalData['shippingAddress']['countryCodeAlpha2'])
+            ->setStreet($paypalData['shippingAddress']['line1'] . ' ' . $paypalData['shippingAddress']['line2'])
+            ->setCity($paypalData['shippingAddress']['city'])
+            ->setCountryId($paypalData['shippingAddress']['countryCode'])
             ->setPostcode($paypalData['shippingAddress']['postalCode'])
             ->setTelephone('0000000000');
 
         // Check if the region is needed
         if (Mage::helper('directory')->isRegionRequired($address->getCountryId())) {
-            $region = Mage::getModel('directory/region')->loadbyCode($paypalData['shippingAddress']['region'], $address->getCountryId());
+            $region = Mage::getModel('directory/region')->loadbyCode($paypalData['shippingAddress']['state'], $address->getCountryId());
             $regionId = $region->getRegionId();
 
             if (empty($regionId)) {

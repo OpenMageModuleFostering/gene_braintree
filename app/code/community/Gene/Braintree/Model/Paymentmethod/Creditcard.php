@@ -480,7 +480,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         $this->handleFraud($result, $payment);
 
         // If 3D secure is enabled, presume it's passed
-        if ($this->_is3DEnabled()) {
+        if ($this->_is3DEnabled() && $result->transaction->threeDSecureInfo->liabilityShifted == 1) {
             $additionalInfo['threeDSecure'] = Mage::helper('gene_braintree')->__('Passed');
         }
 
