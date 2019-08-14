@@ -1,0 +1,188 @@
+<?php
+/**
+ * Intercept various functions for the default checkout flow
+ */
+?>
+<script type="text/javascript">
+
+    // Store the current paymentMethod
+    var paymentMethod = false;
+
+    // Store the original payment method
+    var paymentOriginal = Payment.prototype.save;
+
+    // Intercept the save function
+    Payment.prototype.save = function() {
+
+        if (checkout.loadWaiting != false) return;
+
+        // Update our paymentMethod
+        paymentMethod = this.currentMethod;
+
+        // Check we're dealing with the current method
+        if (paymentMethod == 'gene_braintree_creditcard') {
+
+            // Always attempt to update the card type on submission
+            if($$('[data-genebraintree-name="number"]').first() != undefined) {
+                vzero.updateCardType($$('[data-genebraintree-name="number"]').first().value);
+            }
+
+            // Set the payment to loading
+            checkout.setLoadWaiting('payment');
+
+            // Do the standard validation
+            var validator = new Validation(this.form);
+            if (this.validate() && validator.validate()) {
+
+                // Store these to be used later on
+                var paymentThis = this;
+                var paymentArgs = arguments;
+
+                // Process the card
+                vzero.process({
+                    onSuccess: function () {
+
+                        // Reset the waiting for the parent function
+                        checkout.setLoadWaiting(false);
+
+                        // Disable the standard credit card form so the values don't get passed through to the checkout
+                        $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
+                            if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault' && formElement.id != 'device_data') {
+                                formElement.setAttribute('disabled', 'disabled');
+                            }
+                        });
+
+                        // Fire the original event and return the response
+                        paymentResponse = paymentOriginal.apply(paymentThis, paymentArgs);
+
+                        // Re-enable any form elements which were disabled
+                        $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
+                            formElement.removeAttribute('disabled');
+                        });
+
+                        // Run the original function
+                        return paymentResponse;
+                    },
+                    onFailure: function() {
+                        checkout.setLoadWaiting(false);
+                    }
+                });
+            } else {
+                checkout.setLoadWaiting(false);
+            }
+
+        } else {
+            // Proxy the function through
+            return paymentOriginal.apply(this, arguments);
+        }
+    };
+
+    // Store the original payment method
+    var reviewInitOriginal = Review.prototype.initialize;
+
+    // Intercept the save function
+    Review.prototype.initialize = function(saveUrl, successUrl, agreementsForm) {
+
+        // Do the original action
+        var reviewResponse = reviewInitOriginal.apply(this, arguments);
+
+        // Swap out the buttons
+        if((paymentMethod == 'gene_braintree_paypal' && $('paypal-saved-accounts') == undefined) || ($$('#paypal-saved-accounts input:checked[type=radio]').first() != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first().value == 'other')) {
+
+            // Hide the checkout button
+            if ($$('#review-buttons-container button').first() != undefined) {
+                $$('#review-buttons-container button').first().hide();
+            }
+
+            // Insert out PayPal button
+            $('review-buttons-container').insert('<div id="paypal-complete"><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label><div id="paypal-container"></div></div>');
+
+            // Add in the PayPal button
+            vzeroPaypal.addPayPalButton();
+
+            // Style the label nicely
+            $('paypal-label').setStyle({
+                'lineHeight': '44px',
+                'float': 'left',
+                'marginRight': '12px'
+            });
+
+            // If this button exists swap some minor styling things
+            if($('braintree-paypal-button') != undefined) {
+
+                // Fix some styling issues where we're placing the button
+                $('braintree-paypal-button').setStyle({
+                    'lineHeight': 'auto',
+                    'padding': '0',
+                    'float': 'left'
+                });
+            }
+
+        } else {
+
+            // Revert our madness
+            if ($$('#review-buttons-container button').first() != undefined) {
+                $$('#review-buttons-container button').first().show();
+            }
+
+            // Remove the PayPal element
+            if($$('#paypal-complete').first() != undefined) {
+                $('paypal-complete').remove();
+            }
+        }
+
+        // If we're using braintree credit card disable the form on submission
+        if (paymentMethod == 'gene_braintree_creditcard') {
+
+            // Re-enable the form elements just in case something went wrong
+            $$('#credit-card-form input, #credit-card-form select').each(function(formElement) {
+                formElement.removeAttribute('disabled');
+            });
+        }
+
+        // Return the normal response
+        return reviewResponse;
+
+    };
+
+    // Store the original payment method
+    var reviewSaveOriginal = Review.prototype.save;
+
+    // Intercept the save function
+    Review.prototype.save = function() {
+
+        // If we're using braintree credit card disable the form on submission
+        if (paymentMethod == 'gene_braintree_creditcard') {
+
+            // Disable the standard credit card form so the values don't get passed through to the checkout
+            $$('#credit-card-form input, #credit-card-form select').each(function(formElement) {
+                if(formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault' && formElement.id != 'device_data') {
+                    formElement.setAttribute('disabled', 'disabled');
+                }
+            });
+        }
+
+        // Do the original action
+        var reviewSaveResponse = reviewSaveOriginal.apply(this, arguments);
+
+        // If we're using braintree credit card disable the form on submission
+        if (paymentMethod == 'gene_braintree_creditcard') {
+
+            // Re-enable the form elements just in case something went wrong
+            $$('#credit-card-form input, #credit-card-form select').each(function(formElement) {
+                formElement.removeAttribute('disabled');
+            });
+        }
+
+        return reviewSaveResponse;
+    };
+
+    vzero.close3dSecureMethod(function() {
+
+        // Re-tokenize all the saved cards
+        vzero.tokenize3dSavedCards(function() {
+            checkout.setLoadWaiting(false);
+        });
+
+    });
+</script>

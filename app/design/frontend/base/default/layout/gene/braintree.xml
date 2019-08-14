@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<layout version="0.1.0">
+
+    <checkout_onepage_index>
+        <reference name="head">
+            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js/default.phtml" />
+
+            <!-- Set the payment form ID for the fraud prevention -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>co-payment-form</value>
+                </action>
+            </block>
+        </reference>
+    </checkout_onepage_index>
+
+    <!-- We have to use a customized version of the js.phtml file for Amasty's checkout solution -->
+    <amasty_onestep_checkout>
+        <reference name="before_body_end">
+            <remove name="gene_braintree_js" />
+            <block type="gene_braintree/js" name="gene_braintree_amasty_js" template="gene/braintree/js/amasty.phtml" />
+        </reference>
+    </amasty_onestep_checkout>
+
+    <!-- Need to include the standard resources for the onestepcheckout.com solution -->
+    <onestepcheckout_index_index>
+        <reference name="head">
+            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js/idev.phtml" />
+
+            <!-- We include device data at the end of the larger form -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>onestepcheckout-form</value>
+                </action>
+            </block>
+        </reference>
+    </onestepcheckout_index_index>
+
+    <checkout_onepage_paymentmethod>
+        <reference name="root">
+            <block type="core/text_list" name="additional" as="additional">
+                <block type="gene_braintree/creditcard_threedsecure" name="gene_braintree_creditcard_threedsecure" template="gene/braintree/creditcard/threedsecure.phtml" />
+            </block>
+        </reference>
+    </checkout_onepage_paymentmethod>
+
+    <customer_account>
+        <reference name="customer_account_navigation">
+            <action method="addLink" translate="label" module="customer">
+                <name>braintree.saved</name>
+                <path>braintree/saved/index</path>
+                <label>Saved Payment Information</label>
+            </action>
+        </reference>
+    </customer_account>
+
+    <braintree_saved_index translate="label">
+        <label>Saved Payment Information</label>
+        <update handle="customer_account"/>
+        <!-- Mage_Customer -->
+        <reference name="root">
+            <action method="setTemplate"><template>page/2columns-left.phtml</template></action>
+        </reference>
+        <reference name="my.account.wrapper">
+            <block type="gene_braintree/saved" name="gene_braintree_saved_payments" template="gene/braintree/customer/saved.phtml">
+                <block type="gene_braintree/saved" name="gene_braintree_saved_payments_method" as="methods" template="gene/braintree/customer/methods.phtml" />
+            </block>
+        </reference>
+    </braintree_saved_index>
+
+</layout>

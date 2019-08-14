@@ -1,0 +1,15 @@
+<?php
+/**
+ * Include the crucial braintree-data.js for fraud protection
+ */
+?>
+<script src="https://js.braintreegateway.com/v1/braintree-data.js"></script>
+<script>
+    <?php if($kountId = Mage::getStoreConfig('payment/gene_braintree_creditcard/kount_merchant_id')): ?>
+    var env = BraintreeData.environments.production.withId("<?php echo $kountId; ?>");
+    <?php else: ?>
+    var env = BraintreeData.environments.<?php echo Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_ENVIRONMENT_PATH); ?>;
+    <?php endif; ?>
+    BraintreeData.setup("<?php echo Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_MERCHANT_ID_PATH); ?>", '<?php echo ($this->getPaymentFormId() ? $this->getPaymentFormId() : 'co-payment-form'); ?>', env);
+</script>
+

@@ -1,0 +1,16 @@
+{
+    "name": "OpenMageModuleFostering/Gene_Braintree",
+    "type": "magento-module",
+    "license": "MIT-License",
+    "homepage": "",
+    "description": "Connect your Magento store to Braintree to accept Credit Cards &amp; PayPal using V.Zero SDK",
+    "authors": [
+    {
+        "name": "Dave Macaulay",
+        "email": "magento@gene.co.uk"
+    }
+],
+    "suggest": {
+        "magento-hackathon/magento-composer-installer": "*"
+    }
+}

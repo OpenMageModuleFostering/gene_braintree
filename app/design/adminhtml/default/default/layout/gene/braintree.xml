@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<layout version="0.1.0">
+
+    <adminhtml_braintree_transactions>
+        <reference name="content">
+            <block type="gene_braintree/adminhtml_report_transactions" name="gene.braintree.report.transactions"
+                   template="gene/braintree/transactions/index.phtml">
+                <block type="gene_braintree/adminhtml_report_transactions_search"
+                       name="gene.braintree.report.transactions.search" as="search"
+                       template="gene/braintree/transactions/search.phtml"/>
+            </block>
+        </reference>
+    </adminhtml_braintree_transactions>
+
+    <adminhtml_sales_order_create_index>
+        <reference name="head">
+            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js.phtml" />
+        </reference>
+    </adminhtml_sales_order_create_index>
+
+</layout>

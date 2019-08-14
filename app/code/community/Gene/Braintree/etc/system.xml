@@ -1,0 +1,500 @@
+<?xml version="1.0"?>
+<config>
+    <sections>
+        <payment>
+            <groups>
+                <gene_braintree translate="label comment" module="gene_braintree">
+                    <label>Braintree v.zero - Configuration</label>
+                    <sort_order>1498</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <comment><![CDATA[<img src="https://i.imgur.com/JR1BJTr.png" style="margin: 4px 0 8px 0;" border="0"/><br />To use this module you will need an existing production or sandbox Braintree account. You can apply at <a href="https://www.braintreepayments.com">braintreepayments.com</a>.<br />Braintree v.zero integration provided by <a href="http://gene.co.uk/" target="_blank">Gene Commerce</a>.]]></comment>
+                    <fields>
+
+                        <module_version translate="label">
+                            <label>Magento Braintree v.zero Version</label>
+                            <frontend_model>gene_braintree/adminhtml_system_config_braintree_moduleversion</frontend_model>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </module_version>
+
+                        <lib_version translate="label">
+                            <label>Braintree PHP SDK Version</label>
+                            <frontend_model>gene_braintree/adminhtml_system_config_braintree_version</frontend_model>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </lib_version>
+
+                        <braintree_details translate="label">
+                            <label>Braintree Account Details</label>
+                            <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
+                            <sort_order>30</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </braintree_details>
+
+                        <environment translate="label comment">
+                            <label>Environment</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>gene_braintree/source_environment</source_model>
+                            <sort_order>31</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <comment><![CDATA[
+                                <strong>Warning:</strong> Do not use 'Sandbox' on a production environment.<br />
+                                Your API details above will need to reflect your Sandbox or your Production account.
+                            ]]></comment>
+                            <frontend_class>validate-config</frontend_class>
+                        </environment>
+
+                        <merchant_id translate="label">
+                            <label>Merchant ID</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>35</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <frontend_class>validate-config</frontend_class>
+                        </merchant_id>
+
+                        <merchant_account_id translate="label">
+                            <label>Merchant Account ID</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>40</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <frontend_class>validate-config</frontend_class>
+                            <comment><![CDATA[
+                                If you're accepting different currencies across multiple store views/websites you'll need to adjust your merchant account ID in the correct scope, if you're using the Magento currency switcher you'll need to enable the section below.
+                            ]]></comment>
+                        </merchant_account_id>
+
+                        <public_key translate="label">
+                            <label>Public Key</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>45</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <frontend_class>validate-config</frontend_class>
+                        </public_key>
+
+                        <private_key translate="label">
+                            <label>Private Key</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>50</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <frontend_class>validate-config</frontend_class>
+                        </private_key>
+
+                        <valid_config translate="label">
+                            <label />
+                            <frontend_model>gene_braintree/adminhtml_system_config_braintree_config</frontend_model>
+                            <sort_order>55</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </valid_config>
+
+                        <multi_currency_heading translate="label">
+                            <label>Currency Switcher</label>
+                            <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
+                            <sort_order>60</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </multi_currency_heading>
+
+                        <multi_currency_enable>
+                            <label>Enabled?</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>65</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <comment><![CDATA[
+                                If you're using the Magento built in currency switcher you'll need to activate this section to ensure the customers payment goes into your correct merchant account. If you use store views for separate countries you do not need this feature enabled. <br /><strong>Note:</strong> The invoices will still show up as your base currency, but the customer will be charged in their selected currency for the correct amount.
+                            ]]></comment>
+                        </multi_currency_enable>
+
+                        <multi_currency_mapping translate="label">
+                            <label>Mapping</label>
+                            <backend_model>gene_braintree/system_config_backend_currency</backend_model>
+                            <frontend_model>gene_braintree/adminhtml_system_config_braintree_currency</frontend_model>
+                            <sort_order>70</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <multi_currency_enable>1</multi_currency_enable>
+                            </depends>
+                            <comment><![CDATA[
+                                You need to supply each merchant account ID for each enabled currency.
+                            ]]></comment>
+                        </multi_currency_mapping>
+
+                        <settings translate="label">
+                            <label>Testing Settings</label>
+                            <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
+                            <sort_order>80</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </settings>
+
+                        <debug translate="label comment">
+                            <label>Debug</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>85</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                Debugging will cause a log to be written to the <strong>var/log/gene_braintree.log</strong> file. As no credit card data ever hits the server this file will never contain any crucial customer information.
+                            ]]></comment>
+                        </debug>
+
+                    </fields>
+                </gene_braintree>
+
+                <gene_braintree_paypal translate="label comment" module="gene_braintree">
+                    <label>Braintree v.zero - PayPal</label>
+                    <sort_order>1499</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <comment><![CDATA[<img src="https://i.imgur.com/sitDbHA.png" style="margin: 6px 0;" /><br />You must first configure the <strong>Braintree v.zero - Configuration</strong> section with your Braintree account details.]]></comment>
+                    <fields>
+
+                        <active translate="label">
+                            <label>Enabled</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>1</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </active>
+
+                        <title translate="label">
+                            <label>Title</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>2</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </title>
+
+                        <capture_heading translate="label">
+                            <label>Capture</label>
+                            <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
+                            <sort_order>5</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </capture_heading>
+
+                        <order_status translate="label">
+                            <label>Complete Order Status</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_order_status_processing</source_model>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </order_status>
+
+                        <features_heading translate="label">
+                            <label>Features</label>
+                            <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
+                            <sort_order>70</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </features_heading>
+
+                        <payment_type translate="label comment">
+                            <label>Payment Type</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>gene_braintree/source_paypal_paymenttype</source_model>
+                            <sort_order>75</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                <strong>Single Payment</strong> - Will only require the customer to sign in, we will only be able to take a single payment<br />
+                                <strong>Future Payments</strong> - Allows us to save the customers PayPal account for later purchases and use with the Vault
+                            ]]></comment>
+                        </payment_type>
+
+                        <locale translate="label comment">
+                            <label>Locale</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>gene_braintree/source_paypal_locale</source_model>
+                            <sort_order>80</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <depends>
+                                <payment_type>single</payment_type>
+                            </depends>
+                            <comment><![CDATA[
+                                The locale for the PayPal popup window
+                            ]]></comment>
+                        </locale>
+
+                        <use_vault translate="label comment">
+                            <label>Enable Vault</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>80</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <depends>
+                                <payment_type>future</payment_type>
+                            </depends>
+                            <comment><![CDATA[
+                                Storing the customers PayPal in the vault will allow them to instantly purchase any product without having to login to PayPal again.
+                            ]]></comment>
+                        </use_vault>
+
+                        <display_heading translate="label">
+                            <label>Display</label>
+                            <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
+                            <sort_order>100</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </display_heading>
+
+                        <sort_order translate="label">
+                            <label>Sort Order</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>150</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </sort_order>
+
+                    </fields>
+                </gene_braintree_paypal>
+
+                <gene_braintree_creditcard translate="label comment" module="gene_braintree">
+                    <label>Braintree v.zero - Credit Card</label>
+                    <sort_order>1500</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <comment><![CDATA[You must first configure the <strong>Braintree v.zero - Configuration</strong> section with your Braintree account details.]]></comment>
+                    <fields>
+
+                        <active translate="label">
+                            <label>Enabled</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>1</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </active>
+
+                        <title translate="label">
+                            <label>Title</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>2</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </title>
+
+                        <capture_heading translate="label">
+                            <label>Capture</label>
+                            <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
+                            <sort_order>5</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </capture_heading>
+
+                        <payment_action translate="label comment">
+                            <label>Payment Action</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>gene_braintree/source_creditcard_paymentAction</source_model>
+                            <sort_order>9</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <comment><![CDATA[
+                                <strong>Authorize</strong> - Will only auth the payment and store a token, the transaction will not be settled.<br />
+                                <strong>Authorize & Capture</strong> - We will instantly settle the transaction within the checkout.
+                            ]]></comment>
+                        </payment_action>
+
+                        <capture_action translate="label comment">
+                            <label>Capture Action</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>gene_braintree/source_creditcard_captureAction</source_model>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <comment><![CDATA[
+                                If you're just authorizing transactions you can define at what point they should be submitted for settlement.
+                            ]]></comment>
+                            <depends>
+                                <payment_action>authorize</payment_action>
+                            </depends>
+                        </capture_action>
+
+                        <order_status translate="label">
+                            <label>New Order Status</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_order_status_processing</source_model>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </order_status>
+
+                        <features_heading translate="label">
+                            <label>Features</label>
+                            <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
+                            <sort_order>70</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </features_heading>
+
+                        <use_vault translate="label comment">
+                            <label>Enable Vault/Saved Cards</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>75</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                The vault allows you to securely store the customers credit card on Braintree's servers. We're provided with a token which allows the customer to make future payments without having to enter any details again.
+                            ]]></comment>
+                        </use_vault>
+
+                        <threedsecure translate="label comment">
+                            <label>Enable 3D Secure</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>76</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                The 3D Secure feature enables the shopper to enter a password to confirm their identity with the card issuer. If accepted they then complete their order, and when received by you, you have much more confidence that is genuine and real.
+                            ]]></comment>
+                        </threedsecure>
+
+                        <useccv translate="label comment">
+                            <label>CVV Verification</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>76</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                Should we verify the CVV against the card?
+                            ]]></comment>
+                        </useccv>
+
+                        <kount_merchant_id translate="label comment">
+                            <label>Kount Merchant ID</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>78</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                Braintree offers a direct integration with Kount, our partner for providing advanced fraud detection technology. To use this feature, you must be processing at least 2500 transactions per month, and you’ll be subject to additional fees from Kount for their services. To get started, contact accounts@braintreepayments.com. You can view more information <a href="https://developers.braintreepayments.com/javascript+php/guides/fraud-tools">here</a>.
+                            ]]></comment>
+                        </kount_merchant_id>
+
+                        <cctypes translate="label">
+                            <label>Credit Card Types</label>
+                            <frontend_type>multiselect</frontend_type>
+                            <source_model>gene_braintree/source_cctype</source_model>
+                            <sort_order>85</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </cctypes>
+
+                        <allowspecific translate="label">
+                            <label>Payment from Applicable Countries</label>
+                            <frontend_type>allowspecific</frontend_type>
+                            <sort_order>90</sort_order>
+                            <source_model>adminhtml/system_config_source_payment_allspecificcountries</source_model>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </allowspecific>
+
+                        <specificcountry translate="label">
+                            <label>Payment from Specific Countries</label>
+                            <frontend_type>multiselect</frontend_type>
+                            <sort_order>95</sort_order>
+                            <source_model>adminhtml/system_config_source_country</source_model>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </specificcountry>
+
+                        <!-- @todo to be included in a future release -->
+                        <!--<dynamic_descriptors translate="label comment">-->
+                            <!--<label>Dynamic Descriptors</label>-->
+                            <!--<frontend_type>select</frontend_type>-->
+                            <!--<source_model>adminhtml/system_config_source_yesno</source_model>-->
+                            <!--<sort_order>100</sort_order>-->
+                            <!--<show_in_default>1</show_in_default>-->
+                            <!--<show_in_website>1</show_in_website>-->
+                            <!--<show_in_store>0</show_in_store>-->
+                            <!--<comment><![CDATA[-->
+                                <!--Dyanmic descriptors allow you to modify the entry shown on the customers statement. This will include the company name, company phone number and the company URL.<br />-->
+                                <!--<strong>Note:</strong> You must have this enabled on your account, you can find out more information <a href="https://developers.braintreepayments.com/javascript+php/sdk/server/transaction-processing/dynamic-descriptors">here</a>.-->
+                            <!--]]></comment>-->
+                        <!--</dynamic_descriptors>-->
+
+                        <display_heading translate="label">
+                            <label>Display</label>
+                            <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
+                            <sort_order>145</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </display_heading>
+
+                        <sort_order translate="label">
+                            <label>Sort Order</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>150</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </sort_order>
+
+                    </fields>
+                </gene_braintree_creditcard>
+            </groups>
+        </payment>
+    </sections>
+</config>

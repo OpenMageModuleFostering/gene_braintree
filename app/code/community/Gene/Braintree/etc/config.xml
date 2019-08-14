@@ -1,0 +1,191 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Gene_Braintree>
+            <version>1.0.0</version>
+        </Gene_Braintree>
+    </modules>
+    <global>
+        <models>
+            <gene_braintree>
+                <class>Gene_Braintree_Model</class>
+                <resourceModel>gene_braintree_resource</resourceModel>
+            </gene_braintree>
+            <gene_braintree_resource>
+                <class>Gene_Braintree_Model_Resource</class>
+            </gene_braintree_resource>
+        </models>
+        <blocks>
+            <gene_braintree>
+                <class>Gene_Braintree_Block</class>
+            </gene_braintree>
+
+            <checkout>
+                <rewrite>
+                    <cart_totals>Gene_Braintree_Block_Cart_Totals</cart_totals>
+                </rewrite>
+            </checkout>
+        </blocks>
+        <helpers>
+            <gene_braintree>
+                <class>Gene_Braintree_Helper</class>
+            </gene_braintree>
+        </helpers>
+
+        <resources>
+            <gene_braintree_setup>
+                <setup>
+                    <module>Gene_Braintree</module>
+                    <class>Mage_Eav_Model_Entity_Setup</class>
+                </setup>
+            </gene_braintree_setup>
+        </resources>
+
+        <payment>
+            <cc>
+                <types>
+                    <ME>
+                        <code>ME</code>
+                        <name>Maestro</name>
+                        <order>10</order>
+                    </ME>
+                </types>
+            </cc>
+        </payment>
+    </global>
+
+    <!-- Default values for the system configuration pages -->
+    <default>
+        <payment>
+            <!-- Core settings within the module -->
+            <gene_braintree>
+                <debug>0</debug>
+                <multi_currency_enable>0</multi_currency_enable>
+            </gene_braintree>
+
+            <!-- PayPal method -->
+            <gene_braintree_paypal>
+                <active>0</active>
+                <model>gene_braintree/paymentmethod_paypal</model>
+                <order_status>processing</order_status>
+                <payment_action>authorize_capture</payment_action>
+                <title>PayPal (Braintree)</title>
+                <environment>sandbox</environment>
+                <allowspecific>0</allowspecific>
+                <payment_type>single</payment_type>
+                <use_vault>0</use_vault>
+                <locale>en_gb</locale>
+            </gene_braintree_paypal>
+
+            <!-- Credit Card method -->
+            <gene_braintree_creditcard>
+                <active>0</active>
+                <model>gene_braintree/paymentmethod_creditcard</model>
+                <order_status>processing</order_status>
+                <payment_action>authorize</payment_action>
+                <title>Credit Card (Braintree)</title>
+                <environment>sandbox</environment>
+                <allowspecific>0</allowspecific>
+                <use_vault>0</use_vault>
+                <useccv>1</useccv>
+            </gene_braintree_creditcard>
+
+        </payment>
+    </default>
+
+    <frontend>
+        <layout>
+            <updates>
+                <gene_braintree module="Gene_Braintree">
+                    <file>gene/braintree.xml</file>
+                </gene_braintree>
+            </updates>
+        </layout>
+
+        <routers>
+            <braintree>
+                <use>standard</use>
+                <args>
+                    <module>Gene_Braintree</module>
+                    <frontName>braintree</frontName>
+                </args>
+            </braintree>
+        </routers>
+
+        <translate>
+            <modules>
+                <Gene_Braintree>
+                    <files>
+                        <default>Gene_Braintree.csv</default>
+                    </files>
+                </Gene_Braintree>
+            </modules>
+        </translate>
+
+        <events>
+            <checkout_submit_all_after>
+                <observers>
+                    <gene_braintree_save_customer_id>
+                        <type>singleton</type>
+                        <class>gene_braintree/observer</class>
+                        <method>completeCheckout</method>
+                    </gene_braintree_save_customer_id>
+                </observers>
+            </checkout_submit_all_after>
+
+            <controller_action_layout_load_before>
+                <observers>
+                    <gene_braintree_detect_checkout>
+                        <type>singleton</type>
+                        <class>gene_braintree/observer</class>
+                        <method>addLayoutHandle</method>
+                    </gene_braintree_detect_checkout>
+                </observers>
+            </controller_action_layout_load_before>
+        </events>
+    </frontend>
+
+    <adminhtml>
+        <layout>
+            <updates>
+                <gene_braintree>
+                    <file>gene/braintree.xml</file>
+                </gene_braintree>
+            </updates>
+        </layout>
+
+        <translate>
+            <modules>
+                <Gene_Braintree>
+                    <files>
+                        <default>Gene_Braintree.csv</default>
+                    </files>
+                </Gene_Braintree>
+            </modules>
+        </translate>
+
+        <events>
+            <sales_order_shipment_save_after>
+                <observers>
+                    <capture_braintree_payment>
+                        <class>gene_braintree/observer</class>
+                        <method>captureBraintreePayment</method>
+                    </capture_braintree_payment>
+                </observers>
+            </sales_order_shipment_save_after>
+        </events>
+    </adminhtml>
+
+    <admin>
+        <routers>
+            <adminhtml>
+                <args>
+                    <modules>
+                        <Gene_Braintree before="Mage_Adminhtml">Gene_Braintree_Adminhtml</Gene_Braintree>
+                    </modules>
+                </args>
+            </adminhtml>
+        </routers>
+    </admin>
+
+</config>

@@ -1,0 +1,375 @@
+<?php
+/**
+ * Add in support for Amasty One Step Checkout
+ * https://amasty.com/single-step-checkout.html
+ */
+?>
+<script type="text/javascript">
+
+    // Older versions of the checkout don't contain this variable
+    if(typeof checkoutRunning == 'undefined') {
+        var checkoutRunning = false;
+    }
+
+    // Check that we haven't already set the original complete checkout method
+    if(originalCompleteCheckout === undefined && completeCheckout !== undefined) {
+
+        // Store the old complete checkout function
+        var originalCompleteCheckout = completeCheckout;
+
+        // Re-define the original method so we can do some jazz with it
+        completeCheckout = function () {
+
+            // Device data should never be disabled
+            $('device_data').removeAttribute('disabled');
+
+            // Always attempt to update the card type on submission
+            if($$('[data-genebraintree-name="number"]').first() != undefined) {
+                vzero.updateCardType($$('[data-genebraintree-name="number"]').first().value);
+            }
+
+            // Run the original validation functions
+            if (amscheckoutForm.validator.validate() && !checkoutRunning) {
+
+                // Are we dealing with the credit card method?
+                if (payment.currentMethod == 'gene_braintree_creditcard') {
+
+                    // Update the data as we're in a one step
+                    vzero.updateData(function() {
+
+                        // Grab these directly from the form and update
+                        if ($('billing:firstname') != undefined && $('billing:lastname') != undefined) {
+                            vzero.setBillingName($('billing:firstname').value + ' ' + $('billing:lastname').value);
+                        }
+                        if ($('billing:postcode') != undefined) {
+                            vzero.setBillingPostcode($('billing:postcode').value);
+                        }
+
+                        // Check is running
+                        checkoutRunning = true;
+
+                        // Show the loading
+                        showLoading();
+
+                        // Process the card
+                        vzero.process({
+                            onSuccess: function () {
+
+                                // Disable the standard credit card form so the values don't get passed through to the checkout
+                                $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
+                                    if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault' && formElement.id != 'device_data') {
+                                        formElement.setAttribute('disabled', 'disabled');
+                                    }
+                                });
+
+                                // No longer running
+                                checkoutRunning = false;
+
+                                // Fire the original event and return the response
+                                completeCheckoutResponse = originalCompleteCheckout.apply(this, arguments);
+
+                                // Re-enable any form elements which were disabled
+                                $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
+                                    formElement.removeAttribute('disabled');
+                                });
+
+                                // Run the original function
+                                return completeCheckoutResponse;
+                            },
+                            onFailure: function() {
+
+                                // Reset the waiting for the parent function
+                                hideLoading();
+
+                                // No longer running
+                                checkoutRunning = false;
+
+                            }
+                        });
+
+                    });
+
+                    // We're updating data don't do anything else for now
+                    return false;
+
+                }
+
+            }
+
+            // Stop further processing
+            return originalCompleteCheckout.apply(this, arguments);
+        };
+    }
+
+    // Only intercept the payment method once
+    if(paymentOriginal == undefined) {
+
+        // It's not been ran so set it to false
+        var PayPalCompleteRan = false;
+
+        /**
+         * Function to run once PayPal has been completed
+         */
+        completePayPal = function(obj) {
+
+            // Check the flag to make sure we're good to run the function
+            if(!PayPalCompleteRan) {
+
+                // Mark the flag as true
+                PayPalCompleteRan = true;
+
+                // Force check
+                payment.switchMethod('gene_braintree_paypal', true);
+
+                // Re-enable the form
+                $('paypal-payment-nonce').removeAttribute('disabled');
+                $('paypal-payment-nonce').value = obj.nonce;
+
+                // Show the button again
+                hidePayPalButton();
+
+                // No longer running
+                checkoutRunning = false;
+
+                // Show the loading thing
+                showLoading();
+
+                // Run the complete checkout method
+                return completeCheckout();
+
+            }
+
+        };
+
+        // Flag to check if the PayPal button is already loading
+        var PayPalButtonLoading = false;
+
+        /**
+         * Easily add the PayPal button into the DOM
+         */
+        addPayPalButton = function() {
+
+            // Check we can locate the submit button
+            if($$('.amscheckout-submit').first() != undefined && $('paypal-complete') == undefined && PayPalButtonLoading == false) {
+
+                // The button is loading
+                PayPalButtonLoading = true;
+
+                // As the PayPal button has to request data from the server show the loader
+                showLoading();
+
+                // Update the data contained within the classes
+                vzero.updateData(function () {
+
+                    // The button is no longer loading
+                    PayPalButtonLoading = false;
+
+                    // Hide it once we're done
+                    hideLoading();
+
+                    // Validate the payment method is still correct
+                    if(payment.currentMethod == 'gene_braintree_paypal' && $('paypal-complete') == undefined) {
+
+                        // Set the flag to false as we've created a new button
+                        PayPalCompleteRan = false;
+
+                        // Hide the submit button
+                        $$('.amscheckout-submit').first().hide();
+
+                        // Add in our PayPal button
+                        $$('.amscheckout-submit').first().up().insert('<div id="paypal-complete"><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label><div id="paypal-container"></div></div>');
+
+                        // Always stop the window from opening
+                        $('paypal-complete').observe('click', function(event) {
+
+                            // Validate the form before we open the PayPal modal window
+                            if (!amscheckoutForm.validator.validate() || checkoutRunning) {
+
+                                // Sadly we're unable to intercept the PayPal window in any other way then just hard closing it
+                                vzeroPaypal.closePayPalWindow();
+                            }
+                        });
+
+                        // Add in the PayPal button
+                        vzeroPaypal.addPayPalButton({
+                            onSuccess: completePayPal
+                        });
+
+                    }
+
+                });
+
+            } else if($('paypal-complete') != undefined) {
+
+                // The button is loading
+                PayPalButtonLoading = true;
+
+                // As the PayPal button has to request data from the server show the loader
+                showLoading();
+
+                // Update the data contained within the classes
+                vzero.updateData(function () {
+
+                    // The button is no longer loading
+                    PayPalButtonLoading = false;
+
+                    // Hide it once we're done
+                    hideLoading();
+
+                    // Validate the payment method is still correct
+                    if(payment.currentMethod == 'gene_braintree_paypal') {
+
+                        // Set the flag to false as we've created a new button
+                        PayPalCompleteRan = false;
+
+                        // Hide the submit button
+                        $$('.amscheckout-submit').first().hide();
+
+                        // Add in the PayPal button
+                        $('paypal-complete').show();
+
+                    }
+
+                });
+
+            }
+
+        };
+
+        /**
+         * As we need to remove the PayPal button in multiple places
+         */
+        hidePayPalButton = function() {
+
+            // If the user has selected a different payment method make some modifications
+            if($$('.amscheckout-submit').first() != undefined) {
+                $$('.amscheckout-submit').first().show();
+            }
+
+            // Remove the PayPal element
+            if($('paypal-complete') != undefined) {
+                $('paypal-complete').hide();
+            }
+
+        };
+
+        // Check if the payment method is the default
+        if(payment !== undefined) {
+            if((payment.currentMethod == 'gene_braintree_paypal' && $('paypal-saved-accounts') == undefined) || ($$('#paypal-saved-accounts input:checked[type=radio]').first() != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first().value == 'other')) {
+
+                // Verify that vzero is defined before attempting to use it
+                if(typeof vzeroPaypal !== 'undefined') {
+
+                    // Always set the amount as it's needed within 3D secure requests
+                    vzeroPaypal.setPricing('<?php echo Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getGrandTotal(); ?>', '<?php echo Mage::getSingleton('checkout/cart')->getQuote()->getBaseCurrencyCode(); ?>');
+                }
+
+                addPayPalButton();
+            }
+        }
+
+        // Store the original payment method
+        var paymentOriginal = Payment.prototype.switchMethod;
+
+        // Intercept the save function
+        Payment.prototype.switchMethod = function (method) {
+
+            // Make sure the paypal complete action hasn't just ran
+            if(PayPalCompleteRan != true) {
+
+                // Detect PayPal choice
+                if (method == 'gene_braintree_paypal') {
+
+                    if ($('paypal-saved-accounts') == undefined) {
+                        addPayPalButton();
+                    } else if ($('paypal-saved-accounts') != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first() != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first().value == 'other') {
+                        addPayPalButton();
+                    } else {
+                        hidePayPalButton();
+                    }
+
+                } else {
+                    hidePayPalButton();
+                }
+            }
+
+
+            // Run the original function
+            return paymentOriginal.apply(this, arguments);
+
+        };
+
+        // If we have any saved accounts we'll need to do something jammy
+        if($$('#paypal-saved-accounts input[type=radio]').first() != undefined) {
+
+            // Loop through each radio button
+            $$('#paypal-saved-accounts input[type=radio]').each(function (savedAccount) {
+
+                // Observe them changing
+                Event.observe(savedAccount, 'click', function (ele) {
+                    if(savedAccount.value == 'other') {
+                        addPayPalButton();
+                    } else {
+                        hidePayPalButton();
+                    }
+                });
+            });
+        }
+
+        var updateCheckoutOriginal = updateCheckout;
+        updateCheckout = function() {
+
+            // If we're updating the checkout remove the PayPal button
+            hidePayPalButton();
+
+            // Run the original function
+            return updateCheckoutOriginal.apply(this, arguments);
+        };
+
+        // What should happen if the user closes the 3D secure window?
+        vzero.close3dSecureMethod(function() {
+
+            // Hide the loading
+            hideLoading();
+
+            // Check is running
+            checkoutRunning = false;
+
+        });
+
+        // Observe the card type here as it'll fail within creditCard.phtml
+        vzero.observeCardType();
+
+        // Observe all Ajax requests for changes
+        vzero.observeAjaxRequests(function() {
+
+            // If the method is PayPal remove and re-add the PayPal button
+            if(payment.currentMethod == 'gene_braintree_paypal') {
+                hidePayPalButton();
+                addPayPalButton();
+            } else {
+                vzero.updateData();
+            }
+
+        });
+
+    }
+</script>
+<style type="text/css">
+    #paypal-label {
+        line-height: 44px;
+        float: left;
+        margin-right: 12px;
+    }
+    #braintree-paypal-button {
+        line-height: unset;
+        padding: 0;
+        float: left;
+    }
+    #braintree-paypal-loggedin {
+        display: none!important;
+    }
+    #braintree-paypal-loggedout {
+        display: block!important;
+    }
+</style>

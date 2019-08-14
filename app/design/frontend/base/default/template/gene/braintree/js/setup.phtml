@@ -1,0 +1,36 @@
+<?php
+/**
+ * Setup the JavaScript classes with their required fields
+ */
+/* @var $this Gene_Braintree_Block_Js */
+?>
+<script type="text/javascript">
+
+    // Pass some data over to vZero integration JS
+    var vzero = new vZero(
+        'gene_braintree_creditcard',
+        '<?php echo $this->getClientToken(); ?>',
+        <?php echo $this->is3DEnabled(); ?>,
+        false,
+        false,
+        '<?php echo Mage::getUrl('braintree/checkout/quoteTotal', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>',
+        '<?php echo Mage::getUrl('braintree/checkout/tokenizeCard', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>'
+    );
+
+    <?php if($this->isPayPalActive()): ?>
+
+        // Pass some data through to the PayPal integration
+        var vzeroPaypal = new vZeroPayPalButton(
+            '<?php echo $this->getClientToken(); ?>',
+            '<?php echo Mage::app()->getStore()->getFrontendName(); ?>',
+            <?php echo $this->getSingleUse(); ?>,
+            '<?php echo $this->getLocale(); ?>',
+            <?php echo $this->getSingleFutureUse(); ?>
+        );
+
+    <?php endif; ?>
+
+    // Init the environment
+    vzero.init();
+
+</script>

@@ -1,0 +1,63 @@
+<script type="text/javascript">
+    //<![CDATA[
+    // Pass some data over to vZero integration JS
+    var vzero = new vZero(
+        'gene_braintree_creditcard',
+        '<?php echo $this->getClientToken(); ?>',
+        false,
+        ['order-billing_address_firstname', 'order-billing_address_lastname'],
+        ['order-billing_address_postcode']
+    );
+
+    // Init the environment
+    vzero.init();
+
+    // Store the original payment method
+    var adminOrderOriginal = AdminOrder.prototype.submit;
+
+    // Intercept the save function
+    AdminOrder.prototype.submit = function() {
+
+        // Check we're using the braintree card method
+        if(order.paymentMethod == 'gene_braintree_creditcard') {
+
+            // Validate the form contents
+            if (editForm.validate()) {
+
+                // Store these to be used later on
+                var adminThis = this;
+                var adminArgs = arguments;
+
+                // Process the card
+                vzero.process({
+                    onSuccess: function () {
+
+                        // Disable the standard credit card form so the values don't get passed through to the checkout
+                        $$('#payment_form_gene_braintree_creditcard input, #payment_form_gene_braintree_creditcard select').each(function (formElement) {
+                            if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault' && formElement.id != 'device_data') {
+                                formElement.setAttribute('disabled', 'disabled');
+                            }
+                        });
+
+                        // Fire the original event and return the response
+                        adminOrderResponse = adminOrderOriginal.apply(adminThis, adminArgs);
+
+                        // Re-enable any form elements which were disabled
+                        $$('#payment_form_gene_braintree_creditcard input, #payment_form_gene_braintree_creditcard select').each(function (formElement) {
+                            formElement.removeAttribute('disabled');
+                        });
+
+                        // Run the original function
+                        return adminOrderResponse;
+
+                    }
+                });
+            }
+
+        } else {
+            return adminOrderOriginal.apply(this, arguments);
+        }
+
+    };
+    //]]>
+</script>
