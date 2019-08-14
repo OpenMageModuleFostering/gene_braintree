@@ -2,7 +2,7 @@
 <config>
     <modules>
         <Gene_Braintree>
-            <version>1.0.5.4</version>
+            <version>2.0.0</version>
         </Gene_Braintree>
     </modules>
     <global>
@@ -36,7 +36,7 @@
             <gene_braintree_setup>
                 <setup>
                     <module>Gene_Braintree</module>
-                    <class>Mage_Eav_Model_Entity_Setup</class>
+                    <class>Gene_Braintree_Model_Entity_Setup</class>
                 </setup>
             </gene_braintree_setup>
         </resources>
@@ -52,6 +52,20 @@
                 </types>
             </cc>
         </payment>
+
+        <events>
+            <!-- Add an include path for the Braintree SDK -->
+            <controller_front_init_before>
+                <observers>
+                    <gene_braintree_include_path>
+                        <type>singleton</type>
+                        <class>gene_braintree/observer</class>
+                        <method>addIncludePath</method>
+                    </gene_braintree_include_path>
+                </observers>
+            </controller_front_init_before>
+        </events>
+
     </global>
 
     <!-- Default values for the system configuration pages -->
@@ -66,6 +80,7 @@
             <!-- PayPal method -->
             <gene_braintree_paypal>
                 <active>0</active>
+                <express_active>1</express_active>
                 <model>gene_braintree/paymentmethod_paypal</model>
                 <order_status>processing</order_status>
                 <payment_action>authorize_capture</payment_action>
@@ -86,7 +101,7 @@
                 <title>Credit Card (Braintree)</title>
                 <environment>sandbox</environment>
                 <allowspecific>0</allowspecific>
-                <form_integration>default</form_integration>
+                <form_integration>hosted</form_integration>
                 <use_vault>0</use_vault>
                 <threedsecure>0</threedsecure>
                 <threedsecure_threshold>0</threedsecure_threshold>
@@ -94,9 +109,14 @@
             </gene_braintree_creditcard>
 
         </payment>
+
     </default>
 
     <frontend>
+        <secure_url>
+            <braintree>/braintree/saved/</braintree>
+        </secure_url>
+        
         <layout>
             <updates>
                 <gene_braintree module="Gene_Braintree">
@@ -145,6 +165,36 @@
                     </gene_braintree_detect_checkout>
                 </observers>
             </controller_action_layout_load_before>
+
+            <core_block_abstract_to_html_before>
+                <observers>
+                    <gene_braintree_saved_child>
+                        <type>singleton</type>
+                        <class>gene_braintree/observer</class>
+                        <method>addSavedChild</method>
+                    </gene_braintree_saved_child>
+                </observers>
+            </core_block_abstract_to_html_before>
+
+            <controller_action_predispatch_checkout_multishipping_overviewPost>
+                <observers>
+                    <gene_braintree_reset_multishipping>
+                        <type>singleton</type>
+                        <class>gene_braintree/observer</class>
+                        <method>resetMultishipping</method>
+                    </gene_braintree_reset_multishipping>
+                </observers>
+            </controller_action_predispatch_checkout_multishipping_overviewPost>
+
+            <checkout_type_multishipping_create_orders_single>
+                <observers>
+                    <gene_braintree_multishipping>
+                        <type>singleton</type>
+                        <class>gene_braintree/observer</class>
+                        <method>handleMultishipping</method>
+                    </gene_braintree_multishipping>
+                </observers>
+            </checkout_type_multishipping_create_orders_single>
         </events>
     </frontend>
 
@@ -187,6 +237,16 @@
                     </check_compilation>
                 </observers>
             </controller_action_postdispatch>
+
+            <core_block_abstract_to_html_before>
+                <observers>
+                    <gene_braintree_saved_child>
+                        <type>singleton</type>
+                        <class>gene_braintree/observer</class>
+                        <method>addSavedChild</method>
+                    </gene_braintree_saved_child>
+                </observers>
+            </core_block_abstract_to_html_before>
         </events>
     </adminhtml>
 

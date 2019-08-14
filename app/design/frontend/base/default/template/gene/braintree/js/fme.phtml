@@ -12,7 +12,6 @@
 
         /**
          * Validate the entire checkout
-         * Annoyingly IWD hasn't already wrapped this in a function
          */
         validateAll: function() {
             var validation = new Validation(review.form);
@@ -81,7 +80,7 @@
     new vZeroIntegration(
         (window.vzero || false),
         (window.vzeroPaypal || false),
-        '<div id="paypal-complete"><div id="paypal-container"></div><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label></div>',
+        '<div id="paypal-complete"><div id="paypal-container"></div></div>',
         '#review-buttons-container .input_button',
         true,
         {

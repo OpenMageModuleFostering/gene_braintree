@@ -1,0 +1,44 @@
+<?php
+/*
+ * @var Gene_Braintree_Block_Express_Button $this
+ */
+?>
+
+<?php if( !$this->isEnabled() || !$this->isEnabledPdp()) return; ?>
+
+<?php /* Check if this block has already been setup, so we don't have multuple divs */
+if( !$this->hasBeenSetup() ): ?>
+    <div id="pp-express-overlay"></div>
+    <div id="pp-express-modal"></div>
+    <div id="pp-express-container"></div>
+<?php endif; ?>
+
+<script type="text/javascript">
+    <?php if( !$this->hasBeenSetup() ): ?>
+    if (typeof Translator !== 'object' && typeof Translate == 'object') {
+        var Translator = new Translate([]);
+    }
+
+    if (typeof Translator === 'object') {
+        Translator.add({
+            "We were unable to complete the request. Please try again.": "<?php echo $this->__('We were unable to complete the request. Please try again.'); ?>",
+            "Checkout with PayPal": "<?php echo $this->__("Checkout with PayPal"); ?>"
+        })
+    }
+    <?php endif; ?>
+
+    Event.observe(window, 'load', function() {
+        if (typeof ppExpress === 'object') {
+            ppExpress.addBtn({
+                token:          '<?php echo $this->getToken(); ?>',
+                currency:       '<?php echo $this->getStoreCurrency(); ?>',
+                priceFormat:    <?php echo Mage::helper('core')->jsonEncode(Mage::app()->getLocale()->getJsPriceFormat()); ?>,
+                locale:         '<?php echo strtolower($this->getStoreLocale()); ?>',
+                productId:      <?php echo (int) $this->getProduct()->getId(); ?>,
+                authUrl:        '<?php echo $this->getUrl('braintree/express/authorization') ?>',
+                shippingSaveUrl:'<?php echo $this->getUrl('braintree/express/saveShipping') ?>',
+                successUrl:     '<?php echo $this->getUrl("checkout/onepage/success"); ?>',
+            });
+        }
+    });
+</script>

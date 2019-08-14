@@ -1,4 +1,3 @@
-
 /**
  * Magento Braintree class to bridge the v.zero JS SDK and Magento
  *
@@ -39,7 +38,7 @@ vZero.prototype = {
         if (tokenizeUrl) {
             this.tokenizeUrl = tokenizeUrl;
         }
-        if(vaultToNonceUrl) {
+        if (vaultToNonceUrl) {
             this.vaultToNonceUrl = vaultToNonceUrl;
         }
 
@@ -64,7 +63,7 @@ vZero.prototype = {
      * Init the vZero integration by starting a new version of the client
      * If 3D secure is enabled we also listen out for window messages
      */
-    init: function() {
+    init: function () {
         this.client = new braintree.api.Client({clientToken: this.clientToken});
     },
 
@@ -73,7 +72,7 @@ vZero.prototype = {
      *
      * @param integration
      */
-    initHostedFields: function(integration) {
+    initHostedFields: function (integration) {
 
         // If the hosted field number element exists hosted fields is on the page and working!
         if ($$('iframe[name^="braintree-"]').length > 0) {
@@ -93,7 +92,7 @@ vZero.prototype = {
 
         // Utilise a 50ms timeout to ensure the last call of HF is ran
         clearTimeout(this._hostedFieldsTimeout);
-        this._hostedFieldsTimeout = setTimeout(function() {
+        this._hostedFieldsTimeout = setTimeout(function () {
 
             if (this._hostedIntegration !== false) {
                 try {
@@ -114,9 +113,30 @@ vZero.prototype = {
     },
 
     /**
+     * Tear down hosted fields
+     *
+     * @param callbackFn
+     */
+    teardownHostedFields: function (callbackFn) {
+        if (this._hostedIntegration !== false) {
+            this._hostedIntegration.teardown(function () {
+                this._hostedIntegration = false;
+
+                if (typeof callbackFn === 'function') {
+                    callbackFn();
+                }
+            }.bind(this));
+        } else {
+            if (typeof callbackFn === 'function') {
+                callbackFn();
+            }
+        }
+    },
+
+    /**
      * Setup the hosted fields client utilising the Braintree JS SDK
      */
-    setupHostedFieldsClient: function() {
+    setupHostedFieldsClient: function () {
 
         // If there are iframes within the fields already, don't run again!
         // This function has a delay from the original call so we need to verify everything is still good to go!
@@ -129,24 +149,7 @@ vZero.prototype = {
         var hostedFieldsConfiguration = {
             id: this.integration.form,
             hostedFields: {
-                styles: {
-                    // Style all elements
-                    "input": {
-                        "font-size": "14pt",
-                        "color": "#3A3A3A"
-                    },
-
-                    // Styling element state
-                    ":focus": {
-                        "color": "black"
-                    },
-                    ".valid": {
-                        "color": "green"
-                    },
-                    ".invalid": {
-                        "color": "red"
-                    }
-                },
+                styles: this.getHostedFieldsStyles(),
                 number: {
                     selector: "#card-number",
                     placeholder: "0000 0000 0000 0000"
@@ -161,15 +164,20 @@ vZero.prototype = {
                 },
                 onFieldEvent: this.hostedFieldsOnFieldEvent.bind(this)
             },
-            onReady: function(integration) {
+            onReady: function (integration) {
                 this._hostedIntegration = integration;
+
+                // Unset the loading state if it's present
+                if ($$('#credit-card-form.loading').length) {
+                    $$('#credit-card-form.loading').first().removeClassName('loading');
+                }
             }.bind(this),
             onPaymentMethodReceived: this.hostedFieldsPaymentMethodReceived.bind(this),
             onError: this.hostedFieldsError.bind(this)
         };
 
         // Include the CVV field with the request
-        if($('cvv') !== null) {
+        if ($('cvv') !== null) {
             hostedFieldsConfiguration.hostedFields.cvv = {
                 selector: "#cvv"
             };
@@ -179,11 +187,45 @@ vZero.prototype = {
     },
 
     /**
+     * Return the hosted field styles
+     * See: https://developers.braintreepayments.com/guides/hosted-fields/styling/javascript/v2
+     *
+     * @returns {*}
+     */
+    getHostedFieldsStyles: function () {
+
+        // Does the integration provide it's own styling options for hosted fields?
+        if (typeof this.integration.getHostedFieldsStyles === 'function') {
+            return this.integration.getHostedFieldsStyles();
+        }
+
+        // Return some default styles if all else fails
+        return {
+            // Style all elements
+            "input": {
+                "font-size": "14pt",
+                "color": "#3A3A3A"
+            },
+
+            // Styling element state
+            ":focus": {
+                "color": "black"
+            },
+            ".valid": {
+                "color": "green"
+            },
+            ".invalid": {
+                "color": "red"
+            }
+        };
+    },
+
+    /**
      * Update the card type on field event
      *
      * @param event
      */
-    hostedFieldsOnFieldEvent: function(event) {
+    hostedFieldsOnFieldEvent: function (event) {
         if (event.type === "fieldStateChange") {
             if (event.card) {
                 var cardMapping = {
@@ -209,7 +251,7 @@ vZero.prototype = {
      * @param nonce
      * @param callback
      */
-    vaultToNonce: function(nonce, callback) {
+    vaultToNonce: function (nonce, callback) {
 
         // Craft the parameters
         var parameters = this.getBillingAddress();
@@ -226,6 +268,7 @@ vZero.prototype = {
                     if (transport && transport.responseText) {
 
                         // Parse as an object
+                        var response;
                         try {
                             response = eval('(' + transport.responseText + ')');
                         }
@@ -233,7 +276,7 @@ vZero.prototype = {
                             response = {};
                         }
 
-                        if(response.success && response.nonce) {
+                        if (response.success && response.nonce) {
                             callback(response.nonce);
                         } else {
 
@@ -242,7 +285,7 @@ vZero.prototype = {
                                 this.integration.resetLoading();
                             }
 
-                            if(response.error) {
+                            if (response.error) {
                                 alert(response.error);
                             } else {
                                 alert('Something wen\'t wrong and we\'re currently unable to take your payment.');
@@ -250,7 +293,7 @@ vZero.prototype = {
                         }
                     }
                 }.bind(this),
-                onFailure: function() {
+                onFailure: function () {
 
                     // Hide the loading state
                     if (typeof this.integration.resetLoading === 'function') {
@@ -269,7 +312,7 @@ vZero.prototype = {
      *
      * @param response
      */
-    hostedFieldsPaymentMethodReceived: function(response) {
+    hostedFieldsPaymentMethodReceived: function (response) {
 
         // Check if validation failed or not?
         if (this.threeDSecure) {
@@ -281,7 +324,7 @@ vZero.prototype = {
 
             // Update the quote totals first
             this.updateData(function () {
-                this.vaultToNonce(response.nonce, function(nonce) {
+                this.vaultToNonce(response.nonce, function (nonce) {
 
                     // Hide the loading state
                     if (typeof this.integration.resetLoading === 'function') {
@@ -312,7 +355,7 @@ vZero.prototype = {
      *
      * @param nonce
      */
-    hostedFieldsNonceReceived: function(nonce) {
+    hostedFieldsNonceReceived: function (nonce) {
 
         $('creditcard-payment-nonce').value = nonce;
         $('creditcard-payment-nonce').setAttribute('value', nonce);
@@ -335,7 +378,7 @@ vZero.prototype = {
      * @param response
      * @returns {boolean}
      */
-    hostedFieldsError: function(response) {
+    hostedFieldsError: function (response) {
 
         if (typeof this.integration.resetLoading === 'function') {
             this.integration.resetLoading();
@@ -343,7 +386,7 @@ vZero.prototype = {
 
         // Stop any "Cannot place two elements in #xxx" messages being shown to the user
         // These are non critical errors and the functionality will still work as expected
-        if(typeof response.message !== 'undefined' && response.message.indexOf('Cannot place two elements in') == -1) {
+        if (typeof response.message !== 'undefined' && response.message.indexOf('Cannot place two elements in') == -1) {
             // Let the user know what went wrong
             alert(response.message);
         }
@@ -363,7 +406,7 @@ vZero.prototype = {
      *
      * @returns {boolean}
      */
-    usingSavedCard: function() {
+    usingSavedCard: function () {
         return ($('creditcard-saved-accounts') != undefined
         && $$('#creditcard-saved-accounts input:checked[type=radio]').first() != undefined
         && $$('#creditcard-saved-accounts input:checked[type=radio]').first().value !== 'other');
@@ -375,7 +418,7 @@ vZero.prototype = {
      *
      * @param flag a boolean value
      */
-    setThreeDSecure: function(flag) {
+    setThreeDSecure: function (flag) {
         this.threeDSecure = flag;
     },
 
@@ -385,7 +428,7 @@ vZero.prototype = {
      *
      * @param amount The grand total of the order
      */
-    setAmount: function(amount) {
+    setAmount: function (amount) {
         this.amount = parseFloat(amount);
     },
 
@@ -394,7 +437,7 @@ vZero.prototype = {
      *
      * @param billingName
      */
-    setBillingName: function(billingName) {
+    setBillingName: function (billingName) {
         this.billingName = billingName;
     },
 
@@ -403,7 +446,7 @@ vZero.prototype = {
      *
      * @returns {*}
      */
-    getBillingName: function() {
+    getBillingName: function () {
 
         // If billingName is an object we're wanting to grab the data from elements
         if (typeof this.billingName == 'object') {
@@ -423,7 +466,7 @@ vZero.prototype = {
      *
      * @param billingPostcode
      */
-    setBillingPostcode: function(billingPostcode) {
+    setBillingPostcode: function (billingPostcode) {
         this.billingPostcode = billingPostcode;
     },
 
@@ -432,7 +475,7 @@ vZero.prototype = {
      *
      * @returns {*}
      */
-    getBillingPostcode: function() {
+    getBillingPostcode: function () {
 
         // If billingName is an object we're wanting to grab the data from elements
         if (typeof this.billingPostcode == 'object') {
@@ -452,7 +495,7 @@ vZero.prototype = {
      *
      * @param cards an array of accepted cards
      */
-    setAcceptedCards: function(cards) {
+    setAcceptedCards: function (cards) {
         this.acceptedCards = cards;
     },
 
@@ -461,7 +504,7 @@ vZero.prototype = {
      *
      * @returns {array}
      */
-    getBillingAddress: function() {
+    getBillingAddress: function () {
 
         // Is there a function in the integration for this action?
         if (typeof this.integration.getBillingAddress === 'function') {
@@ -471,17 +514,17 @@ vZero.prototype = {
         var billingAddress = {};
 
         // If not try something generic
-        if($('co-billing-form') !== null) {
-            if($('co-billing-form').tagName == 'FORM') {
+        if ($('co-billing-form') !== null) {
+            if ($('co-billing-form').tagName == 'FORM') {
                 billingAddress = $('co-billing-form').serialize(true);
             } else {
                 billingAddress = this.extractBilling($('co-billing-form').up('form').serialize(true));
             }
-        } else if($('billing:firstname') !== null) {
-            billingAddress =  this.extractBilling($('billing:firstname').up('form').serialize(true));
+        } else if ($('billing:firstname') !== null) {
+            billingAddress = this.extractBilling($('billing:firstname').up('form').serialize(true));
         }
 
-        if(billingAddress) {
+        if (billingAddress) {
             return billingAddress;
         }
     },
@@ -492,11 +535,11 @@ vZero.prototype = {
      * @param formData
      * @returns {{}}
      */
-    extractBilling: function(formData) {
+    extractBilling: function (formData) {
         var billing = {};
-        $H(formData).each(function(data) {
-            // Only include billing details, exclusing passwords
-            if(data.key.indexOf('billing') == 0 && data.key.indexOf('password') == -1) {
+        $H(formData).each(function (data) {
+            // Only include billing details, excluding passwords
+            if (data.key.indexOf('billing') == 0 && data.key.indexOf('password') == -1) {
                 billing[data.key] = data.value;
             }
         });
@@ -508,7 +551,7 @@ vZero.prototype = {
      *
      * @returns {boolean|*}
      */
-    getAcceptedCards: function() {
+    getAcceptedCards: function () {
         return this.acceptedCards;
     },
 
@@ -520,7 +563,7 @@ vZero.prototype = {
      * @param seperator
      * @returns {string}
      */
-    combineElementsValues: function(elements, seperator) {
+    combineElementsValues: function (elements, seperator) {
 
         // If no seperator is set use a space
         if (!seperator) {
@@ -529,7 +572,7 @@ vZero.prototype = {
 
         // Loop through the elements and build up an array
         var response = [];
-        elements.each(function(element, index) {
+        elements.each(function (element, index) {
             if ($(element) !== undefined) {
                 response[index] = $(element).value;
             }
@@ -546,7 +589,7 @@ vZero.prototype = {
      * @param cardNumber The card number that the user has entered
      * @param cardType The card type, if already known
      */
-    updateCardType: function(cardNumber, cardType) {
+    updateCardType: function (cardNumber, cardType) {
 
         if (!cardType) {
             // Retrieve the card type
@@ -579,7 +622,7 @@ vZero.prototype = {
     /**
      * Create a new event upon the card number field
      */
-    observeCardType: function() {
+    observeCardType: function () {
 
         if ($$('[data-genebraintree-name="number"]').first() !== undefined) {
 
@@ -591,7 +634,7 @@ vZero.prototype = {
             });
 
             // Add a space every 4 characters
-            $$('[data-genebraintree-name="number"]').first().oninput = function() {
+            $$('[data-genebraintree-name="number"]').first().oninput = function () {
                 // Add a space every 4 characters
                 var number = this.value.split(" ").join("");
                 if (number.length > 0) {
@@ -611,18 +654,18 @@ vZero.prototype = {
      * @param callback A defined callback function if needed
      * @param ignore An array of indexOf paths to ignore
      */
-    observeAjaxRequests: function(callback, ignore) {
+    observeAjaxRequests: function (callback, ignore) {
 
         // For every ajax request on complete update various Braintree things
         Ajax.Responders.register({
-            onComplete: function(transport) {
+            onComplete: function (transport) {
                 return this.handleAjaxRequest(transport.url, callback, ignore);
             }.bind(this)
         });
 
         // Is jQuery present on the page
         if (window.jQuery) {
-            jQuery(document).ajaxComplete(function(event, xhr, settings) {
+            jQuery(document).ajaxComplete(function (event, xhr, settings) {
                 return this.handleAjaxRequest(settings.url, callback, ignore)
             }.bind(this));
         }
@@ -637,7 +680,7 @@ vZero.prototype = {
      * @param ignore
      * @returns {boolean}
      */
-    handleAjaxRequest: function(url, callback, ignore) {
+    handleAjaxRequest: function (url, callback, ignore) {
 
         // Let's check the ignore variable
         if (typeof ignore !== 'undefined' && ignore instanceof Array && ignore.length > 0) {
@@ -657,7 +700,7 @@ vZero.prototype = {
         }
 
         // Check the transport object has a URL and that it wasn't to our own controller
-        if (url && url.indexOf('braintree') == -1) {
+        if (url && url.indexOf('/braintree/') == -1) {
 
             // Some checkout implementations may require custom callbacks
             if (callback) {
@@ -675,14 +718,14 @@ vZero.prototype = {
      * @param callback A defined callback function if needed
      * @param params any extra data to be passed to the controller
      */
-    updateData: function(callback, params) {
+    updateData: function (callback, params) {
 
         // Push the callbacks into our array
         this._updateDataCallbacks.push(callback);
         this._updateDataParams = params;
 
         // If an updateData ajax request is running, cancel it
-        if(this._updateDataXhr !== false) {
+        if (this._updateDataXhr !== false) {
             this._updateDataXhr.transport.abort();
         }
 
@@ -690,18 +733,18 @@ vZero.prototype = {
         this._updateDataXhr = new Ajax.Request(
             this.quoteUrl,
             {
-                method:'post',
+                method: 'post',
                 parameters: this._updateDataParams,
-                onSuccess: function(transport) {
+                onSuccess: function (transport) {
                     // Verify we have some response text
-                    if (transport && transport.responseText) {
+                    if (transport && (transport.responseJSON || transport.responseText)) {
 
-                        // Parse as an object
-                        try {
-                            response = eval('(' + transport.responseText + ')');
-                        }
-                        catch (e) {
-                            response = {};
+                        // Parse the response from the server
+                        var response;
+                        if (transport.responseJSON && typeof transport.responseJSON === 'object') {
+                            response = transport.responseJSON;
+                        } else if (transport.responseText) {
+                            response = JSON.decode(transport.responseText);
                         }
 
                         if (response.billingName != undefined) {
@@ -734,7 +777,7 @@ vZero.prototype = {
                         this._updateDataXhr = false;
 
                         // Run any callbacks that have been stored
-                        if(this._updateDataCallbacks.length) {
+                        if (this._updateDataCallbacks.length) {
                             this._updateDataCallbacks.each(function (callback) {
                                 callback(response);
                             }.bind(this));
@@ -742,7 +785,7 @@ vZero.prototype = {
                         }
                     }
                 }.bind(this),
-                onFailure: function() {
+                onFailure: function () {
 
                     // Reset the params
                     this._updateDataParams = {};
@@ -760,7 +803,7 @@ vZero.prototype = {
      *
      * @param callback A defined callback function if needed
      */
-    close3dSecureMethod: function(callback) {
+    close3dSecureMethod: function (callback) {
         this.closeMethod = callback;
     },
 
@@ -771,7 +814,7 @@ vZero.prototype = {
      *
      * @param callback A defined callback function if needed
      */
-    tokenize3dSavedCards: function(callback) {
+    tokenize3dSavedCards: function (callback) {
 
         // Check 3D is enabled
         if (this.threeDSecure) {
@@ -789,8 +832,8 @@ vZero.prototype = {
                 new Ajax.Request(
                     this.tokenizeUrl,
                     {
-                        method:'post',
-                        onSuccess: function(transport) {
+                        method: 'post',
+                        onSuccess: function (transport) {
 
                             // Verify we have some response text
                             if (transport && transport.responseText) {
@@ -833,7 +876,7 @@ vZero.prototype = {
         }
     },
 
-    onUserClose3ds: function() {
+    onUserClose3ds: function () {
         this._hostedFieldsTokenGenerated = false;
         // Is there a close method defined?
         if (this.closeMethod) {
@@ -849,7 +892,7 @@ vZero.prototype = {
      * @param nonce
      * @param options
      */
-    verify3dSecureNonce: function(nonce, options) {
+    verify3dSecureNonce: function (nonce, options) {
 
         var threeDSecureRequest = {
             amount: this.amount,
@@ -879,7 +922,7 @@ vZero.prototype = {
      *
      * @param options Contains any callback functions which have been set
      */
-    verify3dSecure: function(options) {
+    verify3dSecure: function (options) {
 
         var threeDSecureRequest = {
             amount: this.amount,
@@ -937,7 +980,7 @@ vZero.prototype = {
      *
      * @param options Contains any callback functions which have been set
      */
-    verify3dSecureVault: function(options) {
+    verify3dSecureVault: function (options) {
 
         // Get the payment nonce
         var paymentNonce = $$('#creditcard-saved-accounts input:checked[type=radio]').first().getAttribute('data-threedsecure-nonce');
@@ -988,7 +1031,7 @@ vZero.prototype = {
      *
      * @param options Contains any callback functions which have been set
      */
-    processCard: function(options) {
+    processCard: function (options) {
 
         var tokenizeRequest = {
             number: $$('[data-genebraintree-name="number"]').first().value,
@@ -1042,7 +1085,7 @@ vZero.prototype = {
      *
      * @returns {boolean}
      */
-    shouldInterceptCreditCard: function() {
+    shouldInterceptCreditCard: function () {
         return true;
     },
 
@@ -1051,7 +1094,7 @@ vZero.prototype = {
      *
      * @returns {boolean}
      */
-    shouldInterceptPayPal: function() {
+    shouldInterceptPayPal: function () {
         return true;
     },
 
@@ -1061,9 +1104,9 @@ vZero.prototype = {
      * @param number
      * @returns {string}
      */
-    getCardType: function(number) {
+    getCardType: function (number) {
 
-        if(number) {
+        if (number) {
 
             if (number.match(/^4/) != null)
                 return "VI";
@@ -1100,13 +1143,13 @@ vZero.prototype = {
      *
      * @param options Object containing onSuccess, onFailure functions
      */
-    process: function(options) {
+    process: function (options) {
 
         // If options isn't set, use an empty object
         options = options || {};
 
         // If the hosted fields token has been generated just glide through
-        if(this._hostedFieldsTokenGenerated) {
+        if (this._hostedFieldsTokenGenerated) {
 
             // No action required as we're using a saved card
             if (options.onSuccess) {
@@ -1137,11 +1180,11 @@ vZero.prototype = {
         }
     },
 
-    creditCardLoaded: function() {
+    creditCardLoaded: function () {
         return false;
     },
 
-    paypalLoaded: function() {
+    paypalLoaded: function () {
         return false;
     }
 
@@ -1174,6 +1217,7 @@ vZeroPayPalButton.prototype = {
 
         this._paypalOptions = {};
         this._paypalIntegration = false;
+        this._paypalButton = false;
 
         this._rebuildTimer = false;
         this._rebuildCount = 0;
@@ -1187,21 +1231,24 @@ vZeroPayPalButton.prototype = {
      * @param amount The amount formatted to two decimal places
      * @param currency The currency code
      */
-    setPricing: function(amount, currency) {
+    setPricing: function (amount, currency) {
 
         // Set them into the class
         this.amount = parseFloat(amount);
         this.currency = currency;
 
-        // As the amounts and currency has been updated let's update the button by rebuilding it
-        this.rebuildButton();
+        if ($('paypal-payment-nonce') != null && !$('paypal-payment-nonce').value) {
+            // As the amounts and currency has been updated let's update the button by rebuilding it
+            // But only if we don't have a nonce
+            this.rebuildButton();
+        }
 
     },
 
     /**
      * Rebuild the PayPal button
      */
-    rebuildButton: function() {
+    rebuildButton: function () {
 
         clearTimeout(this._rebuildTimer);
         if (this._paypalIntegration !== false) {
@@ -1214,10 +1261,10 @@ vZeroPayPalButton.prototype = {
                 }.bind(this));
             } catch (e) {
                 // This error means the integration has already been torn down
-                if(e.message == 'Cannot teardown integration more than once') {
+                if (e.message == 'Cannot teardown integration more than once') {
                     this._paypalIntegration = false;
                     this.addPayPalButton(this._paypalOptions);
-                } else if(this._rebuildCount >= 10) {
+                } else if (this._rebuildCount >= 10) {
                     // Infinite loops are bad kids
                     return false;
                 } else {
@@ -1235,13 +1282,27 @@ vZeroPayPalButton.prototype = {
      * Inject the PayPal button into the document
      *
      * @param options Object containing onSuccess method
+     * @param integration Object the integration class
      */
-    addPayPalButton: function(options) {
+    addPayPalButton: function (options, checkoutIntegration) {
 
         // If the container isn't present on the page we can't add the button
-        if($('paypal-container') === null) {
+        if ($('paypal-container') === null || $('braintree-paypal-button') === null) {
             return false;
         }
+
+        // Add our custom button into the view
+        var buttonHtml = $('braintree-paypal-button').innerHTML;
+        $('paypal-container').update('');
+        $('paypal-container').insert(buttonHtml);
+
+        // Assign the new button
+        if (!$('paypal-container').select('>button').length) {
+            return false;
+        }
+        this._paypalButton = $('paypal-container').select('>button').first();
+        this._paypalButton.addClassName('braintree-paypal-loading');
+        this._paypalButton.setAttribute('disabled', 'disabled');
 
         // Store the options as we may need to rebuild the button
         this._paypalOptions = options;
@@ -1249,10 +1310,9 @@ vZeroPayPalButton.prototype = {
 
         // Build up our setup configuration
         var setupConfiguration = {
-            container: "paypal-container",
             paymentMethodNonceInputField: "paypal-payment-nonce",
             displayName: this.storeFrontName,
-            onPaymentMethodReceived: function(obj) {
+            onPaymentMethodReceived: function (obj) {
 
                 // If we have a success callback we're most likely using a non-default checkout
                 if (typeof options.onSuccess === 'function') {
@@ -1272,19 +1332,23 @@ vZeroPayPalButton.prototype = {
                 }
 
             },
-            onUnsupported: function() {
+            onUnsupported: function () {
                 alert('You need to link your PayPal account with your Braintree account in your Braintree control panel to utilise the PayPal functionality of this extension.');
             },
-            onReady: function(integration) {
+            onReady: function (integration) {
                 this._paypalIntegration = integration;
+                this._attachPayPalButtonEvent(checkoutIntegration);
                 if (typeof options.onReady === 'function') {
                     options.onReady(integration);
                 }
-            }.bind(this)
+            }.bind(this),
+            paypal: {
+                headless: true
+            }
         };
 
         // Pass the locale over to the PayPal instance
-        if(this.locale) {
+        if (this.locale) {
             setupConfiguration.locale = this.locale;
         }
 
@@ -1310,12 +1374,41 @@ vZeroPayPalButton.prototype = {
     },
 
     /**
+     * Attach the click event to the paypal button
+     *
+     * @param integration
+     *
+     * @private
+     */
+    _attachPayPalButtonEvent: function (checkoutIntegration) {
+        if (this._paypalIntegration && this._paypalButton) {
+            this._paypalButton.removeClassName('braintree-paypal-loading');
+            this._paypalButton.removeAttribute('disabled');
+
+            Event.stopObserving(this._paypalButton, 'click');
+            Event.observe(this._paypalButton, 'click', function (event) {
+                Event.stop(event);
+                if (typeof checkoutIntegration == 'object' && typeof checkoutIntegration.validateAll === 'function') {
+                    if (checkoutIntegration.validateAll()) {
+                        // Fire the integration
+                        this._paypalIntegration.paypal.initAuthFlow();
+                    }
+                } else {
+                    // Fire the integration
+                    this._paypalIntegration.paypal.initAuthFlow();
+                }
+
+            }.bind(this));
+        }
+    },
+
+    /**
      * Allow closing of the PayPal window
      *
      * @param callback A defined callback function if needed
      * @deprecated since version 1.0.4.1
      */
-    closePayPalWindow: function(callback) {
+    closePayPalWindow: function (callback) {
         // Function deprecated in favour of using event propagation
     }
 
@@ -1341,7 +1434,7 @@ vZeroIntegration.prototype = {
      * @param config Any further config the integration wants to push into the class
      * @param onReady function fired after integration is "ready"
      */
-    initialize: function(vzero, vzeroPaypal, paypalMarkUp, paypalButtonClass, isOnepage, config, onReady) {
+    initialize: function (vzero, vzeroPaypal, paypalMarkUp, paypalButtonClass, isOnepage, config, onReady) {
 
         // Only allow the system to be initialized twice
         if (vZeroIntegration.prototype.loaded) {
@@ -1354,7 +1447,7 @@ vZeroIntegration.prototype = {
         this.vzeroPaypal = vzeroPaypal || false;
 
         // If both methods aren't present don't run the integration
-        if(this.vzero === false && this.vzeroPaypal === false) {
+        if (this.vzero === false && this.vzeroPaypal === false) {
             console.warn('The vzero and vzeroPaypal objects are not initiated.');
             return false;
         }
@@ -1414,6 +1507,10 @@ vZeroIntegration.prototype = {
         document.observe("dom:loaded", function () {
             // Saved methods need events to!
             this.initSavedMethods();
+
+            if ($('braintree-hosted-submit') !== null) {
+                this.initHostedFields();
+            }
         }.bind(this));
 
     },
@@ -1421,7 +1518,7 @@ vZeroIntegration.prototype = {
     /**
      * Init the saved method events
      */
-    initSavedMethods: function() {
+    initSavedMethods: function () {
 
         // Loop through each saved card being selected
         $$('#creditcard-saved-accounts input[type="radio"], #paypal-saved-accounts input[type="radio"]').each(function (element) {
@@ -1452,7 +1549,7 @@ vZeroIntegration.prototype = {
      * @param parentElement
      * @param targetElement
      */
-    showHideOtherMethod: function(parentElement, targetElement) {
+    showHideOtherMethod: function (parentElement, targetElement) {
 
         // Has the user selected other?
         if ($$(parentElement + ' input:checked[type=radio]').first() !== undefined && $$(parentElement + ' input:checked[type=radio]').first().value == 'other') {
@@ -1489,7 +1586,7 @@ vZeroIntegration.prototype = {
     /**
      * Check to see if the "Other" option is selected and show the div correctly
      */
-    checkSavedOther: function() {
+    checkSavedOther: function () {
         var parentElement = '';
         var targetElement = '';
 
@@ -1510,7 +1607,7 @@ vZeroIntegration.prototype = {
     /**
      * Init hosted fields
      */
-    initHostedFields: function() {
+    initHostedFields: function () {
 
         // Only init hosted fields if it's enabled
         if (this.vzero.hostedFields) {
@@ -1543,7 +1640,7 @@ vZeroIntegration.prototype = {
      * @param nonce
      * @returns {*}
      */
-    afterHostedFieldsNonceReceived: function(nonce) {
+    afterHostedFieldsNonceReceived: function (nonce) {
         this.resetLoading();
         this.vzero._hostedFieldsTokenGenerated = true;
         this.hostedFieldsGenerated = true;
@@ -1560,7 +1657,7 @@ vZeroIntegration.prototype = {
      * @param message
      * @returns {boolean}
      */
-    afterHostedFieldsError: function(message) {
+    afterHostedFieldsError: function (message) {
         this.vzero._hostedFieldsTokenGenerated = false;
         this.hostedFieldsGenerated = false;
         return false;
@@ -1569,10 +1666,10 @@ vZeroIntegration.prototype = {
     /**
      * Init the default payment methods
      */
-    initDefaultMethod: function() {
+    initDefaultMethod: function () {
         if (this.shouldAddPayPalButton(false)) {
             this.setLoading();
-            this.vzero.updateData(function() {
+            this.vzero.updateData(function () {
                 this.resetLoading();
                 this.updatePayPalButton('add');
             }.bind(this));
@@ -1582,9 +1679,9 @@ vZeroIntegration.prototype = {
     /**
      * Observe any Ajax requests and refresh the PayPal button or update the checkouts data
      */
-    observeAjaxRequests: function() {
-        this.vzero.observeAjaxRequests(function() {
-            this.vzero.updateData(function() {
+    observeAjaxRequests: function () {
+        this.vzero.observeAjaxRequests(function () {
+            this.vzero.updateData(function () {
 
                 // The Ajax request might kill our events
                 if (this.isOnepage) {
@@ -1608,7 +1705,7 @@ vZeroIntegration.prototype = {
     /**
      * Rebuild the PayPal button if it's been removed
      */
-    rebuildPayPalButton: function() {
+    rebuildPayPalButton: function () {
 
         // Check to see if the DOM element has been removed?
         if ($('paypal-container') == null) {
@@ -1620,11 +1717,11 @@ vZeroIntegration.prototype = {
     /**
      * Handle saved PayPals being present on the page
      */
-    initSavedPayPal: function() {
+    initSavedPayPal: function () {
 
         // If we have any saved accounts we'll need to do something jammy
         if ($$('#paypal-saved-accounts input[type=radio]').first() !== undefined) {
-            $('paypal-saved-accounts').on('change', 'input[type=radio]', function(event) {
+            $('paypal-saved-accounts').on('change', 'input[type=radio]', function (event) {
 
                 // Update the PayPal button accordingly
                 this.updatePayPalButton(false, 'gene_braintree_paypal');
@@ -1642,7 +1739,7 @@ vZeroIntegration.prototype = {
      *
      * @returns {boolean}
      */
-    prepareSubmitObserver: function() {
+    prepareSubmitObserver: function () {
         return false;
     },
 
@@ -1652,7 +1749,7 @@ vZeroIntegration.prototype = {
      *
      * @returns {boolean}
      */
-    beforeSubmit: function(callback) {
+    beforeSubmit: function (callback) {
         return this._beforeSubmit(callback);
     },
 
@@ -1662,9 +1759,9 @@ vZeroIntegration.prototype = {
      * @param callback
      * @private
      */
-    _beforeSubmit: function(callback) {
+    _beforeSubmit: function (callback) {
         // If hosted fields is activated, and we're 100% not using a saved card
-        if(this.hostedFieldsGenerated === false && this.vzero.hostedFields && ($$('#creditcard-saved-accounts input:checked[type=radio]').first() === undefined || ($$('#creditcard-saved-accounts input:checked[type=radio]').first() !== undefined && $$('#creditcard-saved-accounts input:checked[type=radio]').first().value == 'other'))) {
+        if (this.hostedFieldsGenerated === false && this.vzero.hostedFields && ($$('#creditcard-saved-accounts input:checked[type=radio]').first() === undefined || ($$('#creditcard-saved-accounts input:checked[type=radio]').first() !== undefined && $$('#creditcard-saved-accounts input:checked[type=radio]').first().value == 'other'))) {
             // Fake the form being submitted
             var button = $('braintree-hosted-submit').down('button');
             button.removeAttribute('disabled');
@@ -1679,7 +1776,7 @@ vZeroIntegration.prototype = {
      *
      * @returns {boolean}
      */
-    afterSubmit: function() {
+    afterSubmit: function () {
         return false;
     },
 
@@ -1691,7 +1788,7 @@ vZeroIntegration.prototype = {
      * @param failedCallback
      * @param validateFailedCallback
      */
-    submit: function(type, successCallback, failedCallback, validateFailedCallback) {
+    submit: function (type, successCallback, failedCallback, validateFailedCallback) {
 
         // Check we actually want to intercept this credit card transaction?
         if (this.shouldInterceptSubmit(type)) {
@@ -1703,7 +1800,7 @@ vZeroIntegration.prototype = {
                 this.setLoading();
 
                 // Call the before submit function
-                this.beforeSubmit(function() {
+                this.beforeSubmit(function () {
 
                     // Always attempt to update the card type on submission
                     if ($$('[data-genebraintree-name="number"]').first() != undefined) {
@@ -1781,7 +1878,7 @@ vZeroIntegration.prototype = {
     /**
      * Submit the entire checkout
      */
-    submitCheckout: function() {
+    submitCheckout: function () {
         // Submit the checkout steps
         window.review && review.save();
     },
@@ -1789,14 +1886,14 @@ vZeroIntegration.prototype = {
     /**
      * How to submit the payment section
      */
-    submitPayment: function() {
+    submitPayment: function () {
         payment.save && payment.save();
     },
 
     /**
      * Enable/disable the correct nonce input fields
      */
-    enableDisableNonce: function() {
+    enableDisableNonce: function () {
         // Make sure the nonce inputs aren't going to interfere
         if (this.getPaymentMethod() == 'gene_braintree_creditcard') {
             if ($('creditcard-payment-nonce') !== null) {
@@ -1821,14 +1918,14 @@ vZeroIntegration.prototype = {
      * This should be overridden within each checkouts .phtml file
      * vZeroIntegration.prototype.preparePaymentMethodSwitchObserver = function() {}
      */
-    preparePaymentMethodSwitchObserver: function() {
+    preparePaymentMethodSwitchObserver: function () {
         return this.defaultPaymentMethodSwitch();
     },
 
     /**
      * If the checkout uses the Magento standard Payment.prototype.switchMethod we can utilise this function
      */
-    defaultPaymentMethodSwitch: function() {
+    defaultPaymentMethodSwitch: function () {
 
         // Store a pointer to the vZero integration
         var vzeroIntegration = this;
@@ -1852,11 +1949,11 @@ vZeroIntegration.prototype = {
      * Function to run when the customer changes payment method
      * @param method
      */
-    paymentMethodSwitch: function(method) {
+    paymentMethodSwitch: function (method) {
 
         // Wait for 50ms to see if this function is called again, only ever run the last instance
         clearTimeout(this._methodSwitchTimeout);
-        this._methodSwitchTimeout = setTimeout(function() {
+        this._methodSwitchTimeout = setTimeout(function () {
 
             // Should we add a PayPal button?
             if (this.shouldAddPayPalButton(method)) {
@@ -1882,7 +1979,7 @@ vZeroIntegration.prototype = {
      *
      * @returns {boolean}
      */
-    completePayPal: function(obj) {
+    completePayPal: function (obj) {
 
         // Make sure the nonces are the correct way around
         this.enableDisableNonce();
@@ -1908,7 +2005,7 @@ vZeroIntegration.prototype = {
      *
      * @returns {boolean}
      */
-    afterPayPalComplete: function() {
+    afterPayPalComplete: function () {
         this.resetLoading();
         return this.submitCheckout();
     },
@@ -1916,9 +2013,9 @@ vZeroIntegration.prototype = {
     /**
      * Update the PayPal button, if we should add the button do so, otherwise remove it if it exists
      */
-    updatePayPalButton: function(action, method) {
+    updatePayPalButton: function (action, method) {
 
-        if(this.paypalMarkUp === false) {
+        if (this.paypalMarkUp === false) {
             return false;
         }
 
@@ -1950,7 +2047,7 @@ vZeroIntegration.prototype = {
                 };
 
                 // Add in the PayPal button
-                this.vzeroPaypal.addPayPalButton(buttonParams);
+                this.vzeroPaypal.addPayPalButton(buttonParams, this);
 
             } else {
                 console.warn('We\'re unable to find the element ' + this.paypalButtonClass + '. Please check your integration.');
@@ -1977,47 +2074,29 @@ vZeroIntegration.prototype = {
      *
      * @param integration
      */
-    paypalOnReady: function(integration) {
-
-        if($('braintree-paypal-button') != null) {
-
-            // Always stop the window from opening
-            $('braintree-paypal-button').stopObserving('click').on('click', function (event) {
-
-                // Validate the form before we open the PayPal modal window
-                if (!this.validateAll()) {
-
-                    // If the form fails to validate kill the event
-                    Event.stop(event);
-                    return false;
-                }
-
-            }.bind(this));
-
-        }
-
+    paypalOnReady: function (integration) {
+        return true;
     },
 
     /**
      * Set the loading state
      */
-    setLoading: function() {
+    setLoading: function () {
         checkout.setLoadWaiting('payment');
     },
 
     /**
      * Reset the loading state
      */
-    resetLoading: function() {
+    resetLoading: function () {
         checkout.setLoadWaiting(false);
     },
 
     /**
      * Make sure the device data field isn't disabled
      */
-    enableDeviceData: function() {
+    enableDeviceData: function () {
         if ($('device_data') !== null) {
-            $('device_data').setAttribute('name', 'payment[device_data]');
             $('device_data').removeAttribute('disabled');
         }
     },
@@ -2025,8 +2104,8 @@ vZeroIntegration.prototype = {
     /**
      * Disable all fields in the credit card form so they don't end up going server side
      */
-    disableCreditCardForm: function() {
-        $$('#credit-card-form input, #credit-card-form select').each(function(formElement) {
+    disableCreditCardForm: function () {
+        $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
             if (formElement.id != 'creditcard-payment-nonce' && formElement.id != 'gene_braintree_creditcard_store_in_vault') {
                 formElement.setAttribute('disabled', 'disabled');
             }
@@ -2036,7 +2115,7 @@ vZeroIntegration.prototype = {
     /**
      * Re-enable the credit card form, just in case there was an error etc
      */
-    enableCreditCardForm: function() {
+    enableCreditCardForm: function () {
         $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
             formElement.removeAttribute('disabled');
         });
@@ -2047,7 +2126,7 @@ vZeroIntegration.prototype = {
      *
      * @returns {boolean}
      */
-    updateBilling: function() {
+    updateBilling: function () {
 
         // Verify we're not using a saved address
         if (($('billing-address-select') !== null && $('billing-address-select').value == '') || $('billing-address-select') === null) {
@@ -2067,7 +2146,7 @@ vZeroIntegration.prototype = {
      *
      * @returns {{}}
      */
-    getUpdateDataParams: function() {
+    getUpdateDataParams: function () {
         var parameters = {};
 
         // If the billing address is selected and we're wanting to ship to that address we need to pass the addressId
@@ -2083,7 +2162,7 @@ vZeroIntegration.prototype = {
      *
      * @returns {*}
      */
-    getPaymentMethod: function() {
+    getPaymentMethod: function () {
         return payment.currentMethod;
     },
 
@@ -2093,8 +2172,8 @@ vZeroIntegration.prototype = {
      * @param type
      * @returns {*}
      */
-    shouldInterceptSubmit: function(type) {
-        switch(type){
+    shouldInterceptSubmit: function (type) {
+        switch (type) {
             case 'creditcard':
                 return (this.getPaymentMethod() == 'gene_braintree_creditcard' && this.vzero.shouldInterceptCreditCard());
                 break;
@@ -2109,14 +2188,14 @@ vZeroIntegration.prototype = {
      * Should we be adding a PayPal button?
      * @returns {boolean}
      */
-    shouldAddPayPalButton: function(method) {
+    shouldAddPayPalButton: function (method) {
         return (((method ? method : this.getPaymentMethod()) == 'gene_braintree_paypal' && $('paypal-saved-accounts') === null) || ((method ? method : this.getPaymentMethod()) == 'gene_braintree_paypal' && ($$('#paypal-saved-accounts input:checked[type=radio]').first() !== undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first().value == 'other')));
     },
 
     /**
      * Function to run once 3D retokenization is complete
      */
-    threeDTokenizationComplete: function() {
+    threeDTokenizationComplete: function () {
         this.resetLoading();
     },
 
@@ -2125,16 +2204,17 @@ vZeroIntegration.prototype = {
      *
      * @returns {boolean}
      */
-    validateAll: function() {
+    validateAll: function () {
         return true;
     }
 
 };
 
 // Avoid 'console' errors in browsers that lack a console.
-(function() {
+(function () {
     var method;
-    var noop = function () {};
+    var noop = function () {
+    };
     var methods = [
         'assert', 'clear', 'count', 'debug', 'dir', 'dirxml', 'error',
         'exception', 'group', 'groupCollapsed', 'groupEnd', 'info', 'log',

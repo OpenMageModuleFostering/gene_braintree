@@ -4,6 +4,8 @@ $_code = $this->getMethodCode()
 ?>
 <div id="payment_form_<?php echo $_code ?>" style="display:none;" class="form-list">
 
+    <?php echo $this->getSavedChildHtml(); ?>
+
     <div id="credit-card-form">
         <ul class="form-list">
             <li>
@@ -99,6 +101,8 @@ $_code = $this->getMethodCode()
 
         // Only needed for 3DS transactions but still helpful
         vzero.setAmount('<?php echo Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getGrandTotal(); ?>');
+
+        vzero.creditCardLoaded();
     }
 
 </script>

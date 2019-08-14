@@ -13,6 +13,8 @@ abstract class Gene_Braintree_Model_Paymentmethod_Abstract extends Mage_Payment_
     const ADVANCED_FRAUD_REVIEW = 'Review';
     const ADVANCED_FRAUD_DECLINE = 'Decline';
 
+    const BRAINTREE_ORIGINAL_TOKEN = 'gene_braintree_original_token';
+
     /**
      * Verify that the module has been setup
      *
@@ -78,18 +80,27 @@ abstract class Gene_Braintree_Model_Paymentmethod_Abstract extends Mage_Payment_
     protected function handleFraud($result, Varien_Object $payment)
     {
         // Verify we have risk data
-        if(isset($result->transaction) && isset($result->transaction->riskData) && isset($result->transaction->riskData->decision)) {
+        if (isset($result->transaction) && isset($result->transaction->riskData) && isset($result->transaction->riskData->decision)) {
+
+            // If the merchant has specified the merchant and website ID we can update the payments status
+            if (Mage::helper('gene_braintree')->canUpdateKount() && isset($result->transaction->riskData->id)) {
+
+                // Update the payment with the require information
+                $payment->setAdditionalInformation('kount_id', $result->transaction->riskData->id);
+                $payment->save();
+            }
 
             // If the decision is to review the payment mark the payment as such
-            if($result->transaction->riskData->decision == self::ADVANCED_FRAUD_REVIEW || $result->transaction->riskData->decision == self::ADVANCED_FRAUD_DECLINE) {
+            if ($result->transaction->riskData->decision == self::ADVANCED_FRAUD_REVIEW || $result->transaction->riskData->decision == self::ADVANCED_FRAUD_DECLINE) {
 
                 // Mark the payment as pending
                 $payment->setIsTransactionPending(true);
 
                 // If the payment got marked as fraud/decline, we mark it as fraud
-                if($result->transaction->riskData->decision == self::ADVANCED_FRAUD_DECLINE) {
+                if ($result->transaction->riskData->decision == self::ADVANCED_FRAUD_DECLINE) {
                     $payment->setIsFraudDetected(true);
                 }
+
             }
         }
 
@@ -147,13 +158,16 @@ abstract class Gene_Braintree_Model_Paymentmethod_Abstract extends Mage_Payment_
                 // Pass over the transaction ID
                 $payment->getCreditmemo()->setRefundTransactionId($result->transaction->id);
 
-                // Only close the transaction once the
+                // Only close the transaction once the transaction amount meets the refund amount
                 if($transaction->amount == $refundAmount) {
 
                     $payment->setIsTransactionClosed(1);
 
                     // Mark the invoice as canceled if the invoice was completely refunded
                     $invoice->setState(Mage_Sales_Model_Order_Invoice::STATE_CANCELED);
+
+                    // Only update Kount to say the transaction is refunded if the whole transaction is refunded
+                    $this->_updateKountRefund($payment);
                 }
 
             } else {
@@ -182,6 +196,244 @@ abstract class Gene_Braintree_Model_Paymentmethod_Abstract extends Mage_Payment_
     {
         // Copy the refund transaction ID from the credit memo
         $creditmemo->setTransactionId($creditmemo->getRefundTransactionId());
+        return $this;
+    }
+
+    /**
+     * Capture the payment on the checkout page
+     *
+     * @param Varien_Object $payment
+     * @param float         $amount
+     *
+     * @return Mage_Payment_Model_Abstract
+     */
+    protected function _captureAuthorized(Varien_Object $payment, $amount)
+    {
+        // Has the payment already been authorized?
+        if ($payment->getCcTransId()) {
+
+            // Convert the capture amount to the correct currency
+            $captureAmount = $this->_getWrapper()->getCaptureAmount($payment->getOrder(), $amount);
+
+            // Check to see if the transaction has already been captured
+            $lastTransactionId = $payment->getLastTransId();
+            if ($lastTransactionId) {
+                try {
+                    $this->_getWrapper()->init($payment->getOrder()->getStoreId());
+                    $transaction = Braintree_Transaction::find($lastTransactionId);
+
+                    // Has the transaction already been settled? or submitted for the settlement?
+                    if (isset($transaction->id) && ($transaction->status == Braintree_Transaction::SUBMITTED_FOR_SETTLEMENT || $transaction->status == Braintree_Transaction::SETTLED)) {
+                        // Do the capture amounts match?
+                        if ($captureAmount == $transaction->amount) {
+                            // We can just approve the invoice
+                            $this->_updateKountStatus($payment, 'A');
+                            $payment->setStatus(self::STATUS_APPROVED);
+                            return $this;
+                        }
+                    }
+                } catch (Exception $e) {
+                    // Unable to load transaction, so process as below
+                }
+            }
+
+            // Has the authorization already been settled? Partial invoicing
+            if ($this->authorizationUsed($payment)) {
+
+                // Set the token as false
+                $token = false;
+
+                // Was the original payment created with a token?
+                if($additionalInfoToken = $payment->getAdditionalInformation('token')) {
+
+                    try {
+                        // Init the environment
+                        $this->_getWrapper()->init($payment->getOrder()->getStoreId());
+
+                        // Attempt to find the token
+                        Braintree_PaymentMethod::find($additionalInfoToken);
+
+                        // Set the token if a success
+                        $token = $additionalInfoToken;
+
+                    } catch (Exception $e) {
+                        $token = false;
+                    }
+
+                }
+
+                // If we managed to find a token use that for the capture
+                if ($token) {
+
+                    // Stop processing the rest of the method
+                    // We pass $amount instead of $captureAmount as the authorize function contains the conversion
+                    $this->_authorize($payment, $amount, true, $token);
+                    return $this;
+
+                } else {
+
+                    // Attempt to clone the transaction
+                    $result = $this->_getWrapper()->init($payment->getOrder()->getStoreId())->cloneTransaction($lastTransactionId, $captureAmount);
+                }
+
+            } else {
+
+                // Init the environment
+                $result = $this->_getWrapper()->init($payment->getOrder()->getStoreId())->submitForSettlement($payment->getCcTransId(), $captureAmount);
+
+                // Log the result
+                Gene_Braintree_Model_Debug::log(array('capture:submitForSettlement' => $result));
+            }
+
+            if($result->success) {
+                $this->_updateKountStatus($payment, 'A');
+                $this->_processSuccessResult($payment, $result, $amount);
+            } else if($result->errors->deepSize() > 0) {
+
+                // Clean up
+                Gene_Braintree_Model_Wrapper_Braintree::cleanUp();
+
+                Mage::throwException($this->_getWrapper()->parseErrors($result->errors->deepAll()));
+            } else {
+
+                // Clean up
+                Gene_Braintree_Model_Wrapper_Braintree::cleanUp();
+
+                Mage::throwException($result->transaction->processorSettlementResponseCode.': '.$result->transaction->processorSettlementResponseText);
+            }
+
+        } else {
+            // Otherwise we need to do an auth & capture at once
+            $this->_authorize($payment, $amount, true);
+        }
+
+        return $this;
+    }
+
+    /**
+     * If we're doing authorize, has the payment already got more than one transaction?
+     *
+     * @param \Varien_Object $payment
+     *
+     * @return int
+     */
+    public function authorizationUsed(Varien_Object $payment)
+    {
+        $collection = Mage::getModel('sales/order_payment_transaction')
+            ->getCollection()
+            ->addFieldToFilter('payment_id', $payment->getId())
+            ->addFieldToFilter('txn_type', Mage_Sales_Model_Order_Payment_Transaction::TYPE_CAPTURE);
+
+        return $collection->getSize();
+    }
+
+    /**
+     * Update the order status within Kount
+     *
+     * @param \Varien_Object $payment
+     * @param string         $status
+     *
+     * @return $this
+     */
+    protected function _updateKountStatus(Varien_Object $payment, $status = 'A')
+    {
+        if (Mage::helper('gene_braintree')->canUpdateKount() && ($kountId = $payment->getAdditionalInformation('kount_id'))) {
+            $kountRest = Mage::getModel('gene_braintree/kount_rest');
+            $kountRest->updateOrderStatus($payment->getOrder(), $status);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Update Kount when an order is refunded
+     *
+     * @param \Varien_Object $payment
+     *
+     * @return $this
+     */
+    protected function _updateKountRefund(Varien_Object $payment)
+    {
+        if (Mage::helper('gene_braintree')->canUpdateKount() && ($kountId = $payment->getAdditionalInformation('kount_id'))) {
+            $kountRest = Mage::getModel('gene_braintree/kount_rest');
+            $kountRest->updateOrderRefund($payment->getOrder());
+        }
+
+        return $this;
+    }
+
+    /**
+     * Dispatch the event for the sale array
+     *
+     * @param $event
+     * @param $saleArray
+     * @param $payment
+     *
+     * @return mixed
+     */
+    protected function _dispatchSaleArrayEvent($event, $saleArray, $payment)
+    {
+        // Pass the sale array into a varien object
+        $request = new Varien_Object();
+        $request->setData('sale_array', $saleArray);
+
+        // Dispatch event for modifying the sale array
+        Mage::dispatchEvent($event, array('payment' => $payment, 'request' => $request));
+
+        // Pull the saleArray back out
+        $saleArray = $request->getData('sale_array');
+
+        // Log the initial sale array, no protected data is included
+        Gene_Braintree_Model_Debug::log(array('_authorize:saleArray' => $saleArray));
+
+        return $saleArray;
+    }
+
+    /**
+     * Process a failed payment
+     *
+     * @param            $message
+     * @param bool|false $log
+     * @param bool|false $result
+     *
+     * @return $this
+     * @throws \Mage_Core_Exception
+     */
+    protected function _processFailedResult($message, $log = false, $result = false)
+    {
+        // Clean up from any other operations that have occured
+        Gene_Braintree_Model_Wrapper_Braintree::cleanUp();
+
+        if ($log !== false) {
+            Gene_Braintree_Model_Debug::log($log);
+        }
+
+        Mage::throwException($message);
+
+        return $this;
+    }
+
+    /**
+     * Return the token generated from the initial transaction
+     *
+     * @return mixed
+     */
+    protected function _getOriginalToken()
+    {
+        return Mage::registry(self::BRAINTREE_ORIGINAL_TOKEN);
+    }
+
+    /**
+     * Set the original token
+     *
+     * @param $token
+     *
+     * @return $this
+     */
+    protected function _setOriginalToken($token)
+    {
+        Mage::register(self::BRAINTREE_ORIGINAL_TOKEN, $token);
+
         return $this;
     }
 }

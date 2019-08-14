@@ -9,25 +9,32 @@
 
     vZeroIntegration.addMethods({
 
+        /**
+         * Multi shipping doesn't have ajax states
+         **/
         setLoading: function () {
-
+            $('payment-continue').setAttribute('disabled','disabled');
+            $('payment-continue').addClassName('loading');
         },
-
         resetLoading: function () {
-
+            $('payment-continue').removeAttribute('disabled');
+            $('payment-continue').removeClassName('loading');
         },
 
         /**
          * Attach an observer to the submit action of the checkout to tokenize the card details
          */
-        prepareSubmitObserver: function () {
+        prepareSubmitObserver: function() {
 
             // Store a pointer to the vZero integration
             var vzeroIntegration = this;
 
             // Observe the click event
             var _originalSubmitEvent = $('multishipping-billing-form').submit;
-            $('multishipping-billing-form').submit = function braintreeOverride() {
+            $('multishipping-billing-form').onsubmit = function braintreeOverride(event) {
+
+                // Stop the event
+                Event.stop(event);
 
                 if (vzeroIntegration.shouldInterceptSubmit('creditcard')) {
 
@@ -45,20 +52,18 @@
         },
 
         /**
-         * Replace the PayPal button at the correct time
-         *
-         * This should be overridden within each checkouts .phtml file
-         * vZeroIntegration.prototype.preparePaymentMethodSwitchObserver = function() {}
+         * Attach an event to insert the PayPal button on the review step of the checkout
          */
         preparePaymentMethodSwitchObserver: function() {
+
             // Store a pointer to the vZero integration
             var vzeroIntegration = this;
 
             // Store the original payment method
-            var paymentSwitchOriginal = payment.switchMethod;
+            var paymentSwitchOriginal = paymentForm.prototype.switchMethod;
 
             // Intercept the save function
-            payment.switchMethod = function (method) {
+            paymentForm.prototype.switchMethod = function (method) {
 
                 // Run our method switch function
                 vzeroIntegration.paymentMethodSwitch(method);
@@ -66,6 +71,74 @@
                 // Run the original function
                 return paymentSwitchOriginal.apply(this, arguments);
             };
+
+        },
+
+        /**
+         * Hide or show the "other" method for both PayPal & Credit Card
+         *
+         * @param parentElement
+         * @param targetElement
+         */
+        showHideOtherMethod: function (parentElement, targetElement) {
+
+            // Has the user selected other?
+            if ($$(parentElement + ' input:checked[type=radio]').first() !== undefined && $$(parentElement + ' input:checked[type=radio]').first().value == 'other') {
+
+                if ($$(targetElement).first() !== undefined) {
+
+                    // Show the credit card form
+                    $$(targetElement).first().show();
+
+                    // Enable the credit card form all the elements in the credit card form
+                    $$(targetElement + ' input, ' + targetElement + ' select').each(function (formElement) {
+                        formElement.removeAttribute('disabled');
+                    });
+
+                    // Do we need to re-initialize hosted fields?
+                    if (this.vzero.hostedFields) {
+                        this.initHostedFields();
+                    }
+
+                }
+
+            } else if ($$(parentElement + ' input:checked[type=radio]').first() !== undefined) {
+
+                if ($$(targetElement).first() !== undefined) {
+
+                    // Hide the new credit card form
+                    $$(targetElement).first().hide();
+
+                    // Disable all the elements in the credit card form
+                    $$(targetElement + ' input, ' + targetElement + ' select').each(function (formElement) {
+                        formElement.setAttribute('disabled', 'disabled');
+                    });
+
+                    // Tear down hosted fields
+                    if (this.vzero.hostedFields) {
+                        this.vzero.teardownHostedFields();
+                        $('credit-card-form').addClassName('loading');
+                    }
+
+                }
+
+            }
+        },
+
+        /**
+         * Let the back-end system know the customer is using multi shipping
+         */
+        getBillingAddress: function () {
+            return {
+                billing: 'multishipping'
+            };
+        },
+
+        /**
+         * Submit the payment
+         */
+        submitCheckout: function () {
+            return $('multishipping-billing-form').submit();
         }
 
     });
@@ -78,8 +151,9 @@
     new vZeroIntegration(
         (window.vzero || false),
         (window.vzeroPaypal || false),
-        '<div id="paypal-complete"><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label><div id="paypal-container"></div></div>',
-        '#review-buttons-container button'
+        '<div id="paypal-complete"><div id="paypal-container"></div></div>',
+        '.buttons-set button#payment-continue',
+        true
     );
 
 </script>

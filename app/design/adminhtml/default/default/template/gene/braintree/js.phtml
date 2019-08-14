@@ -19,7 +19,17 @@
          */
         updateData: function(callback, params) {
             callback();
-        }
+        },
+
+        /**
+         * If the order value is 0 we don't need to intercept
+         *
+         * @returns {boolean}
+         */
+        shouldInterceptCreditCard: function() {
+            return $('p_method_free') == null || ($('p_method_free') != null && !$('p_method_free').checked);
+        },
+
     });
 
     vZeroIntegration.addMethods({
@@ -69,11 +79,13 @@
             // On dom load init hosted fields if it's enabled
             document.observe("dom:loaded", function () {
                 vzeroIntegration.paymentMethodSwitch();
+                vzeroIntegration.initSavedMethods();
             }.bind(this));
 
             // Intercept any area of the checkout being updated
             this.vzero.observeAjaxRequests(function() {
                 vzeroIntegration.paymentMethodSwitch();
+                vzeroIntegration.initSavedMethods();
             });
 
         },
@@ -97,6 +109,15 @@
 
                 // Run the original function
                 return paymentSwitchOriginal.apply(this, arguments);
+            };
+
+            // Attach an event for when the system is updated the areas
+            var loadAreaResponseHandlerOriginal = AdminOrder.prototype.loadAreaResponseHandler;
+            AdminOrder.prototype.loadAreaResponseHandler = function (response) {
+                var result = loadAreaResponseHandlerOriginal.apply(this, arguments);
+                vzeroIntegration.paymentMethodSwitch();
+                vzeroIntegration.initSavedMethods();
+                return result;
             };
 
             // Re-assign payment switch method
@@ -134,7 +155,7 @@
     // stop Magento's card_validation ajax from running
     AdminOrder.prototype._getPaymentDataOriginal = AdminOrder.prototype.getPaymentData;
     AdminOrder.prototype.getPaymentData = function(currentMethod) {
-        return (currentMethod == 'gene_braintree_creditcard') ? false : this._getPaymentDataOriginal(currentMethod);
+        return (currentMethod == 'gene_braintree_creditcard' || currentMethod == 'gene_braintree_paypal') ? false : this._getPaymentDataOriginal(currentMethod);
     };
     //]]>
 </script>

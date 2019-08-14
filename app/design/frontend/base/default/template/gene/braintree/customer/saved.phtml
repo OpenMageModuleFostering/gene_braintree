@@ -1,34 +1,36 @@
-<div class="page-title">
-    <h1><?php echo $this->__('Saved Payment Information') ?></h1>
-</div>
+<div id="braintree-saved-payments">
+    <div class="page-title">
+        <h1><?php echo $this->__('Saved Payment Information') ?></h1>
+    </div>
 
-<?php echo $this->getMessagesBlock()->toHtml() ?>
+    <?php echo $this->getMessagesBlock()->toHtml() ?>
 
-<div class="fieldset">
+    <div class="fieldset">
 
-    <?php if($this->hasSavedDetails()): ?>
+        <?php if($this->hasSavedDetails()): ?>
 
-        <p><?php echo $this->__('You\'re able to use any of the listed payment methods below when purchasing through our checkout, you\'re able to add new payment methods within the checkout.'); ?></p>
+            <p><?php echo $this->__('You\'re able to use any of the listed payment methods below when purchasing through our checkout, you\'re able to add new payment methods within the checkout.'); ?></p>
 
-        <div class="col2-set">
+            <form action="" method="post">
+                <div class="payment-methods-container">
+                    <?php if($this->hasSavedDetails(Gene_Braintree_Model_Saved::SAVED_CREDITCARD_ID)): ?>
+                        <div class="payment-methods">
+                            <h2 class="legend"><?php echo $this->__('Credit Cards') ?></h2>
+                            <?php echo $this->getChild('methods')->setType(Gene_Braintree_Model_Saved::SAVED_CREDITCARD_ID)->toHtml(); ?>
+                        </div>
+                    <?php endif; ?>
 
-            <?php if($this->hasSavedDetails(Gene_Braintree_Model_Saved::SAVED_CREDITCARD_ID)): ?>
-                <div class="col-1">
-                    <h2 class="legend"><?php echo $this->__('Cards') ?></h2>
-                    <?php echo $this->getChild('methods')->setType(Gene_Braintree_Model_Saved::SAVED_CREDITCARD_ID)->toHtml(); ?>
+                    <?php if($this->hasSavedDetails(Gene_Braintree_Model_Saved::SAVED_PAYPAL_ID)): ?>
+                        <div class="payment-methods">
+                            <h2 class="legend"><?php echo $this->__('PayPal') ?></h2>
+                            <?php echo $this->getChild('methods')->setType(Gene_Braintree_Model_Saved::SAVED_PAYPAL_ID)->toHtml(); ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
+            </form>
 
-            <?php if($this->hasSavedDetails(Gene_Braintree_Model_Saved::SAVED_PAYPAL_ID)): ?>
-                <div class="col-1">
-                    <h2 class="legend"><?php echo $this->__('PayPal') ?></h2>
-                    <?php echo $this->getChild('methods')->setType(Gene_Braintree_Model_Saved::SAVED_PAYPAL_ID)->toHtml(); ?>
-                </div>
-            <?php endif; ?>
-
-        </div>
-
-    <?php else: ?>
-        <p><?php echo $this->__('You currently have no saved payment information, you can save a payment method when making a purchase.'); ?></p>
-    <?php endif; ?>
+        <?php else: ?>
+            <p><?php echo $this->__('You currently have no saved payment information, you can save a payment method when making a purchase.'); ?></p>
+        <?php endif; ?>
+    </div>
 </div>

@@ -29,20 +29,52 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
      */
     protected $_isGateway = false;
     protected $_canOrder = false;
-    protected $_canAuthorize = false;
+    protected $_canAuthorize = true;
     protected $_canCapture = true;
     protected $_canCapturePartial = false;
     protected $_canRefund = true;
     protected $_canRefundInvoicePartial = true;
     protected $_canVoid = false;
-    protected $_canUseInternal = false;
+    protected $_canUseInternal = true;
     protected $_canUseCheckout = true;
-    protected $_canUseForMultishipping = false;
+    protected $_canUseForMultishipping = true;
     protected $_isInitializeNeeded = false;
     protected $_canFetchTransactionInfo = false;
     protected $_canReviewPayment = false;
     protected $_canCreateBillingAgreement = false;
     protected $_canManageRecurringProfiles = false;
+
+    /**
+     * Verify that the module has been setup
+     *
+     * @param null $quote
+     *
+     * @return bool
+     */
+    public function isAvailable($quote = null)
+    {
+        // Check Magento's internal methods allow us to run
+        if(parent::isAvailable($quote)) {
+
+            // Validate the configuration is okay
+            if ($this->_getWrapper()->validateCredentialsOnce()) {
+
+                // This method is only active in the admin if the vault is enabled
+                if (Mage::app()->getStore()->isAdmin() && $this->isVaultEnabled()) {
+                    return true;
+                } else if (Mage::app()->getStore()->isAdmin()) {
+                    return false;
+                }
+
+                return true;
+            }
+
+        } else {
+
+            // Otherwise it's a no
+            return false;
+        }
+    }
 
     /**
      * Place Braintree specific data into the additional information of the payment instance object
@@ -103,11 +135,22 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
      * Should we save this method in the database?
      *
      * @param \Varien_Object $payment
+     * @param $skipMultishipping
      *
      * @return mixed
      */
-    public function shouldSaveMethod($payment)
+    public function shouldSaveMethod($payment, $skipMultishipping = false)
     {
+        if ($skipMultishipping === false) {
+            // We must always save the method for multi shipping requests
+            if ($payment->getMultiShipping() && !$this->_getOriginalToken()) {
+                return true;
+            } else if ($this->_getOriginalToken()) {
+                // If we have an original token, there is no need to save the same payment method again
+                return false;
+            }
+        }
+
         // Retrieve whether or not we should save the card from the info instance
         $savePaypal = $this->getInfoInstance()->getAdditionalInformation('save_paypal');
 
@@ -144,18 +187,27 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
     }
 
     /**
-     * Capture the payment on the checkout page
+     * Psuedo _authorize function so we can pass in extra data
      *
-     * @param Varien_Object $payment
-     * @param float         $amount
+     * @param \Varien_Object $payment
+     * @param                $amount
+     * @param bool|false     $shouldCapture
+     * @param bool|false     $token
      *
-     * @return Mage_Payment_Model_Abstract
+     * @return $this
+     * @throws \Mage_Core_Exception
      */
-    public function capture(Varien_Object $payment, $amount)
+    protected function _authorize(Varien_Object $payment, $amount, $shouldCapture = false, $token = false)
     {
         // Confirm that we have a nonce from Braintree
         // We cannot utilise the validate() function as these checks need to happen at the capture point
-        if(!$this->getPaymentMethodToken() && !$this->getPaymentMethodNonce()) {
+        if (!$this->getPaymentMethodNonce()) {
+            if (!$this->getPaymentMethodToken()) {
+                Mage::throwException(
+                    $this->_getHelper()->__('There has been an issue processing your PayPal payment, please try again.')
+                );
+            }
+        } else if (!$this->getPaymentMethodNonce()) {
             Mage::throwException(
                 $this->_getHelper()->__('There has been an issue processing your PayPal payment, please try again.')
             );
@@ -164,59 +216,33 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
         // Init the environment
         $this->_getWrapper()->init();
 
-        if($this->getPaymentMethodToken() && $this->getPaymentMethodToken() != 'other') {
-            $paymentArray = array(
-                'paymentMethodToken' => $this->getPaymentMethodToken()
-            );
-        } else {
-            $paymentArray = array(
-                'paymentMethodNonce' => $this->getPaymentMethodNonce()
-            );
-        }
-
         // Retrieve the amount we should capture
         $amount = $this->_getWrapper()->getCaptureAmount($payment->getOrder(), $amount);
 
         // Attempt to create the sale
         try {
-            // Build the array for the sale
+
+            // Build up the sale array
             $saleArray = $this->_getWrapper()->buildSale(
                 $amount,
-                $paymentArray,
+                $this->_buildPaymentRequest($token),
                 $payment->getOrder(),
-                true,
+                $shouldCapture,
                 $this->getInfoInstance()->getAdditionalInformation('device_data'),
                 $this->shouldSaveMethod($payment)
             );
 
-            // Pass the sale array into a varien object
-            $request = new Varien_Object();
-            $request->setData('sale_array', $saleArray);
-
-            // Dispatch event for modifying the sale array
-            Mage::dispatchEvent('gene_braintree_paypal_sale_array', array('payment' => $payment, 'request' => $request));
-
-            // Pull the saleArray back out
-            $saleArray = $request->getData('sale_array');
-
-            // Log the initial sale array, no protected data is included
-            Gene_Braintree_Model_Debug::log(array('saleArray' => $saleArray));
-
-            // Attempt to create the sale
+            // Attempt to make the sale, firstly dispatching an event
             $result = $this->_getWrapper()->makeSale(
-                $saleArray
+                $this->_dispatchSaleArrayEvent('gene_braintree_paypal_sale_array', $saleArray, $payment)
             );
+
         } catch (Exception $e) {
 
             // Dispatch an event for when a payment fails
             Mage::dispatchEvent('gene_braintree_paypal_failed_exception', array('payment' => $payment, 'exception' => $e));
 
-            // If there's an error
-            Gene_Braintree_Model_Debug::log($e);
-
-            Mage::throwException(
-                $this->_getHelper()->__('We were unable to complete your purchase through PayPal, please try again or an alternative payment method.')
-            );
+            return $this->_processFailedResult($this->_getHelper()->__('We were unable to complete your purchase through PayPal, please try again or an alternative payment method.'), $e);
         }
 
         // Log the result
@@ -228,13 +254,75 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
             // Dispatch an event for when a payment fails
             Mage::dispatchEvent('gene_braintree_paypal_failed', array('payment' => $payment, 'result' => $result));
 
-            Mage::throwException($this->_getHelper()->__('%s. Please try again or attempt refreshing the page.', $result->message));
+            return $this->_processFailedResult($this->_getHelper()->__('%s. Please try again or attempt refreshing the page.', rtrim($result->message, '.')));
         }
 
-        // Finish of the order
         $this->_processSuccessResult($payment, $result, $amount);
 
         return $this;
+    }
+
+    /**
+     * Build up the payment request
+     *
+     * @param $token
+     *
+     * @return array
+     */
+    protected function _buildPaymentRequest($token)
+    {
+        // Build our payment array with either our token, or nonce
+        $paymentArray = array();
+
+        // If we have an original token use that for the subsequent requests
+        if ($originalToken = $this->_getOriginalToken()) {
+            $paymentArray['paymentMethodToken'] = $originalToken;
+            return $paymentArray;
+        }
+
+        if ($this->getPaymentMethodToken() && $this->getPaymentMethodToken() != 'other') {
+            $paymentArray['paymentMethodToken'] = $this->getPaymentMethodToken();
+        } else {
+            $paymentArray['paymentMethodNonce'] = $this->getPaymentMethodNonce();
+        }
+
+        // If a token is present in the request use that
+        if ($token) {
+
+            // Remove this unneeded data
+            unset($paymentArray['paymentMethodNonce']);
+
+            // Send the token as the payment array
+            $paymentArray['paymentMethodToken'] = $token;
+        }
+
+        return $paymentArray;
+    }
+
+    /**
+     * Authorize the requested amount
+     *
+     * @param \Varien_Object $payment
+     * @param float          $amount
+     *
+     * @return \Gene_Braintree_Model_Paymentmethod_Paypal
+     */
+    public function authorize(Varien_Object $payment, $amount)
+    {
+        return $this->_authorize($payment, $amount, false);
+    }
+
+    /**
+     * Process capturing of a payment
+     *
+     * @param \Varien_Object $payment
+     * @param float          $amount
+     *
+     * @return \Mage_Payment_Model_Abstract
+     */
+    public function capture(Varien_Object $payment, $amount)
+    {
+        return $this->_captureAuthorized($payment, $amount);
     }
 
     /**
@@ -260,7 +348,7 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
             ->setAmount($amount)
             ->setShouldCloseParentTransaction(false);
 
-        // Set the additioanl information about the customers PayPal account
+        // Set the additional information about the customers PayPal account
         $payment->setAdditionalInformation(
             array(
                 'paypal_email'     => $result->transaction->paypal['payerEmail'],
@@ -275,6 +363,16 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
         // Store the PayPal token if we have one
         if (isset($result->transaction->paypal['token']) && !empty($result->transaction->paypal['token'])) {
             $payment->setAdditionalInformation('token', $result->transaction->paypal['token']);
+
+            // If the transaction is part of a multi shipping transaction store the token for the next order
+            if ($payment->getMultiShipping() && !$this->_getOriginalToken()) {
+                $this->_setOriginalToken($result->transaction->paypal['token']);
+
+                // If we shouldn't have this method saved, add it into the session to be removed once the request is complete
+                if (!$this->shouldSaveMethod($payment, true)) {
+                    Mage::getSingleton('checkout/session')->setTemporaryPaymentToken($result->transaction->paypal['token']);
+                }
+            }
         }
 
         return $payment;

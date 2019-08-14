@@ -14,61 +14,74 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     CONST BRAINTREE_PUBLIC_KEY_PATH = 'payment/gene_braintree/public_key';
     CONST BRAINTREE_PRIVATE_KEY_PATH = 'payment/gene_braintree/private_key';
 
+    CONST BRAINTREE_SANDBOX_MERCHANT_ID_PATH = 'payment/gene_braintree/sandbox_merchant_id';
+    CONST BRAINTREE_SANDBOX_MERCHANT_ACCOUNT_ID_PATH = 'payment/gene_braintree/sandbox_merchant_account_id';
+    CONST BRAINTREE_SANDBOX_PUBLIC_KEY_PATH = 'payment/gene_braintree/sandbox_public_key';
+    CONST BRAINTREE_SANDBOX_PRIVATE_KEY_PATH = 'payment/gene_braintree/sandbox_private_key';
+
     const BRAINTREE_MULTI_CURRENCY = 'payment/gene_braintree/multi_currency_enable';
     const BRAINTREE_MULTI_CURRENCY_MAPPING = 'payment/gene_braintree/multi_currency_mapping';
+
+    /**
+     * Store whether or not the system has recently connected to the Braintree API successfully
+     */
+    const BRAINTREE_API_CONFIG_STATUS = 'payment/gene_braintree/api_config_status';
 
     /**
      * Store the customer
      *
      * @var Braintree_Customer
      */
-    private $customer;
+    protected $_customer;
 
     /**
      * Store the Braintree ID
      *
      * @var int
      */
-    private $braintreeId;
+    protected $_braintreeId;
 
     /**
      * Used to track whether the payment methods are available
      *
      * @var bool
      */
-    private $validated = null;
-
-    /**
-     * If we're using a mapped currency we need to charge the grand total, instead of the base
-     *
-     * @var bool
-     */
-    private $mappedCurrency = false;
+    protected $_validated = null;
 
     /**
      * Store whether or not we've init the environment yet
      *
      * @var bool
      */
-    private $init = false;
+    protected $init = false;
 
     /**
      * Setup the environment
+     *
+     * @param null $store
      *
      * @return $this
      */
     public function init($store = null)
     {
-        if(!$this->init) {
+        if (!$this->init) {
 
             // Setup the various configuration variables
-            Braintree_Configuration::environment(Mage::getStoreConfig(self::BRAINTREE_ENVIRONMENT_PATH, $store));
-            Braintree_Configuration::merchantId(Mage::getStoreConfig(self::BRAINTREE_MERCHANT_ID_PATH, $store));
-            Braintree_Configuration::publicKey(Mage::getStoreConfig(self::BRAINTREE_PUBLIC_KEY_PATH, $store));
-            Braintree_Configuration::privateKey(Mage::getStoreConfig(self::BRAINTREE_PRIVATE_KEY_PATH, $store));
+            $environment = Mage::getStoreConfig(self::BRAINTREE_ENVIRONMENT_PATH, $store);
+            Braintree_Configuration::environment($environment);
+
+            if ($environment == Gene_Braintree_Model_Source_Environment::PRODUCTION) {
+                Braintree_Configuration::merchantId(Mage::getStoreConfig(self::BRAINTREE_MERCHANT_ID_PATH, $store));
+                Braintree_Configuration::publicKey(Mage::getStoreConfig(self::BRAINTREE_PUBLIC_KEY_PATH, $store));
+                Braintree_Configuration::privateKey(Mage::getStoreConfig(self::BRAINTREE_PRIVATE_KEY_PATH, $store));
+            } else {
+                Braintree_Configuration::merchantId(Mage::getStoreConfig(self::BRAINTREE_SANDBOX_MERCHANT_ID_PATH, $store));
+                Braintree_Configuration::publicKey(Mage::getStoreConfig(self::BRAINTREE_SANDBOX_PUBLIC_KEY_PATH, $store));
+                Braintree_Configuration::privateKey(Mage::getStoreConfig(self::BRAINTREE_SANDBOX_PRIVATE_KEY_PATH, $store));
+            }
 
             // Set our flag
-            $this->init = true;
+            $this->_init = true;
         }
 
         return $this;
@@ -98,6 +111,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         $this->init();
 
         $result = Braintree_PaymentMethodNonce::create($paymentMethodToken);
+
         return $result->paymentMethodNonce->nonce;
     }
 
@@ -111,15 +125,15 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function getCustomer($braintreeCustomerId)
     {
         // Try and load it from the customer
-        if(!$this->customer && !isset($this->customer[$braintreeCustomerId])) {
+        if (!$this->_customer && !isset($this->_customer[$braintreeCustomerId])) {
             try {
-                $this->customer[$braintreeCustomerId] = Braintree_Customer::find($braintreeCustomerId);
+                $this->_customer[$braintreeCustomerId] = Braintree_Customer::find($braintreeCustomerId);
             } catch (Exception $e) {
                 return false;
             }
         }
 
-        return $this->customer[$braintreeCustomerId];
+        return $this->_customer[$braintreeCustomerId];
     }
 
     /**
@@ -131,7 +145,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     {
         try {
             // Check to see that we can generate a braintree ID
-            if($braintreeId = $this->getBraintreeId()) {
+            if ($braintreeId = $this->getBraintreeId()) {
 
                 // Proxy this request to the other method which has caching
                 return $this->getCustomer($braintreeId);
@@ -168,7 +182,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         $customerId = Mage::getSingleton('customer/session')->getCustomer()->getBraintreeCustomerId();
 
         // Detect which type of payment method we've got here
-        if($paymentMethod instanceof Braintree_PayPalAccount) {
+        if ($paymentMethod instanceof Braintree_PayPalAccount) {
 
             // Grab the customer
             $customer = $this->getCustomer($customerId);
@@ -177,11 +191,11 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
             $customerTokens = array();
 
             // Check the customer has PayPal Accounts
-            if(isset($customer->paypalAccounts)) {
+            if (isset($customer->paypalAccounts)) {
 
                 /* @var $payPalAccount Braintree_PayPalAccount */
-                foreach($customer->paypalAccounts as $payPalAccount) {
-                    if(isset($payPalAccount->token)) {
+                foreach ($customer->paypalAccounts as $payPalAccount) {
+                    if (isset($payPalAccount->token)) {
                         $customerTokens[] = $payPalAccount->token;
                     }
                 }
@@ -190,13 +204,13 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
             }
 
             // Check to see if this customer account contains this token
-            if(in_array($paymentMethod->token, $customerTokens)) {
+            if (in_array($paymentMethod->token, $customerTokens)) {
                 return true;
             }
 
             return false;
 
-        } else if(isset($paymentMethod->customerId) && $paymentMethod->customerId == $customerId) {
+        } else if (isset($paymentMethod->customerId) && $paymentMethod->customerId == $customerId) {
 
             return true;
         }
@@ -212,7 +226,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     protected function getBraintreeId()
     {
         // Some basic caching
-        if(!$this->braintreeId) {
+        if (!$this->_braintreeId) {
 
             // Is the customer already logged in
             if (Mage::getSingleton('customer/session')->isLoggedIn()) {
@@ -222,30 +236,30 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
 
                 // Determine whether they have a braintree customer ID already
                 if ($brainteeId = $customer->getBraintreeCustomerId()) {
-                    $this->braintreeId = $customer->getBraintreeCustomerId();
+                    $this->_braintreeId = $customer->getBraintreeCustomerId();
                 } else {
                     // If not let's create them one
-                    $this->braintreeId = $this->buildCustomerId();
-                    $customer->setBraintreeCustomerId($this->braintreeId)->save();
+                    $this->_braintreeId = $this->buildCustomerId();
+                    $customer->setBraintreeCustomerId($this->_braintreeId)->save();
                 }
 
             } else {
                 if ((Mage::getSingleton('checkout/type_onepage')->getCheckoutMethod() == 'login_in' || Mage::getSingleton('checkout/type_onepage')->getCheckoutMethod() == Mage_Checkout_Model_Type_Onepage::METHOD_REGISTER)) {
 
                     // Check to see if we've already generated an ID
-                    if($braintreeId = Mage::getSingleton('checkout/session')->getBraintreeCustomerId()) {
-                        $this->braintreeId = $braintreeId;
+                    if ($braintreeId = Mage::getSingleton('checkout/session')->getBraintreeCustomerId()) {
+                        $this->_braintreeId = $braintreeId;
                     } else {
                         // If the user plans to register let's build them an ID and store it in their session
-                        $this->braintreeId = $this->buildCustomerId();
-                        Mage::getSingleton('checkout/session')->setBraintreeCustomerId($this->braintreeId);
+                        $this->_braintreeId = $this->buildCustomerId();
+                        Mage::getSingleton('checkout/session')->setBraintreeCustomerId($this->_braintreeId);
                     }
                 }
             }
 
         }
 
-        return $this->braintreeId;
+        return $this->_braintreeId;
     }
 
     /**
@@ -258,7 +272,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     protected function getAdminConfigValue($path)
     {
         // If we have the getConfigDataValue use that
-        if(method_exists('Mage_Adminhtml_Model_Config_Data','getConfigDataValue')) {
+        if (method_exists('Mage_Adminhtml_Model_Config_Data', 'getConfigDataValue')) {
             return Mage::getSingleton('adminhtml/config_data')->getConfigDataValue($path);
         }
 
@@ -293,14 +307,26 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     {
         // Try to init the environment
         try {
-            if(!$alreadyInit) {
+            if (!$alreadyInit) {
 
                 // If we're within the admin we want to grab these values from whichever store we're modifying
-                if(Mage::app()->getStore()->isAdmin()) {
-                    Braintree_Configuration::environment($this->getAdminConfigValue(self::BRAINTREE_ENVIRONMENT_PATH));
-                    Braintree_Configuration::merchantId($this->getAdminConfigValue(self::BRAINTREE_MERCHANT_ID_PATH));
-                    Braintree_Configuration::publicKey($this->getAdminConfigValue(self::BRAINTREE_PUBLIC_KEY_PATH));
-                    Braintree_Configuration::privateKey($this->getAdminConfigValue(self::BRAINTREE_PRIVATE_KEY_PATH));
+                if (Mage::app()->getStore()->isAdmin()) {
+                    // Setup the various configuration variables
+                    $environment = $this->getAdminConfigValue(self::BRAINTREE_ENVIRONMENT_PATH);
+                    Braintree_Configuration::environment($environment);
+
+                    // Change logic based on environment
+                    if ($environment == Gene_Braintree_Model_Source_Environment::PRODUCTION) {
+                        Braintree_Configuration::merchantId($this->getAdminConfigValue(self::BRAINTREE_MERCHANT_ID_PATH));
+                        Braintree_Configuration::publicKey($this->getAdminConfigValue(self::BRAINTREE_PUBLIC_KEY_PATH));
+                        Braintree_Configuration::privateKey($this->getAdminConfigValue(self::BRAINTREE_PRIVATE_KEY_PATH));
+                    } else if ($environment == Gene_Braintree_Model_Source_Environment::SANDBOX) {
+                        Braintree_Configuration::merchantId($this->getAdminConfigValue(self::BRAINTREE_SANDBOX_MERCHANT_ID_PATH));
+                        Braintree_Configuration::publicKey($this->getAdminConfigValue(self::BRAINTREE_SANDBOX_PUBLIC_KEY_PATH));
+                        Braintree_Configuration::privateKey($this->getAdminConfigValue(self::BRAINTREE_SANDBOX_PRIVATE_KEY_PATH));
+                    } else {
+                        return $this->_updateApiStatus(false);
+                    }
                 } else {
                     $this->init();
                 }
@@ -312,12 +338,14 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         } catch (Exception $e) {
 
             // Do we want to rethrow the exception?
-            if($throwException) {
+            if ($throwException) {
                 throw $e;
             }
 
+            $this->_updateApiStatus(false);
+
             // Otherwise give the user a little bit more information
-            if($prettyResponse) {
+            if ($prettyResponse) {
                 return '<span style="color: red;font-weight: bold;" id="braintree-valid-config">' . Mage::helper('gene_braintree')->__('Invalid Credentials') . '</span><br />' . Mage::helper('gene_braintree')->__('Payments cannot be processed until this is resolved, due to this the methods will be hidden within the checkout');
             }
 
@@ -326,9 +354,16 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         }
 
         // Check to see if we've been passed the merchant account ID?
-        if(!$merchantAccountId) {
-            if(Mage::app()->getStore()->isAdmin()) {
-                $merchantAccountId = $this->getAdminConfigValue(self::BRAINTREE_MERCHANT_ACCOUNT_ID_PATH);
+        if (!$merchantAccountId) {
+            if (Mage::app()->getStore()->isAdmin()) {
+                // Setup the various configuration variables
+                $environment = $this->getAdminConfigValue(self::BRAINTREE_ENVIRONMENT_PATH);
+
+                if ($environment == Gene_Braintree_Model_Source_Environment::PRODUCTION) {
+                    $merchantAccountId = $this->getAdminConfigValue(self::BRAINTREE_MERCHANT_ACCOUNT_ID_PATH);
+                } else {
+                    $merchantAccountId = $this->getAdminConfigValue(self::BRAINTREE_SANDBOX_MERCHANT_ACCOUNT_ID_PATH);
+                }
             } else {
                 $merchantAccountId = $this->getMerchantAccountId();
             }
@@ -340,12 +375,14 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         } catch (Exception $e) {
 
             // Do we want to rethrow the exception?
-            if($throwException) {
+            if ($throwException) {
                 throw $e;
             }
 
+            $this->_updateApiStatus(false);
+
             // Otherwise do we want a pretty response?
-            if($prettyResponse) {
+            if ($prettyResponse) {
                 return '<span style="color: orange;font-weight: bold;" id="braintree-valid-config">' . Mage::helper('gene_braintree')->__('Invalid Merchant Account ID') . '</span><br />' . Mage::helper('gene_braintree')->__('Payments cannot be processed until this is resolved. We cannot find your merchant account ID associated with the other credentials you\'ve provided, please update this field');
             }
 
@@ -353,9 +390,12 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
             return false;
         }
 
-        if($prettyResponse) {
+        $this->_updateApiStatus(true);
+
+        if ($prettyResponse) {
             return '<span style="color: green;font-weight: bold;" id="braintree-valid-config">' . Mage::helper('gene_braintree')->__('Valid Credentials') . '</span><br />' . Mage::helper('gene_braintree')->__('You\'re ready to accept payments via Braintree');
         }
+
         return true;
     }
 
@@ -367,55 +407,49 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function validateCredentialsOnce()
     {
         // Check to see if it's been validated yet
-        if(is_null($this->validated)) {
+        if (is_null($this->_validated)) {
 
             // Check the Braintree lib version is above 2.32, as this is when 3D secure appeared
             if (Braintree_Version::get() < 2.32) {
-                $this->validated = false;
+                $this->_validated = false;
             } else {
 
                 // Check that the module is fully setup
-                if (!Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_ENVIRONMENT_PATH)
-                    || !Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_MERCHANT_ID_PATH)
-                    || !Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_PUBLIC_KEY_PATH)
-                    || !Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_PRIVATE_KEY_PATH)
-                ) {
+                if (!$this->_validateConfiguration()) {
                     // If not the payment methods aren't available
-                    $this->validated = false;
+                    $this->_validated = false;
 
                 } else {
-
-                    // Attempt to validate credentials
-                    try {
-
-                        // Passing true will cause the system to rethrow exceptions
-                        if(Mage::getModel('gene_braintree/wrapper_braintree')->validateCredentials(false, false, false, true)) {
-
-                            // Mark our flag as true
-                            $this->validated = true;
-
-                        } else {
-
-                            // Mark our flag as false, this shouldn't even return false it should always throw an
-                            // Exception but just in case
-                            $this->validated = false;
-                        }
-
-                    } catch (Exception $e) {
-
-                        // If it fails log it
-                        Gene_Braintree_Model_Debug::log('CRITICAL ERROR: The system was unable to connect to Braintree, error is below');
-                        Gene_Braintree_Model_Debug::log($e);
-
-                        // If the validateCredentials throws an exception it has failed
-                        $this->validated = false;
-                    }
-
+                    // Check to see if the connection is valid
+                    $this->_validated = $this->_getApiStatus();
                 }
             }
         }
 
-        return $this->validated;
+        return $this->_validated;
+    }
+
+    /**
+     * Validate if the configuration is setup correctly
+     *
+     * @return bool
+     */
+    protected function _validateConfiguration()
+    {
+        // Retrieve the environment
+        $environment = Mage::getStoreConfig(self::BRAINTREE_ENVIRONMENT_PATH);
+
+        if ($environment == Gene_Braintree_Model_Source_Environment::PRODUCTION) {
+            return Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_MERCHANT_ID_PATH)
+                && Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_PUBLIC_KEY_PATH)
+                && Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_PRIVATE_KEY_PATH);
+        } else if ($environment == Gene_Braintree_Model_Source_Environment::SANDBOX) {
+            return Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_SANDBOX_MERCHANT_ID_PATH)
+                && Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_SANDBOX_PUBLIC_KEY_PATH)
+                && Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_SANDBOX_PRIVATE_KEY_PATH);
+        }
+
+        return false;
     }
 
     /**
@@ -430,20 +464,20 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     {
         // Create the payment method with this data
         $paymentMethodCreate = array(
-            'customerId' => $this->getBraintreeId(),
+            'customerId'         => $this->getBraintreeId(),
             'paymentMethodNonce' => $nonce,
-            'options' => array(
-                'verifyCard' => true,
+            'options'            => array(
+                'verifyCard'                    => true,
                 'verificationMerchantAccountId' => $this->getMerchantAccountId()
             )
         );
 
-        if($customerId = $this->getBraintreeId()) {
+        if ($customerId = $this->getBraintreeId()) {
             $paymentMethodCreate['customerId'] = $this->getBraintreeId();
         }
 
         // Include billing address information into the payment method
-        if($billingAddress) {
+        if ($billingAddress) {
 
             // Add in the billing address
             $paymentMethodCreate['billingAddress'] = $billingAddress;
@@ -474,18 +508,18 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function storeInGuestVault($nonce, $billingAddress = false)
     {
         $guestCustomerCreate = array(
-            'id' => $this->getBraintreeId(),
+            'id'         => $this->getBraintreeId(),
             'creditCard' => array(
                 'paymentMethodNonce' => $nonce,
-                'options' => array(
-                    'verifyCard' => true,
+                'options'            => array(
+                    'verifyCard'                    => true,
                     'verificationMerchantAccountId' => $this->getMerchantAccountId()
                 )
             )
         );
 
         // Include billing address information into the customer
-        if($billingAddress) {
+        if ($billingAddress) {
 
             // Add in the billing address
             $guestCustomerCreate['creditCard']['cardholderName'] = $billingAddress['firstName'] . ' ' . $billingAddress['lastName'];
@@ -496,13 +530,13 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
             $guestCustomerCreate['lastName'] = $billingAddress['lastName'];
 
             // Conditionally copy over these fields
-            if(isset($billingAddress['email']) && !empty($billingAddress['email'])) {
+            if (isset($billingAddress['email']) && !empty($billingAddress['email'])) {
                 $guestCustomerCreate['email'] = $billingAddress['email'];
             }
-            if(isset($billingAddress['company']) && !empty($billingAddress['company'])) {
+            if (isset($billingAddress['company']) && !empty($billingAddress['company'])) {
                 $guestCustomerCreate['company'] = $billingAddress['company'];
             }
-            if(isset($billingAddress['phone']) && !empty($billingAddress['phone'])) {
+            if (isset($billingAddress['phone']) && !empty($billingAddress['phone'])) {
                 $guestCustomerCreate['phone'] = $billingAddress['phone'];
             }
 
@@ -527,7 +561,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         Mage::dispatchEvent('gene_braintree_cleanup');
 
         // If a guest customer was created during the checkout we can remove them now
-        if($guestCustomerId = Mage::getSingleton('checkout/session')->getGuestBraintreeCustomerId()) {
+        if ($guestCustomerId = Mage::getSingleton('checkout/session')->getGuestBraintreeCustomerId()) {
             $wrapper = Mage::getSingleton('gene_braintree/wrapper_braintree');
             $wrapper->init()->deleteCustomer($guestCustomerId);
             Mage::getSingleton('checkout/session')->unsGuestBraintreeCustomerId();
@@ -535,11 +569,13 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         }
 
         // Remove the temporary payment method
-        if($token = Mage::getSingleton('checkout/session')->getTemporaryPaymentToken()) {
+        if ($token = Mage::getSingleton('checkout/session')->getTemporaryPaymentToken()) {
             $wrapper = Mage::getSingleton('gene_braintree/wrapper_braintree');
             $wrapper->init()->deletePaymentMethod($token);
             Mage::getSingleton('checkout/session')->unsTemporaryPaymentToken();
         }
+
+        Mage::getSingleton('checkout/session')->unsVaultedNonce();
 
         return false;
     }
@@ -547,14 +583,14 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     /**
      * Build up the sale request
      *
-     * @param $amount
-     * @param array $paymentDataArray
+     * @param                        $amount
+     * @param array                  $paymentDataArray
      * @param Mage_Sales_Model_Order $order
-     * @param bool $submitForSettlement
-     * @param bool $deviceData
-     * @param bool $storeInVault
-     * @param bool $threeDSecure
-     * @param array $extra
+     * @param bool                   $submitForSettlement
+     * @param bool                   $deviceData
+     * @param bool                   $storeInVault
+     * @param bool                   $threeDSecure
+     * @param array                  $extra
      *
      * @return array
      *
@@ -569,7 +605,8 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         $storeInVault = false,
         $threeDSecure = false,
         $extra = array()
-    ) {
+    )
+    {
         // Check we always have an ID
         if (!$order->getIncrementId()) {
             Mage::throwException('Your order has become invalid, please try refreshing.');
@@ -579,9 +616,9 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         $createdMethod = false;
 
         // Are we storing in the vault, from a guest customer account?
-        if($storeInVault && Mage::getSingleton('checkout/session')->getGuestBraintreeCustomerId() && ($token = Mage::getSingleton('checkout/session')->getGuestPaymentToken())) {
+        if ($storeInVault && Mage::getSingleton('checkout/session')->getGuestBraintreeCustomerId() && ($token = Mage::getSingleton('checkout/session')->getGuestPaymentToken())) {
 
-            if($this->checkPaymentMethod($token)) {
+            if ($this->checkPaymentMethod($token)) {
 
                 // Remove this from the session so it doesn't get deleted at the end of checkout
                 Mage::getSingleton('checkout/session')->unsGuestBraintreeCustomerId();
@@ -599,32 +636,44 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
             } else {
                 // If the method doesn't exist, clear the token and re-build the sale
                 Mage::getSingleton('checkout/session')->unsGuestPaymentToken();
+
                 return $this->buildSale($amount, $paymentDataArray, $order, $submitForSettlement, $deviceData, $storeInVault, $threeDSecure, $extra);
             }
 
-        } else if($storeInVault && $this->checkIsCustomer() && isset($paymentDataArray['paymentMethodNonce'])) {
+        } else if ($storeInVault && $this->checkIsCustomer() && isset($paymentDataArray['paymentMethodNonce'])) {
             // If the user is already a customer and wants to store in the vault we've gotta do something a bit special
 
             // Do we already have a saved token in the session?
-            if($token = Mage::getSingleton('checkout/session')->getTemporaryPaymentToken()) {
+            if ($token = Mage::getSingleton('checkout/session')->getTemporaryPaymentToken()) {
 
-                if($this->checkPaymentMethod($token)) {
+                if ($this->checkPaymentMethod($token)) {
 
-                    // Remove this from the session so it doesn't get deleted at the end of checkout
-                    Mage::getSingleton('checkout/session')->unsTemporaryPaymentToken();
+                    // Is the submitted nonce different?
+                    if (Mage::getSingleton('checkout/session')->getVaultedNonce() == $paymentDataArray['paymentMethodNonce']) {
 
-                    // We no longer need this nonce
-                    unset($paymentDataArray['paymentMethodNonce']);
+                        // Remove this from the session so it doesn't get deleted at the end of checkout
+                        Mage::getSingleton('checkout/session')->unsTemporaryPaymentToken();
 
-                    // Instead use the token
-                    $paymentDataArray['paymentMethodToken'] = $token;
+                        // We no longer need this nonce
+                        unset($paymentDataArray['paymentMethodNonce']);
 
-                    // Create a flag for other methods
-                    $createdMethod = true;
+                        // Instead use the token
+                        $paymentDataArray['paymentMethodToken'] = $token;
+
+                        // Create a flag for other methods
+                        $createdMethod = true;
+
+                    } else {
+
+                        // Store it again with the 3Ds information
+                        $storeInVault = true;
+
+                    }
 
                 } else {
                     // If the method doesn't exist, clear the token and re-build the sale
                     Mage::getSingleton('checkout/session')->unsTemporaryPaymentToken();
+
                     return $this->buildSale($amount, $paymentDataArray, $order, $submitForSettlement, $deviceData, $storeInVault, $threeDSecure, $extra);
                 }
 
@@ -674,33 +723,34 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
 
         // Build up the initial request parameters
         $request = array(
-            'amount'             => $amount,
-            'orderId'            => $order->getIncrementId(),
-            'merchantAccountId'  => $this->getMerchantAccountId($order),
-            'channel'            => 'MagentoVZero',
-            'options'            => array(
+            'amount'            => $amount,
+            'orderId'           => $order->getIncrementId(),
+            'merchantAccountId' => $this->getMerchantAccountId($order),
+            'channel'           => 'MagentoVZero',
+            'options'           => array(
                 'submitForSettlement' => $submitForSettlement,
                 'storeInVault'        => $storeInVault
             )
         );
 
         // Input the allowed payment method info
-        $allowedPaymentInfo = array('paymentMethodNonce','paymentMethodToken','token','cvv');
-        foreach($paymentDataArray as $key => $value) {
-            if(in_array($key, $allowedPaymentInfo)) {
-                if($key == 'cvv') {
+        $allowedPaymentInfo = array('paymentMethodNonce', 'paymentMethodToken', 'token', 'cvv');
+        foreach ($paymentDataArray as $key => $value) {
+            if (in_array($key, $allowedPaymentInfo)) {
+                if ($key == 'cvv') {
                     $request['creditCard']['cvv'] = $value;
                 } else {
                     $request[$key] = $value;
                 }
             } else {
-                Mage::throwException($key.' is not allowed within $paymentDataArray');
+                Mage::throwException($key . ' is not allowed within $paymentDataArray');
             }
         }
 
         // Include the customer if we're creating a new one
-        if(!$this->checkIsCustomer() && (Mage::getSingleton('customer/session')->isLoggedIn() ||
-                (Mage::getSingleton('checkout/type_onepage')->getCheckoutMethod() == 'login_in' || Mage::getSingleton('checkout/type_onepage')->getCheckoutMethod() == Mage_Checkout_Model_Type_Onepage::METHOD_REGISTER))) {
+        if (!$this->checkIsCustomer() && (Mage::getSingleton('customer/session')->isLoggedIn() ||
+                (Mage::getSingleton('checkout/type_onepage')->getCheckoutMethod() == 'login_in' || Mage::getSingleton('checkout/type_onepage')->getCheckoutMethod() == Mage_Checkout_Model_Type_Onepage::METHOD_REGISTER))
+        ) {
             $request['customer'] = $this->buildCustomer($order);
         } else {
             // If the customer exists but we aren't using the vault we want to pass a customer object with no ID
@@ -723,12 +773,19 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         }
 
         // Is 3D secure enabled?
-        if($threeDSecure !== false && !$createdMethod) {
+        if ($threeDSecure !== false && !$createdMethod) {
             $request['options']['three_d_secure']['required'] = true;
         }
 
+        // Include level 2 data if the user has provided a VAT ID
+        if ($order->getBillingAddress()->getVatId()) {
+            $request['taxAmount'] = $order->getTaxAmount();
+            $request['taxExempt'] = true;
+            $request['purchaseOrderNumber'] = $order->getIncrementId();
+        }
+
         // Any extra information we want to supply
-        if(!empty($extra) && is_array($extra)) {
+        if (!empty($extra) && is_array($extra)) {
             $request = array_merge($request, $extra);
         }
 
@@ -747,7 +804,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         try {
             // Attempt to load the temporary payment method
             $paymentMethod = Braintree_PaymentMethod::find($token);
-            if(isset($paymentMethod->token) && $paymentMethod->token == $token) {
+            if (isset($paymentMethod->token) && $paymentMethod->token == $token) {
                 return true;
             }
         } catch (Exception $e) {
@@ -793,7 +850,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
      */
     private function buildCustomerId()
     {
-        return md5(uniqid('braintree_',true));
+        return md5(uniqid('braintree_', true));
     }
 
     /**
@@ -805,17 +862,17 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
      */
     public function convertBillingAddress($address)
     {
-        if($address instanceof Mage_Sales_Model_Order_Address || $address instanceof Mage_Sales_Model_Quote_Address || $address instanceof Mage_Customer_Model_Address) {
+        if ($address instanceof Mage_Sales_Model_Order_Address || $address instanceof Mage_Sales_Model_Quote_Address || $address instanceof Mage_Customer_Model_Address) {
             return $this->buildAddress($address);
         }
 
         // Otherwise we're most likely dealing with a raw request
-        if(is_array($address)) {
+        if (is_array($address)) {
 
             // Is the user using a saved address?
-            if($addressId = Mage::app()->getRequest()->getParam('billing_address_id', false)) {
+            if ($addressId = Mage::app()->getRequest()->getParam('billing_address_id', false)) {
                 $savedAddress = Mage::getModel('customer/address')->load($addressId);
-                if($savedAddress->getId()) {
+                if ($savedAddress->getId()) {
                     return $this->buildAddress($savedAddress);
                 }
             }
@@ -829,7 +886,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
             $addressForm->setEntity($addressObject);
 
             // Emulate request object
-            $addressData    = $addressForm->extractData($addressForm->prepareRequest($address));
+            $addressData = $addressForm->extractData($addressForm->prepareRequest($address));
             $addressObject->addData($addressData);
 
             return $this->buildAddress($addressObject);
@@ -847,32 +904,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
      */
     private function buildAddress($address)
     {
-        // Build up the initial array
-        $return = array(
-            'firstName'         => $address->getFirstname(),
-            'lastName'          => $address->getLastname(),
-            'streetAddress'     => $address->getStreet1(),
-            'locality'          => $address->getCity(),
-            'postalCode'        => $address->getPostcode(),
-            'countryCodeAlpha2' => $address->getCountry()
-        );
-
-        // Any extended address?
-        if ($address->getStreet2()) {
-            $return['extendedAddress'] = $address->getStreet2();
-        }
-
-        // Region
-        if ($address->getRegion()) {
-            $return['region'] = $address->getRegionCode();
-        }
-
-        // Check to see if we have a company
-        if ($address->getCompany()) {
-            $return['company'] = $address->getCompany();
-        }
-
-        return $return;
+        return Mage::helper('gene_braintree')->convertToBraintreeAddress($address);
     }
 
     /**
@@ -885,14 +917,23 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function getMerchantAccountId(Mage_Sales_Model_Order $order = null)
     {
         // If multi-currency is enabled use the mapped merchant account ID
-        if($currencyCode = $this->hasMappedCurrencyCode($order)) {
+        if ($currencyCode = $this->hasMappedCurrencyCode($order)) {
 
             // Return the mapped currency code
             return $currencyCode;
         }
 
+        $environment = Mage::getStoreConfig(self::BRAINTREE_ENVIRONMENT_PATH, ($order ? $order->getStoreId() : null));
+        if ($environment == Gene_Braintree_Model_Source_Environment::PRODUCTION) {
+            $merchantAccountIdPath = self::BRAINTREE_MERCHANT_ACCOUNT_ID_PATH;
+        } else if ($environment == Gene_Braintree_Model_Source_Environment::SANDBOX) {
+            $merchantAccountIdPath = self::BRAINTREE_SANDBOX_MERCHANT_ACCOUNT_ID_PATH;
+        } else {
+            return false;
+        }
+
         // Otherwise return the one from the store
-        return Mage::getStoreConfig(self::BRAINTREE_MERCHANT_ACCOUNT_ID_PATH, ($order ? $order->getStoreId() : null));
+        return Mage::getStoreConfig($merchantAccountIdPath, ($order ? $order->getStoreId() : null));
     }
 
     /**
@@ -905,19 +946,19 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function hasMappedCurrencyCode(Mage_Sales_Model_Order $order = null)
     {
         // If multi-currency is enabled use the mapped merchant account ID
-        if($this->currencyMappingEnabled($order)) {
+        if ($this->currencyMappingEnabled($order)) {
 
             // Retrieve the mapping from the config
             $mapping = Mage::helper('core')->jsonDecode(Mage::getStoreConfig(self::BRAINTREE_MULTI_CURRENCY_MAPPING, ($order ? $order->getStoreId() : false)));
 
             // Verify it decoded correctly
-            if(is_array($mapping) && !empty($mapping)) {
+            if (is_array($mapping) && !empty($mapping)) {
 
                 // If we haven't been given an order use the quote currency code
                 $currency = (!$order ? $this->getQuote()->getQuoteCurrencyCode() : $order->getOrderCurrencyCode());
 
                 // Verify we have a mapping value for this currency
-                if(isset($mapping[$currency]) && !empty($mapping[$currency])) {
+                if (isset($mapping[$currency]) && !empty($mapping[$currency])) {
 
                     // These should never have spaces in so make sure we trim it
                     return trim($mapping[$currency]);
@@ -949,7 +990,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function getQuote()
     {
         // If we're within the admin return the admin quote
-        if(Mage::app()->getStore()->isAdmin()) {
+        if (Mage::app()->getStore()->isAdmin()) {
             return Mage::getSingleton('adminhtml/session_quote')->getQuote();
         }
 
@@ -968,10 +1009,10 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function getCaptureAmount(Mage_Sales_Model_Order $order = null, $amount)
     {
         // If we've got a mapped currency code the amount is going to change
-        if($this->hasMappedCurrencyCode($order)) {
+        if ($this->hasMappedCurrencyCode($order)) {
 
             // If we don't have an order yet get the quote capture amount
-            if($order === null) {
+            if ($order === null) {
                 return $this->convertCaptureAmount($this->getQuote()->getBaseCurrencyCode(), $this->getQuote()->getQuoteCurrencyCode(), $amount);
             }
 
@@ -1015,18 +1056,18 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         );
 
         // Shall we include the customer ID?
-        if($includeId) {
+        if ($includeId) {
             $customer['id'] = $this->getBraintreeId();
         }
 
         // Handle empty data with alternatives
-        if(empty($customer['firstName'])) {
+        if (empty($customer['firstName'])) {
             $customer['firstName'] = $order->getBillingAddress()->getFirstname();
         }
-        if(empty($customer['lastName'])) {
+        if (empty($customer['lastName'])) {
             $customer['lastName'] = $order->getBillingAddress()->getLastname();
         }
-        if(empty($customer['email'])) {
+        if (empty($customer['email'])) {
             $customer['email'] = $order->getBillingAddress()->getEmail();
         }
 
@@ -1109,7 +1150,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function parseErrors($braintreeErrors)
     {
         $errors = array();
-        foreach($braintreeErrors as $error) {
+        foreach ($braintreeErrors as $error) {
             $errors[] = $error->code . ': ' . $this->parseMessage($error->message);
         }
 
@@ -1126,6 +1167,52 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function parseMessage($string)
     {
         return str_replace('nonce', 'token', $string);
+    }
+
+    /**
+     * Update the API status in the config
+     *
+     * @param $status
+     * @param $storeId
+     *
+     * @return mixed
+     */
+    protected function _updateApiStatus($status, $storeId = 0)
+    {
+        $apiStatus = Mage::getModel('core/variable')->setStoreId($storeId)->loadByCode(self::BRAINTREE_API_CONFIG_STATUS);
+        if ($apiStatus->getId()) {
+            $apiStatus->setPlainValue($status)->save();
+        } else {
+            Mage::getModel('core/variable')->setData(array(
+                'code' => self::BRAINTREE_API_CONFIG_STATUS,
+                'name' => self::BRAINTREE_API_CONFIG_STATUS,
+                'store_id' => $storeId,
+                'plain_value' => $status
+            ))->save();
+        }
+
+        return $status;
+    }
+
+    /**
+     * Get the API status from the core variable system
+     *
+     * @param bool|false $storeId
+     *
+     * @return bool|string
+     * @throws \Exception
+     */
+    protected function _getApiStatus($storeId = false)
+    {
+        if ($storeId === false) {
+            $storeId = Mage::app()->getStore()->getId();
+        }
+        $apiStatus = Mage::getModel('core/variable')->setStoreId($storeId)->loadByCode(self::BRAINTREE_API_CONFIG_STATUS)->getValue('text');
+        if (!$apiStatus) {
+            return $this->validateCredentials();
+        }
+
+        return (bool) $apiStatus;
     }
 
 }

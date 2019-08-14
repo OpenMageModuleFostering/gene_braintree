@@ -21,11 +21,11 @@ class Gene_Braintree_Model_Source_Paypal_Paymenttype
         return array(
             array(
                 'value' => self::GENE_BRAINTREE_PAYPAL_SINGLE_PAYMENT,
-                'label' => Mage::helper('gene_braintree')->__('Single Payment'),
+                'label' => Mage::helper('gene_braintree')->__('Checkout'),
             ),
             array(
                 'value' => self::GENE_BRAINTREE_PAYPAL_FUTURE_PAYMENTS,
-                'label' => Mage::helper('gene_braintree')->__('Future Payments')
+                'label' => Mage::helper('gene_braintree')->__('Vault')
             )
         );
     }

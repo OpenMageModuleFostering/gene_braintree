@@ -4,7 +4,13 @@ $_code = $this->getMethodCode()
 ?>
 <div id="payment_form_<?php echo $_code ?>" style="display:none;" class="form-list">
 
-    <div id="credit-card-form"<?php echo ($this->hasSavedDetails() && $this->getMethod()->isVaultEnabled() ? ' style="display: none;"' : ''); ?>>
+    <?php echo $this->getSavedChildHtml(); ?>
+
+    <div id="credit-card-form"<?php echo ($this->hasSavedDetails() && $this->getMethod()->isVaultEnabled() ? ' style="display: none;"' : ''); ?> class="loading">
+        <div class="credit-card-loading">
+            <img src="<?php echo $this->getSkinUrl('images/gene/loader.gif'); ?>" />
+            <p><?php echo $this->__('Loading Payment Method'); ?></p>
+        </div>
         <ul class="form-list braintree-hostedfield">
             <li>
                 <label for="card-number"><?php echo $this->__('Card Number'); ?></label>

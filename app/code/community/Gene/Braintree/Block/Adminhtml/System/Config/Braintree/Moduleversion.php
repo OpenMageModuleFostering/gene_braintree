@@ -65,7 +65,7 @@ document.observe("dom:loaded", function() {
             },
             onSuccess: function(transport) {
                 try {
-                    json = eval(\'(\' + transport.responseText + \')\');
+                    var json = eval(\'(\' + transport.responseText + \')\');
                 } catch(e){}
 
                 // Is there a message to be displayed to the user?

@@ -98,7 +98,7 @@
     var _integration = new vZeroIntegration(
         (window.vzero || false),
         (window.vzeroPaypal || false),
-        '<div id="paypal-complete"><div id="paypal-container"></div><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label></div>',
+        '<div id="paypal-complete"><div id="paypal-container"></div></div>',
         '#onestepcheckout-place-order',
         true,
         {
@@ -129,7 +129,7 @@
                             _integration.prepareSubmitObserver();
 
                             // Detect if we've overriden the function
-                            if(!/braintreeOverride/.match($('onestepcheckout-form').submit.toString())) {
+                            if(/braintreeOverride/.match($('onestepcheckout-form').submit.toString())) {
 
                                 // Re-fire the event
                                 return $('onestepcheckout-place-order').click();

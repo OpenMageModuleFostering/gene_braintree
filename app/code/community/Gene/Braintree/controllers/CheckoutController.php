@@ -36,12 +36,22 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
 
         }
 
+        // Currency mapping
+        if(Mage::getSingleton('gene_braintree/wrapper_braintree')->hasMappedCurrencyCode()) {
+            $grandTotal = $quote->getGrandTotal();
+            $currencyCode = $quote->getQuoteCurrencyCode();
+        }
+        else {
+            $grandTotal = $quote->getBaseGrandTotal();
+            $currencyCode = $quote->getBaseCurrencyCode();
+        }
+
         // Build up our JSON response
         $jsonResponse = array(
             'billingName' => $billingName,
             'billingPostcode' => $billingPostcode,
-            'grandTotal' => Mage::helper('gene_braintree')->formatPrice($quote->getGrandTotal()),
-            'currencyCode' => $quote->getQuoteCurrencyCode(),
+            'grandTotal' => Mage::helper('gene_braintree')->formatPrice( $grandTotal ),
+            'currencyCode' => $currencyCode,
             'threeDSecure' => Mage::getSingleton('gene_braintree/paymentmethod_creditcard')->is3DEnabled()
         );
 
@@ -87,14 +97,21 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
     public function vaultToNonceAction()
     {
         // Check we have a nonce in the request
-        if($nonce = $this->getRequest()->getParam('nonce')) {
+        if ($nonce = $this->getRequest()->getParam('nonce')) {
 
             // Retrieve the billing address
-            if(!$this->getRequest()->getParam('billing')) {
+            if (!$this->getRequest()->getParam('billing')) {
                 return $this->_returnJson(array(
                     'success' => false,
                     'error' => 'Billing address is not present'
                 ));
+            }
+
+            // Pull the billing address from the multishipping experience
+            if ($this->getRequest()->getParam('billing') == 'multishipping') {
+                $billing = Mage::getSingleton('checkout/type_multishipping')->getQuote()->getBillingAddress();
+            } else {
+                $billing = $this->getRequest()->getParam('billing');
             }
 
             // Create a new payment method in the vault
@@ -102,9 +119,12 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
             $wrapper->init();
 
             // Retrieve and convert the billing address
-            $billingAddress = $wrapper->convertBillingAddress($this->getRequest()->getParam('billing'));
+            $billingAddress = $wrapper->convertBillingAddress($billing);
 
             $token = false;
+
+            // Store the vaulted nonce in the session
+            Mage::getSingleton('checkout/session')->setVaultedNonce($nonce);
 
             try {
                 if ($wrapper->checkIsCustomer()) {

@@ -106,10 +106,10 @@ class Gene_Braintree_Model_Observer
         $order = $shipment->getOrder();
 
         // Should we capture the payment in shipment?
-        if($this->shouldCaptureShipment($order)) {
+        if ($this->_shouldCaptureShipment($order)) {
 
             // Check the order can be invoiced
-            if($order->canInvoice()) {
+            if ($order->canInvoice()) {
 
                 /* @var @invoice Mage_Sales_Model_Order_Invoice */
                 $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
@@ -141,13 +141,37 @@ class Gene_Braintree_Model_Observer
     }
 
     /**
+     * Add in the saved block
+     *
+     * @param \Varien_Event_Observer $observer
+     */
+    public function addSavedChild(Varien_Event_Observer $observer)
+    {
+        $block = $observer->getEvent()->getBlock();
+
+        // Add the child block of saved to the credit card form
+        if ($block instanceof Gene_Braintree_Block_Creditcard) {
+            $saved = $block->getLayout()->createBlock('gene_braintree/creditcard_saved');
+            $saved->setMethod($block->getMethod());
+            $block->setChild('saved', $saved);
+        }
+
+        // Add the child block of saved to the PayPal payment method form
+        if ($block instanceof Gene_Braintree_Block_Paypal) {
+            $saved = $block->getLayout()->createBlock('gene_braintree/paypal_saved');
+            $saved->setMethod($block->getMethod());
+            $block->setChild('saved', $saved);
+        }
+    }
+
+    /**
      * Should we capture the payment?
      *
      * @param \Mage_Sales_Model_Order $order
      *
      * @return bool
      */
-    private function shouldCaptureShipment($order)
+    protected function _shouldCaptureShipment($order)
     {
         // Check the store configuration settings are set to capture shipment
         if(Mage::getStoreConfig(Gene_Braintree_Model_Source_Creditcard_PaymentAction::PAYMENT_ACTION_XML_PATH, $order->getStoreId()) == Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE
@@ -173,16 +197,62 @@ class Gene_Braintree_Model_Observer
 
             // Verify the SSL folder exists
             if(!is_dir($compilerPath . '/..' . $directory)) {
-                mkdir($compilerPath . '/..' . $directory);
+                mkdir($compilerPath . '/..' . $directory, 0777, true);
             }
 
             // Loop through each certificate and check whether it's in the includes directory, if not copy it!
             foreach($certificates as $file) {
                 if(!file_exists($compilerPath . '/..' . $directory . $file)) {
-                    copy(Mage::getBaseDir('lib') . $directory . $file, $compilerPath . '/..' . $directory . $file);
+                    copy(Mage::getBaseDir('lib') . DS . 'Gene' . DS . $directory . $file, $compilerPath . '/..' . $directory . $file);
                 }
             }
         }
+
+        return $this;
+    }
+
+    /**
+     * Unregister the original token from the request
+     *
+     * @return $this
+     */
+    public function resetMultishipping()
+    {
+        Mage::unregister(Gene_Braintree_Model_Paymentmethod_Abstract::BRAINTREE_ORIGINAL_TOKEN);
+
+        return $this;
+    }
+
+    /**
+     * Handle multi shipping orders
+     *
+     * @param \Varien_Event_Observer $observer
+     *
+     * @return $this
+     */
+    public function handleMultishipping(Varien_Event_Observer $observer)
+    {
+        /* @var $order Mage_Sales_Model_Order */
+        $order = $observer->getEvent()->getOrder();
+
+        // Let the payment method know the transaction is a multi shipping transaction
+        // Braintree don't allow multiple transactions from one authorization, however they do allow the vaulting
+        // of the initial transaction, then using the token from that transaction to take repeat payments.
+        // Due to this the payment method needs to be aware if it's expecting to take multiple transactions from one
+        // authorization.
+        $order->getPayment()->setMultiShipping(true);
+
+        return $this;
+    }
+
+    /**
+     * Add the include path to the Gene/Braintree library folder
+     *
+     * @return $this
+     */
+    public function addIncludePath()
+    {
+        set_include_path(BP . DS . 'lib' . DS . 'Gene' . PS . get_include_path());
 
         return $this;
     }

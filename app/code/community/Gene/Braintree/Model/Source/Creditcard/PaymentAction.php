@@ -7,7 +7,6 @@
  */
 class Gene_Braintree_Model_Source_Creditcard_PaymentAction
 {
-
     const PAYMENT_ACTION_XML_PATH = 'payment/gene_braintree_creditcard/payment_action';
 
     /**

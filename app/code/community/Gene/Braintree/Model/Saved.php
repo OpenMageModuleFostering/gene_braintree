@@ -13,7 +13,10 @@ class Gene_Braintree_Model_Saved extends Mage_Core_Model_Abstract
     const SAVED_PAYPAL_ID = 1;
     const SAVED_CREDITCARD_ID = 2;
 
-    private $savedAccounts = false;
+    /**
+     * @var bool|array
+     */
+    protected $_savedAccounts = false;
 
     /**
      * Get the current customers saved cards
@@ -22,13 +25,10 @@ class Gene_Braintree_Model_Saved extends Mage_Core_Model_Abstract
      */
     public function getCustomerSavedPaymentMethods()
     {
-        // Grab an instance of the customers session
-        $customerSession = Mage::getSingleton('customer/session');
+        // Do we have a valid customer?
+        if ($customer = $this->getCustomer()) {
 
-        // You can only store cards if you're logged in
-        if($customerSession->isLoggedIn() && $customerSession->getCustomer()->getBraintreeCustomerId()) {
-
-            if(!$this->savedAccounts) {
+            if(!$this->_savedAccounts) {
 
                 // Grab a new instance of the wrapper
                 $wrapper = Mage::getModel('gene_braintree/wrapper_braintree');
@@ -37,7 +37,7 @@ class Gene_Braintree_Model_Saved extends Mage_Core_Model_Abstract
                 $wrapper->init();
 
                 // Try and load the customer from Braintrees side
-                if ($customer = $wrapper->getCustomer($customerSession->getCustomer()->getBraintreeCustomerId())) {
+                if ($customer = $wrapper->getCustomer($customer->getBraintreeCustomerId())) {
 
                     // Assign them into our model
                     $object = new Varien_Object();
@@ -45,13 +45,32 @@ class Gene_Braintree_Model_Saved extends Mage_Core_Model_Abstract
 
                     Mage::dispatchEvent('gene_braintree_get_saved_methods', array('object' => $object));
 
-                    $this->savedAccounts = $object->getSavedAccounts();
+                    $this->_savedAccounts = $object->getSavedAccounts();
                 }
 
             }
 
-            return $this->savedAccounts;
+            return $this->_savedAccounts;
 
+        }
+
+        return false;
+    }
+
+    /**
+     * Return the current customer, if the session is an admin session use the admin quote
+     *
+     * @return bool|\Mage_Customer_Model_Customer
+     */
+    public function getCustomer()
+    {
+        if (Mage::app()->getStore()->isAdmin()) {
+            $adminQuote = Mage::getSingleton('adminhtml/session_quote');
+            if ($customer = $adminQuote->getCustomer()) {
+                return $customer;
+            }
+        } else if (Mage::getSingleton('customer/session')->isLoggedIn()) {
+            return Mage::getSingleton('customer/session')->getCustomer();
         }
 
         return false;

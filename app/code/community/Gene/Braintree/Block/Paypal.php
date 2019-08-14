@@ -54,7 +54,7 @@ class Gene_Braintree_Block_Paypal extends Mage_Payment_Block_Form
      */
     public function hasSavedDetails()
     {
-        if(Mage::getSingleton('customer/session')->isLoggedIn()) {
+        if(Mage::getSingleton('customer/session')->isLoggedIn() || Mage::app()->getStore()->isAdmin()) {
             if($this->getSavedDetails()) {
                 return sizeof($this->getSavedDetails());
             }
@@ -73,6 +73,18 @@ class Gene_Braintree_Block_Paypal extends Mage_Payment_Block_Form
             $this->_savedDetails = Mage::getSingleton('gene_braintree/saved')->getSavedMethodsByType(Gene_Braintree_Model_Saved::SAVED_PAYPAL_ID);
         }
         return $this->_savedDetails;
+    }
+
+    /**
+     * Get the saved child HTML
+     *
+     * @return string
+     */
+    public function getSavedChildHtml()
+    {
+        $html = $this->getChildHtml('saved', false);
+        $this->unsetChild('saved');
+        return $html;
     }
 
     /**

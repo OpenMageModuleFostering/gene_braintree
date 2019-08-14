@@ -7,7 +7,6 @@
  */
 class Gene_Braintree_Model_Source_Creditcard_CaptureAction
 {
-
     const CAPTURE_ACTION_XML_PATH = 'payment/gene_braintree_creditcard/capture_action';
 
     const CAPTURE_INVOICE = 'invoice';

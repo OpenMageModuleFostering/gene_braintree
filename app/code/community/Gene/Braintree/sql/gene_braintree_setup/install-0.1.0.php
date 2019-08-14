@@ -1,5 +1,6 @@
 <?php
 
+/* @var $installer Gene_Braintree_Model_Entity_Setup */
 $installer = $this;
 $installer->startSetup();
 
