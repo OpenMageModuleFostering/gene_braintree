@@ -295,20 +295,53 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
                 'exception' => $e
             ));
 
-            return $this->_processFailedResult($this->_getHelper()->__('There was an issue whilst trying to process your card payment, please try again or another method.'), $e);
+            return $this->_processFailedResult(
+                $this->_getHelper()->__(
+                    'There was an issue whilst trying to process your card payment, please try again or another' .
+                    ' method.'
+                ),
+                $e
+            );
         }
 
+        return $this->handleResult($result, $payment, $amount, $saleArray);
+    }
+
+    /**
+     * Handle the result of the sale
+     *
+     * @param $result
+     * @param $payment
+     * @param $amount
+     * @param $saleArray
+     *
+     * @return $this
+     */
+    protected function handleResult($result, $payment, $amount, $saleArray)
+    {
         // Log the initial sale array, no protected data is included
         Gene_Braintree_Model_Debug::log(array('_authorize:result' => $result));
 
         // If the transaction was 3Ds but doesn't contain a 3Ds response
-        if (($this->is3DEnabled() && isset($saleArray['options']['three_d_secure']['required']) &&
-                $saleArray['options']['three_d_secure']['required'] == true) &&
-            (!isset($result->transaction->threeDSecureInfo) || (isset($result->transaction->threeDSecureInfo) &&
-                    is_null($result->transaction->threeDSecureInfo)))
+        if ($this->is3DEnabled()
+            && isset($saleArray['options']['threeDSecure']['required'])
+            && $saleArray['options']['threeDSecure']['required'] == true
         ) {
-            return $this->_processFailedResult($this->_getHelper()->__('This transaction must be passed through 3D secure, please try again or consider using an alternate payment method.'), false, $result);
-
+            // Check to see if the liability was shifted
+            if (!isset($result->transaction->threeDSecureInfo)
+                || empty($result->transaction->threeDSecureInfo)
+                || !$result->transaction->threeDSecureInfo->liabilityShifted
+            ) {
+                switch ($this->_getConfig('threedsecure_failed_liability')) {
+                    case Gene_Braintree_Model_System_Config_Source_Payment_Liabilityaction::BLOCK:
+                        return $this->processFailedThreeDResult($result);
+                        break;
+                    case Gene_Braintree_Model_System_Config_Source_Payment_Liabilityaction::FRAUD:
+                        $payment->setIsTransactionPending(true);
+                        $payment->setIsFraudDetected(true);
+                        break;
+                }
+            }
         }
 
         // If the sale has failed
@@ -320,8 +353,14 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             if (isset($result->transaction->status)) {
                 // Return a custom response for processor declined messages
                 if ($result->transaction->status == Braintree_Transaction::PROCESSOR_DECLINED) {
-                    return $this->_processFailedResult($this->_getHelper()->__('Your transaction has been declined, please try another payment method or contacting your issuing bank.'), false, $result);
-
+                    return $this->_processFailedResult(
+                        $this->_getHelper()->__(
+                            'Your transaction has been declined, please try another payment method or contacting ' .
+                            'your issuing bank.'
+                        ),
+                        false,
+                        $result
+                    );
                 } elseif ($result->transaction->status == Braintree_Transaction::GATEWAY_REJECTED
                     && isset($result->transaction->gatewayRejectionReason)
                     && $result->transaction->gatewayRejectionReason == Braintree_Transaction::THREE_D_SECURE
@@ -332,16 +371,51 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
                         'result' => $result
                     ));
 
-                    return $this->_processFailedResult($this->_getHelper()->__('Your card has failed 3D secure validation, please try again or consider using an alternate payment method.'), 'Transaction failed with 3D secure', false, $result);
+                    return $this->_processFailedResult(
+                        $this->_getHelper()->__(
+                            'Your card has failed 3D secure validation, please try again or consider using an ' .
+                            'alternate payment method.'
+                        ),
+                        false,
+                        $result
+                    );
                 }
             }
 
-            return $this->_processFailedResult($this->_getHelper()->__('%s Please try again or attempt refreshing the page.', $this->_getWrapper()->parseMessage($result->message)), $result);
+            return $this->_processFailedResult(
+                $this->_getHelper()->__(
+                    '%s Please try again or attempt refreshing the page.',
+                    $this->_getHelper()->__(
+                        $this->_getWrapper()->parseMessage($result->message)
+                    )
+                ),
+                $result
+            );
         }
 
+        // If no errors are thrown we're safe to process the transaction as a success
         $this->_processSuccessResult($payment, $result, $amount);
 
         return $this;
+    }
+
+    /**
+     * The transaction has failed due to 3D secure
+     *
+     * @param $result
+     *
+     * @return $this
+     */
+    protected function processFailedThreeDResult($result)
+    {
+        return $this->_processFailedResult(
+            $this->_getHelper()->__(
+                'This transaction must be passed through 3D secure, please try again or consider using an ' .
+                'alternate payment method.'
+            ),
+            false,
+            $result
+        );
     }
 
     /**
@@ -496,9 +570,11 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         // If 3D secure is enabled, presume it's passed
         if ($this->_is3DEnabled()
             && isset($result->transaction->threeDSecureInfo->liabilityShifted)
-            && $result->transaction->threeDSecureInfo->liabilityShifted == 1
+            && $result->transaction->threeDSecureInfo->liabilityShifted
         ) {
-            $additionalInfo['threeDSecure'] = Mage::helper('gene_braintree')->__('Passed');
+            $additionalInfo['threeDSecure'] = Mage::helper('gene_braintree')->__('Liability Shifted');
+        } elseif ($this->_is3DEnabled()) {
+            $additionalInfo['threeDSecure'] = Mage::helper('gene_braintree')->__('Liability Not Shifted');
         }
 
         // Iterate through and pull out any data we want

@@ -781,10 +781,29 @@
                             ]]></comment>
                         </threedsecure>
 
+                        <threedsecure_failed_liability translate="label comment">
+                            <label>Failed Liability Shift Action</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>gene_braintree/system_config_source_payment_liabilityaction</source_model>
+                            <sort_order>101</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                Action to complete if the liability shift fails after the 3D secure. If the liability cannot be shifted the merchant is liable for charge backs.<br />
+                                <strong>Request Alternative Payment Method</strong> - Block the payment and inform the customer to choose a different payment method.<br />
+                                <strong>Accept & Mark as Fraud</strong> - Will accept the payment but mark as fraudulent within Magento for manual inspection.<br />
+                                <strong>Accept</strong> - Will accept the payment and be processed as a normal order (this setting is not recommended).
+                            ]]></comment>
+                            <depends>
+                                <threedsecure>1</threedsecure>
+                            </depends>
+                        </threedsecure_failed_liability>
+
                         <threedsecure_threshold translate="label comment">
                             <label>3D Secure Threshold</label>
                             <frontend_type>text</frontend_type>
-                            <sort_order>101</sort_order>
+                            <sort_order>105</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
@@ -799,7 +818,7 @@
                         <threedsecure_allowspecific translate="label comment">
                             <label>3D Secure for Applicable Countries</label>
                             <frontend_type>allowspecific</frontend_type>
-                            <sort_order>102</sort_order>
+                            <sort_order>106</sort_order>
                             <source_model>gene_braintree/system_config_source_payment_threedsecurecountries</source_model>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
@@ -815,7 +834,7 @@
                         <threedsecure_specificcountry translate="label">
                             <label>3D Secure for Specific Countries</label>
                             <frontend_type>multiselect</frontend_type>
-                            <sort_order>103</sort_order>
+                            <sort_order>110</sort_order>
                             <source_model>adminhtml/system_config_source_country</source_model>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>

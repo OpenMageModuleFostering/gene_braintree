@@ -54,6 +54,7 @@ vZero.prototype = {
 
         this.threeDSpecificCountries = false;
         this.threeDCountries = [];
+        this.threeDSecureFailedAction = 0;
 
         this.supportedCards = [];
         this.cardType = false;
@@ -120,6 +121,15 @@ vZero.prototype = {
         }
         this.threeDSpecificCountries = true;
         this.threeDCountries = countries;
+    },
+
+    /**
+     * Set the action to occur when a 3Ds transactions liability doesn't shift
+     *
+     * @param action
+     */
+    setThreeDFailedAction: function (action) {
+        this.threeDSecureFailedAction = action;
     },
 
     /**
@@ -315,6 +325,21 @@ vZero.prototype = {
                 options.fields.cvv = {
                     selector: "#cvv"
                 };
+            }
+
+            // Detect if AVS is enabled, if so we need to display a postal code field
+            var config = clientInstance.getConfiguration();
+            if (typeof config.gatewayConfiguration.challenges === 'object'
+                && config.gatewayConfiguration.challenges.indexOf('postal_code') !== -1
+            ) {
+                if ($$('.braintree-avs-postal-code').first() == undefined) {
+                    console.error('We\'ve detected you have AVS rules enabled, however the braintree-avs-postal-code field is not present in your Hosted Fields form. Please ensure you haven\'t overriden hostedfields.phtml and if you have please update it.');
+                } else {
+                    $$('.braintree-avs-postal-code').first().show();
+                    options.fields.postalCode = {
+                        selector: "#postal-code"
+                    };
+                }
             }
 
             // Create a new instance of hosted fields
@@ -1043,21 +1068,20 @@ vZero.prototype = {
                             if (options.onSuccess) {
                                 options.onSuccess(payload);
                             }
-                        } else if (payload.liabilityShiftPossible) {
-                            // Liablity may still be shifted
-                            // Decide if you want to submit the nonce
-
-                            // Treat as success, allow the server to handle the decision
-                            if (options.onSuccess) {
-                                options.onSuccess(payload);
-                            }
                         } else {
-                            // Liablity has not shifted and will not shift
-                            // Decide if you want to submit the nonce
-
-                            // Treat as success, allow the server to handle the decision
-                            if (options.onSuccess) {
-                                options.onSuccess(payload);
+                            // Block the payment
+                            if (this.threeDSecureFailedAction == 1) {
+                                if (options.onFailure) {
+                                    options.onFailure(
+                                        payload,
+                                        Translator.translate('Your payment has failed 3D secure verification, please try an alternate payment method.')
+                                    );
+                                }
+                            } else {
+                                // Otherwise let the server side handle this
+                                if (options.onSuccess) {
+                                    options.onSuccess(payload);
+                                }
                             }
                         }
                     } else {
@@ -1065,7 +1089,7 @@ vZero.prototype = {
                             options.onFailure(payload, verifyError);
                         }
                     }
-                });
+                }.bind(this));
             }.bind(this));
         }.bind(this));
 

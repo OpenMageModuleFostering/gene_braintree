@@ -183,4 +183,34 @@ class Gene_Braintree_Helper_Data extends Mage_Core_Helper_Abstract
 
         return false;
     }
+
+    /**
+     * Determine if express is enabled by a page handle
+     *
+     * @param $handle
+     *
+     * @return bool
+     */
+    public function isExpressEnabled($handle)
+    {
+        $assetRequiredFunctions = Mage::getConfig()->getNode('global/payment/assets_required/' . $handle);
+        if ($assetRequiredFunctions) {
+            $checkFunctions = $assetRequiredFunctions->asArray();
+            if (is_array($checkFunctions) && count($checkFunctions) > 0) {
+                foreach ($checkFunctions as $check) {
+                    if (isset($check['class']) && isset($check['method'])) {
+                        $model = Mage::getModel($check['class']);
+                        if ($model) {
+                            // If the method returns true, express is enabled for this handle
+                            if (method_exists($model, $check['method']) && $model->{$check['method']}()) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
 }

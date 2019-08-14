@@ -2,7 +2,7 @@
 <config>
     <modules>
         <Gene_Braintree>
-            <version>2.1.6</version>
+            <version>2.1.7</version>
         </Gene_Braintree>
     </modules>
     <global>
@@ -57,6 +57,22 @@
                 <gene_braintree_creditcard />
                 <gene_braintree_paypal />
             </setup_required>
+
+            <!-- Function checks for assets on specific pages -->
+            <assets_required>
+                <catalog_product_view>
+                    <paypal>
+                        <class>gene_braintree/express_assets</class>
+                        <method>isEnabledPdp</method>
+                    </paypal>
+                </catalog_product_view>
+                <checkout_cart_index>
+                    <paypal>
+                        <class>gene_braintree/express_assets</class>
+                        <method>isEnabledCart</method>
+                    </paypal>
+                </checkout_cart_index>
+            </assets_required>
         </payment>
 
         <events>
@@ -112,6 +128,7 @@
                 <form_integration>hosted</form_integration>
                 <use_vault>0</use_vault>
                 <threedsecure>0</threedsecure>
+                <threedsecure_failed_liability>1</threedsecure_failed_liability>
                 <threedsecure_threshold>0</threedsecure_threshold>
                 <useccv>1</useccv>
                 <kount_ens_ips>209.81.12.0/24,64.128.91.0/24,64.128.87.0/24</kount_ens_ips>

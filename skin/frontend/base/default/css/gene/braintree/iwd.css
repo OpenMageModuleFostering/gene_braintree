@@ -48,6 +48,9 @@
   border: 1px solid lightgrey;
   background: white;
 }
+.braintree-input-field.braintree-postal-code {
+  width: 140px;
+}
 .braintree-card-input-field {
   height: 50px;
   width: 100%;

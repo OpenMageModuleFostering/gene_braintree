@@ -18,5 +18,8 @@
     <braintree-hosted-fields-error translate="message" module="gene_braintree">
         <message>There are a number of errors present with the credit card form:</message>
     </braintree-hosted-fields-error>
+    <braintree-threed-failed translate="message" module="gene_braintree">
+        <message>Your payment has failed 3D secure verification, please try an alternate payment method.</message>
+    </braintree-threed-failed>
 </jstranslator>
 

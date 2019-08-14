@@ -155,8 +155,14 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
         }
 
         // Build the address
-        list($firstName, $lastName) = explode(" ", $paypalData['shippingAddress']['recipientName'], 2);
+        if (isset($paypalData['firstName']) && isset($paypalData['lastName'])) {
+            $firstName = $paypalData['firstName'];
+            $lastName = $paypalData['lastName'];
+        } elseif (isset($paypalData['shippingAddress']['recipientName'])) {
+            list($firstName, $lastName) = explode(" ", $paypalData['shippingAddress']['recipientName'], 2);
+        }
 
+        // Retrieve the street
         $street = $paypalData['shippingAddress']['line1'];
         if (isset($paypalData['shippingAddress']['line2'])) {
             $street .= ' ' . $paypalData['shippingAddress']['line2'];

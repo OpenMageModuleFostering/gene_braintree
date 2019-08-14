@@ -141,3 +141,5 @@
 "CVV","CVV"
 "is invalid.","is invalid."
 "We\'re currently unable to process this card type, please try another card or payment method.","We\'re currently unable to process this card type, please try another card or payment method."
+"Your payment has failed 3D secure verification, please try an alternate payment method.","Your payment has failed 3D secure verification, please try an alternate payment method."
+"Gateway rejected: AVS","There has been an issue whilst validating your billing address."

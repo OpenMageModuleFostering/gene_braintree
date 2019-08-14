@@ -33,6 +33,8 @@
         vzero.setThreeDCountries('<?php echo $this->getThreeDSpecificCountries(); ?>');
         <?php endif; ?>
 
+        vzero.setThreeDFailedAction('<?php echo $this->getThreeDSecureFailedAction(); ?>');
+
         <?php if ($this->isPayPalActive()) : ?>
         // Pass some data through to the PayPal integration
         var vzeroPaypal = new vZeroPayPalButton(

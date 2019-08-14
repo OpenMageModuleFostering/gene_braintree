@@ -55,6 +55,11 @@ $_code = $this->getMethodCode()
                     <a href="#" class="cvv-what-is-this"><?php echo $this->__('What is this?') ?></a>
                 </li>
             <?php endif; ?>
+            <?php /* This field is automatically shown by JavaScript based on the merchants AVS settings */ ?>
+            <li class="braintree-avs-postal-code" style="display: none;">
+                <label for="postal-code"><?php echo $this->__('Postal Code'); ?></label>
+                <div id="postal-code" class="braintree-input-field braintree-postal-code"></div>
+            </li>
             <?php if ($this->canSaveCard()): ?>
                 <li id="<?php echo $_code ?>_store_in_vault_div">
                     <input type="checkbox" title="<?php echo $this->__('Save this card for future use') ?>"

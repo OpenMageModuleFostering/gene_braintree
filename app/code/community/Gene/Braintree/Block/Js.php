@@ -5,7 +5,7 @@
  *
  * @author Dave Macaulay <dave@gene.co.uk>
  */
-class Gene_Braintree_Block_Js extends Mage_Core_Block_Template
+class Gene_Braintree_Block_Js extends Gene_Braintree_Block_Assets
 {
     /**
      * We can use the same token twice
@@ -95,7 +95,21 @@ class Gene_Braintree_Block_Js extends Mage_Core_Block_Template
             return Mage::getStoreConfig('payment/gene_braintree_creditcard/cctypes');
         }
 
-        return [];
+        return '';
+    }
+
+    /**
+     * Return the failed action for 3D secure payments
+     *
+     * @return int
+     */
+    protected function getThreeDSecureFailedAction()
+    {
+        if ($this->isCreditCardActive() && $this->is3DEnabled()) {
+            return Mage::getStoreConfig('payment/gene_braintree_creditcard/threedsecure_failed_liability');
+        }
+
+        return 0;
     }
 
     /**
@@ -205,11 +219,10 @@ class Gene_Braintree_Block_Js extends Mage_Core_Block_Template
     protected function _toHtml()
     {
         // Check the payment method is active, block duplicate rendering of this block
-        if (Mage::helper('gene_braintree')->isSetupRequired() &&
-            !Mage::registry('gene_js_loaded_' . $this->getTemplate())
-        ) {
+        if (!Mage::registry('gene_js_loaded_' . $this->getTemplate())) {
             Mage::register('gene_js_loaded_' . $this->getTemplate(), true);
 
+            // The parent handles whether or not the module is enabled
             return parent::_toHtml();
         }
 

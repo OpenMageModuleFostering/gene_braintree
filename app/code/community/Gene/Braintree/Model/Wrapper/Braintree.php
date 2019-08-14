@@ -632,7 +632,6 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         if ($storeInVault && Mage::getSingleton('checkout/session')->getGuestBraintreeCustomerId() &&
             ($token = Mage::getSingleton('checkout/session')->getGuestPaymentToken())
         ) {
-            echo '1';
             if ($this->checkPaymentMethod($token)) {
                 // Remove this from the session so it doesn't get deleted at the end of checkout
                 Mage::getSingleton('checkout/session')->unsGuestBraintreeCustomerId();

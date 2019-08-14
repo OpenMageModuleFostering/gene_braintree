@@ -1,0 +1,15 @@
+<?php
+/* @var $this Gene_Braintree_Block_Assets */
+?>
+<!-- Braintree External SDK -->
+<script src="https://js.braintreegateway.com/web/3.6.0/js/client.min.js"></script>
+<script src="https://js.braintreegateway.com/web/3.6.0/js/hosted-fields.min.js"></script>
+<script src="https://js.braintreegateway.com/web/3.6.0/js/three-d-secure.min.js"></script>
+<script src="https://js.braintreegateway.com/web/3.6.0/js/paypal.min.js"></script>
+<script src="https://js.braintreegateway.com/web/3.6.0/js/data-collector.min.js"></script>
+
+<!-- Internal SDK Magento Interfaces -->
+<?php /* {VERSION} is replaced with the current version of the Braintree module */ ?>
+<script src="<?php echo $this->getJsUrl('gene/braintree/{VERSION}/vzero-min.js'); ?>"></script>
+<script src="<?php echo $this->getJsUrl('gene/braintree/{VERSION}/vzero-paypal-min.js'); ?>"></script>
+<script src="<?php echo $this->getJsUrl('gene/braintree/{VERSION}/vzero-integration-min.js'); ?>"></script>
