@@ -27,8 +27,9 @@
          * @returns {boolean}
          */
         shouldInterceptCreditCard: function() {
-            return $('p_method_free') == null || ($('p_method_free') != null && !$('p_method_free').checked);
-        },
+            // Additional check to see if the label is present for the payment method
+            return ($('p_method_free') == null || ($('p_method_free') != null && !$('p_method_free').checked)) && $$('[for="p_method_gene_braintree_creditcard"]').length > 0;
+        }
 
     });
 

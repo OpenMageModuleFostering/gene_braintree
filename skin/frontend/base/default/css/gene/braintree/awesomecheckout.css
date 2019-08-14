@@ -198,20 +198,58 @@ button.braintree-paypal-button > span {
 label[for="gene_braintree_paypal_store_in_vault"] {
   width: auto!important;
 }
-/* Centrally aligned PayPal button */
-button.braintree-paypal-button {
-  margin: 0 auto;
-  float: none;
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal {
+  padding: 12px 0;
 }
-#creditcard-saved-accounts td,
-#paypal-saved-accounts td {
-  vertical-align: middle;
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard > label,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal > label {
+  font-weight: bold;
 }
-#gene_braintree_creditcard_cc_number {
-  text-indent: 62px!important;
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard > p,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal > p {
+  margin-top: 6px;
 }
-#payment_form_gene_braintree_paypal,
-#payment_form_gene_braintree_creditcard {
-  padding-top: 6px;
-  padding-bottom: 6px;
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard #creditcard-saved-accounts,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal #creditcard-saved-accounts,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard #paypal-saved-accounts,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal #paypal-saved-accounts {
+  font-size: inherit!important;
+  margin: 8px 0;
+}
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard #creditcard-saved-accounts tr td,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal #creditcard-saved-accounts tr td,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard #paypal-saved-accounts tr td,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal #paypal-saved-accounts tr td {
+  padding: 6px 0;
+}
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard #creditcard-saved-accounts label .saved-card-info,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal #creditcard-saved-accounts label .saved-card-info,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard #paypal-saved-accounts label .saved-card-info,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal #paypal-saved-accounts label .saved-card-info {
+  margin-left: 10px;
+}
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard #credit-card-form li,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal #credit-card-form li {
+  margin-bottom: 12px;
+}
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard #credit-card-form li > label,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal #credit-card-form li > label {
+  margin-bottom: 6px;
+  display: block;
+}
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard #credit-card-form li .cvv-what-is-this,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal #credit-card-form li .cvv-what-is-this {
+  top: -40px;
+}
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard #credit-card-form #gene_braintree_creditcard_store_in_vault_div label,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal #credit-card-form #gene_braintree_creditcard_store_in_vault_div label {
+  display: inline;
+}
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_creditcard .paypal-info > p,
+#ac-page #checkout-payment-method-load #payment_form_gene_braintree_paypal .paypal-info > p {
+  margin-bottom: 8px;
+}
+#paypal-complete {
+  float: right;
 }

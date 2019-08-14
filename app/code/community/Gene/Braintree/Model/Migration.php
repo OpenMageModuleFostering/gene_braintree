@@ -126,7 +126,6 @@ class Gene_Braintree_Model_Migration extends Mage_Core_Model_Abstract
             'capture_action' => 'gene_braintree_creditcard/capture_action',
             'order_status' => 'gene_braintree_creditcard/order_status',
             'use_vault' => 'gene_braintree_creditcard/use_vault',
-            'useccv' => 'gene_braintree_creditcard/useccv',
             'cctypes' => 'gene_braintree_creditcard/cctypes',
             'three_d_secure' => 'gene_braintree_creditcard/threedsecure',
             'kount_id' => 'gene_braintree_creditcard/kount_merchant_id',

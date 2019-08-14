@@ -311,8 +311,44 @@ class Gene_Braintree_Model_Kount_Ens extends Mage_Core_Model_Abstract
      */
     public function isValidEnsIp($ip)
     {
-        $validIps = array('64.128.91.251', '209.81.12.251', '192.168.47.1');
-        return in_array($ip, $validIps);
+        $validIps = explode(',', Mage::getStoreConfig('payment/gene_braintree_creditcard/kount_ens_ips'));
+        if (is_array($validIps) && count($validIps) > 0) {
+            $validIps = array_map('trim', $validIps);
+            foreach ($validIps as $validIp) {
+                if ($this->isIpInRange($ip, $validIp)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // If no IP's are set allow from all
+        return true;
+    }
+
+    /**
+     * Determine whether an IP is within a range
+     *
+     * @param $ip
+     * @param $range
+     *
+     * @return bool
+     *
+     * @author https://gist.github.com/tott/7684443
+     */
+    protected function isIpInRange($ip, $range)
+    {
+        if ( strpos( $range, '/' ) == false ) {
+            $range .= '/32';
+        }
+        // $range is in IP/CIDR format eg 127.0.0.1/24
+        list( $range, $netmask ) = explode( '/', $range, 2 );
+        $range_decimal = ip2long( $range );
+        $ip_decimal = ip2long( $ip );
+        $wildcard_decimal = pow( 2, ( 32 - $netmask ) ) - 1;
+        $netmask_decimal = ~ $wildcard_decimal;
+        return ( ( $ip_decimal & $netmask_decimal ) == ( $range_decimal & $netmask_decimal ) );
     }
 
     /**

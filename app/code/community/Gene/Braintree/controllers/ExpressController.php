@@ -257,14 +257,76 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
             }
         }
 
-        // Build up the totals block
-        /* @var $totals Mage_Checkout_Block_Cart_Totals */
-        $totals = $this->getLayout()->createBlock('checkout/cart_totals')
-            ->setTemplate('checkout/cart/totals.phtml')
-            ->setCustomQuote($this->_getQuote());
+        return $this->_returnJson(array(
+            'success' => true,
+            'totals' => $this->_returnTotals()
+        ));
+    }
 
-        // Set the body in the response
-        $this->getResponse()->setBody($totals->toHtml());
+    /**
+     * Allow customers to add coupon codes into their orders
+     *
+     * @return \Gene_Braintree_ExpressController|\Zend_Controller_Response_Abstract
+     */
+    public function saveCouponAction()
+    {
+        $quote = $this->_getQuote();
+        $couponCode = $this->getRequest()->getParam('coupon');
+        $oldCoupon = $quote->getCouponCode();
+
+        // Don't try and re-apply the already applied coupon
+        if ($couponCode == $oldCoupon) {
+            // Just alert the front-end the response was a success
+            return $this->_returnJson(array(
+                'success' => true
+            ));
+        }
+
+        // If the user is trying to remove the coupon code allow them to
+        if ($this->getRequest()->getParam('remove')) {
+            $couponCode = '';
+        }
+
+        // Build our response in an array to be returned as JSON
+        $response = array(
+            'success' => false
+        );
+
+        try {
+            $codeLength = strlen($couponCode);
+            $isCodeLengthValid = $codeLength && $codeLength <= Mage_Checkout_Helper_Cart::COUPON_CODE_MAX_LENGTH;
+
+            $this->_getQuote()->getShippingAddress()->setCollectShippingRates(true);
+            $this->_getQuote()->setCouponCode($isCodeLengthValid ? $couponCode : '')
+                ->collectTotals()
+                ->save();
+
+            if ($codeLength) {
+                if ($isCodeLengthValid && $couponCode == $this->_getQuote()->getCouponCode()) {
+                    $response['success'] = true;
+                    $response['message'] = $this->__('Coupon code "%s" was applied.', Mage::helper('core')->escapeHtml($couponCode));
+                } else {
+                    $response['success'] = false;
+                    $response['message'] = $this->__('Coupon code "%s" is not valid.', Mage::helper('core')->escapeHtml($couponCode));
+                }
+            } else {
+                // The coupon has been removed successfully
+                $response['success'] = true;
+            }
+
+        } catch (Mage_Core_Exception $e) {
+            $response['success'] = false;
+            $response['message'] = $e->getMessage();
+        } catch (Exception $e) {
+            $response['success'] = false;
+            $response['message'] = $this->__('Cannot apply the coupon code.');
+            Mage::logException($e);
+        }
+
+        // Include the totals HTML in the response
+        $response['totals'] = $this->_returnTotals();
+
+        return $this->_returnJson($response);
     }
 
     /**
@@ -275,11 +337,17 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
         $quote = $this->_getQuote();
         $quote->setTotalsCollectedFlag(false)->collectTotals()->save();
 
-        // Set payment method
-        $paymentMethod = $quote->getPayment();
-        $paymentMethod->setMethod('gene_braintree_paypal');
-        $paymentMethod->setAdditionalInformation('payment_method_nonce', Mage::getModel('core/session')->getBraintreeNonce());
-        $quote->setPayment($paymentMethod);
+        // Handle free orders via coupon codes
+        if ($quote->getGrandTotal() == 0) {
+            $paymentMethod = $quote->getPayment();
+            $paymentMethod->setMethod('free');
+            $quote->setPayment($paymentMethod);
+        } else {
+            $paymentMethod = $quote->getPayment();
+            $paymentMethod->setMethod('gene_braintree_paypal');
+            $paymentMethod->setAdditionalInformation('payment_method_nonce', Mage::getModel('core/session')->getBraintreeNonce());
+            $quote->setPayment($paymentMethod);
+        }
 
         // Convert quote to order
         $convert = Mage::getSingleton('sales/convert_quote');
@@ -296,8 +364,17 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
         }
 
         // Set the order as complete
+        /* @var $service Mage_Sales_Model_Service_Quote */
         $service = Mage::getModel('sales/service_quote', $order->getQuote());
-        $service->submitAll();
+        try {
+            $service->submitAll();
+        } catch (Mage_Core_Exception $e) {
+            $this->errorAction($e->getMessage());
+            return false;
+        } catch (Exception $e) {
+            $this->errorAction($e->getMessage());
+            return false;
+        }
         $order = $service->getOrder();
 
         // Send the new order email
@@ -316,15 +393,54 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
     }
 
     /**
-     * Display order summary.
+     * Display an error to the user
+     *
+     * @param bool|false $errorMessage
      */
-    public function errorAction()
+    public function errorAction($errorMessage = false)
     {
         // View to select shipping method
+        /* @var $block Gene_Braintree_Block_Express_Checkout */
         $block = $this->getLayout()->createBlock('gene_braintree/express_checkout')
             ->setTemplate('gene/braintree/express/error.phtml');
 
+        if ($errorMessage) {
+            $block->getLayout()->getMessagesBlock()->addError($errorMessage);
+        }
+
         $this->getResponse()->setBody($block->toHtml());
+    }
+
+    /**
+     * Return the totals in the Ajax response
+     *
+     * @return \Zend_Controller_Response_Abstract
+     */
+    protected function _returnTotals()
+    {
+        // Build up the totals block
+        /* @var $totals Mage_Checkout_Block_Cart_Totals */
+        $totals = $this->getLayout()->createBlock('checkout/cart_totals')
+            ->setTemplate('checkout/cart/totals.phtml')
+            ->setCustomQuote($this->_getQuote());
+
+        // Set the body in the response
+        return $totals->toHtml();
+    }
+
+    /**
+     * Return JSON to the browser
+     *
+     * @param $array
+     *
+     * @return $this
+     */
+    protected function _returnJson($array)
+    {
+        $this->getResponse()->setBody(Mage::helper('core')->jsonEncode($array));
+        $this->getResponse()->setHeader('Content-type', 'application/json');
+
+        return $this;
     }
 
 }

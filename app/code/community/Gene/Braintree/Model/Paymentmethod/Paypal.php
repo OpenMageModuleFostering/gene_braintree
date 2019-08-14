@@ -40,7 +40,7 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
     protected $_canUseForMultishipping = true;
     protected $_isInitializeNeeded = false;
     protected $_canFetchTransactionInfo = false;
-    protected $_canReviewPayment = false;
+    protected $_canReviewPayment = true;
     protected $_canCreateBillingAgreement = false;
     protected $_canManageRecurringProfiles = false;
 

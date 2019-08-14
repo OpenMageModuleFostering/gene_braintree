@@ -164,14 +164,7 @@ vZero.prototype = {
                 },
                 onFieldEvent: this.hostedFieldsOnFieldEvent.bind(this)
             },
-            onReady: function (integration) {
-                this._hostedIntegration = integration;
-
-                // Unset the loading state if it's present
-                if ($$('#credit-card-form.loading').length) {
-                    $$('#credit-card-form.loading').first().removeClassName('loading');
-                }
-            }.bind(this),
+            onReady: this.hostedFieldsOnReady.bind(this),
             onPaymentMethodReceived: this.hostedFieldsPaymentMethodReceived.bind(this),
             onError: this.hostedFieldsError.bind(this)
         };
@@ -308,6 +301,31 @@ vZero.prototype = {
     },
 
     /**
+     * Called when Hosted Fields integration is ready
+     *
+     * @param integration
+     */
+    hostedFieldsOnReady: function (integration) {
+        this._hostedIntegration = integration;
+
+        // Unset the loading state if it's present
+        if ($$('#credit-card-form.loading').length) {
+            $$('#credit-card-form.loading').first().removeClassName('loading');
+        }
+
+        // Will this checkout submit the payment after the "payment" step. This is typically used in non one step checkouts
+        // which contains a review step.
+        if (this.integration.submitAfterPayment) {
+            var input = new Element('input', {type: 'hidden', name: 'payment[submit_after_payment]', value: 1, id: 'braintree-submit-after-payment'});
+            $('payment_form_gene_braintree_creditcard').insert(input);
+        } else {
+            if ($('braintree-submit-after-payment')) {
+                $('braintree-submit-after-payment').remove();
+            }
+        }
+    },
+
+    /**
      * Action to call after receiving the payment method
      *
      * @param response
@@ -386,7 +404,11 @@ vZero.prototype = {
 
         // Stop any "Cannot place two elements in #xxx" messages being shown to the user
         // These are non critical errors and the functionality will still work as expected
-        if (typeof response.message !== 'undefined' && response.message.indexOf('Cannot place two elements in') == -1) {
+        if (
+            typeof response.message !== 'undefined' &&
+            response.message.indexOf('Cannot place two elements in') == -1 &&
+            response.message.indexOf('Unable to find element with selector') == -1
+        ) {
             // Let the user know what went wrong
             alert(response.message);
         }
@@ -655,6 +677,12 @@ vZero.prototype = {
      * @param ignore An array of indexOf paths to ignore
      */
     observeAjaxRequests: function (callback, ignore) {
+
+        // Only allow one initialization of this function
+        if (vZero.prototype.observingAjaxRequests) {
+            return false;
+        }
+        vZero.prototype.observingAjaxRequests = true;
 
         // For every ajax request on complete update various Braintree things
         Ajax.Responders.register({
@@ -1086,7 +1114,7 @@ vZero.prototype = {
      * @returns {boolean}
      */
     shouldInterceptCreditCard: function () {
-        return true;
+        return (this.amount != '0.00');
     },
 
     /**
@@ -1432,9 +1460,9 @@ vZeroIntegration.prototype = {
      * @param paypalButtonClass The class of the button we need to replace with the above mark up
      * @param isOnepage Is the integration a onepage checkout?
      * @param config Any further config the integration wants to push into the class
-     * @param onReady function fired after integration is "ready"
+     * @param submitAfterPayment Is the checkout going to submit the actual payment after the payment step? For instance a checkout with a review step
      */
-    initialize: function (vzero, vzeroPaypal, paypalMarkUp, paypalButtonClass, isOnepage, config, onReady) {
+    initialize: function (vzero, vzeroPaypal, paypalMarkUp, paypalButtonClass, isOnepage, config, submitAfterPayment) {
 
         // Only allow the system to be initialized twice
         if (vZeroIntegration.prototype.loaded) {
@@ -1458,6 +1486,8 @@ vZeroIntegration.prototype = {
         this.isOnepage = isOnepage || false;
 
         this.config = config || {};
+
+        this.submitAfterPayment = submitAfterPayment || false;
 
         this._methodSwitchTimeout = false;
 
@@ -1644,7 +1674,7 @@ vZeroIntegration.prototype = {
         this.resetLoading();
         this.vzero._hostedFieldsTokenGenerated = true;
         this.hostedFieldsGenerated = true;
-        if (this.isOnepage) {
+        if (this.isOnepage || this.submitAfterPayment) {
             return this.submitCheckout();
         } else {
             return this.submitPayment();
@@ -1768,6 +1798,11 @@ vZeroIntegration.prototype = {
             button.click();
         } else {
             callback();
+        }
+
+        // Remove the save after payment to ensure validation fires correctly
+        if (this.submitAfterPayment && $('braintree-submit-after-payment')) {
+            $('braintree-submit-after-payment').remove();
         }
     },
 

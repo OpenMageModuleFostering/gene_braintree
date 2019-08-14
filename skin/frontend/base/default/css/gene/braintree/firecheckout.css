@@ -1,6 +1,6 @@
 /* Accepted Cards */
 #braintree-accepted-cards img {
-  float: left;
+  display: inline-block;
   margin-right: 4px;
 }
 /* Hosted Fields Loading State */
@@ -216,4 +216,24 @@ label[for="gene_braintree_paypal_store_in_vault"] {
 #payment_form_gene_braintree_creditcard {
   padding-top: 6px;
   padding-bottom: 6px;
+}
+#payment_form_gene_braintree_paypal label,
+#payment_form_gene_braintree_creditcard label {
+  float: left;
+  width: 100%;
+  margin-bottom: 4px;
+}
+#payment_form_gene_braintree_paypal .braintree-card-input-field,
+#payment_form_gene_braintree_creditcard .braintree-card-input-field {
+  float: left;
+  width: 100%;
+}
+#payment_form_gene_braintree_paypal #cvv,
+#payment_form_gene_braintree_creditcard #cvv {
+  float: left;
+}
+#payment_form_gene_braintree_paypal a.cvv-what-is-this,
+#payment_form_gene_braintree_creditcard a.cvv-what-is-this {
+  display: block;
+  clear: both;
 }

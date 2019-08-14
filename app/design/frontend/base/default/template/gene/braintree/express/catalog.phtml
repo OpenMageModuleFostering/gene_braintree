@@ -37,7 +37,8 @@ if( !$this->hasBeenSetup() ): ?>
                 productId:      <?php echo (int) $this->getProduct()->getId(); ?>,
                 authUrl:        '<?php echo $this->getUrl('braintree/express/authorization') ?>',
                 shippingSaveUrl:'<?php echo $this->getUrl('braintree/express/saveShipping') ?>',
-                successUrl:     '<?php echo $this->getUrl("checkout/onepage/success"); ?>',
+                couponSaveUrl:  '<?php echo $this->getUrl('braintree/express/saveCoupon') ?>',
+                successUrl:     '<?php echo $this->getUrl("checkout/onepage/success"); ?>'
             });
         }
     });

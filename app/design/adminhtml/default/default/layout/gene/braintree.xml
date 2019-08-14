@@ -24,7 +24,7 @@
         </reference>
         <reference name="js">
             <block type="core/text" name="braintree-js">
-                <action method="setText"><text><![CDATA[<script src="https://js.braintreegateway.com/js/braintree-2.23.0.min.js"></script>]]></text></action>
+                <action method="setText"><text><![CDATA[<script src="https://js.braintreegateway.com/js/braintree-2.26.0.min.js"></script>]]></text></action>
             </block>
         </reference>
         <reference name="before_body_end">

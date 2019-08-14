@@ -761,10 +761,22 @@
                             ]]></comment>
                         </kount_ens_url>
 
+                        <kount_ens_ips>
+                            <label>Event Notification System (ENS) Allowed IPs</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>145</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                The IPs that have access to the ENS endpoint above. These can be individual IP's or ranges separated with commas. To allow from all IPs leave this field empty (not recommended).
+                            ]]></comment>
+                        </kount_ens_ips>
+
                         <display_heading translate="label">
                             <label>Display</label>
                             <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
-                            <sort_order>145</sort_order>
+                            <sort_order>150</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
@@ -773,7 +785,7 @@
                         <sort_order translate="label">
                             <label>Sort Order</label>
                             <frontend_type>text</frontend_type>
-                            <sort_order>150</sort_order>
+                            <sort_order>155</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>

@@ -144,7 +144,8 @@ var ppExpress = (function() {
         /**
          * Update the grand total display within the modal
          */
-        updateShipping: function(method) {
+        updateShipping: function (method) {
+            this._setLoading($('paypal-express-submit'));
             new Ajax.Request(config.get('shippingSaveUrl'), {
                 method: 'POST',
                 parameters: {
@@ -153,14 +154,165 @@ var ppExpress = (function() {
                 },
 
                 onSuccess: function (data) {
-                    $('paypal-express-totals').update(data.responseText);
-                },
+                    var response = this._getJson(data);
+                    this._unsetLoading($('paypal-express-submit'));
+                    this._updateTotals(response);
+                }.bind(this),
 
                 onFailure: function () {
+                    this._unsetLoading($('paypal-express-submit'));
                     api.hideModal();
                     alert( typeof Translator === "object" ? Translator.translate("We were unable to complete the request. Please try again.") : "We were unable to complete the request. Please try again." );
                 }
             });
+        },
+
+        /**
+         * Prepare the coupon form by handling users hitting enter
+         */
+        prepareCoupon: function () {
+            if ($('paypal-express-coupon')) {
+                $('paypal-express-coupon').observe('keypress', function (event) {
+                    var key = event.which || event.keyCode;
+                    if (key == Event.KEY_RETURN) {
+                        Event.stop(event);
+                        this.updateCoupon();
+                    }
+                }.bind(this));
+            }
+        },
+
+        /**
+         * Allow customers to add coupons into their basket
+         *
+         * @param coupon
+         */
+        updateCoupon: function (coupon) {
+            $('paypal-express-coupon-error').hide();
+            if (!coupon && $('paypal-express-coupon')) {
+                coupon = $('paypal-express-coupon').value;
+            }
+
+            // Only update if the coupon is set to something
+            if (coupon == '') {
+                return false;
+            }
+
+            this._setLoading($('paypal-express-coupon-apply'));
+            new Ajax.Request(config.get('couponSaveUrl'), {
+                method: 'POST',
+                parameters: {
+                    'coupon': coupon
+                },
+
+                onSuccess: function (data) {
+                    var response = this._getJson(data);
+                    this._unsetLoading($('paypal-express-coupon-apply'));
+                    this._updateTotals(response);
+                    if (response.success == true) {
+                        $('paypal-express-coupon-remove').show();
+                        $('paypal-express-coupon-apply').hide();
+                    } else if (response.message) {
+                        $('paypal-express-coupon-error').update(response.message).show();
+                    }
+                }.bind(this),
+
+                onFailure: function () {
+                    this._unsetLoading($('paypal-express-coupon-submit'));
+                    api.hideModal();
+                    alert( typeof Translator === "object" ? Translator.translate("We were unable to complete the request. Please try again.") : "We were unable to complete the request. Please try again." );
+                }
+            });
+            return false;
+        },
+
+        /**
+         * Allow the user the ability to remove the coupon code from their quote
+         */
+        removeCoupon: function () {
+            $('paypal-express-coupon-error').hide();
+            this._setLoading($('paypal-express-coupon-remove'));
+            new Ajax.Request(config.get('couponSaveUrl'), {
+                method: 'POST',
+                parameters: {
+                    'remove': true
+                },
+
+                onSuccess: function (data) {
+                    var response = this._getJson(data);
+                    this._unsetLoading($('paypal-express-coupon-remove'));
+                    this._updateTotals(response);
+                    if (response.success == true) {
+                        $('paypal-express-coupon-remove').hide();
+                        $('paypal-express-coupon-apply').show();
+                        $('paypal-express-coupon').value = '';
+                        $('paypal-express-coupon').focus();
+                    } else if (response.message) {
+                        $('paypal-express-coupon-error').update(response.message).show();
+                    }
+                }.bind(this),
+
+                onFailure: function () {
+                    this._unsetLoading($('paypal-express-coupon-submit'));
+                    api.hideModal();
+                    alert( typeof Translator === "object" ? Translator.translate("We were unable to complete the request. Please try again.") : "We were unable to complete the request. Please try again." );
+                }
+            });
+        },
+
+        /**
+         * Update the totals from the response
+         *
+         * @param response
+         * @private
+         */
+        _updateTotals: function (response) {
+            if (typeof response.totals !== 'undefined') {
+                $('paypal-express-totals').update(response.totals);
+            }
+        },
+
+        /**
+         * Return the JSON from the request
+         *
+         * @param data
+         * @returns {*}
+         * @private
+         */
+        _getJson: function (data) {
+            if (typeof data.responseJSON !== 'undefined') {
+                return data.responseJSON;
+            } else if (typeof data.responseText === 'string') {
+                return data.responseText.evalJSON();
+            }
+        },
+
+        /**
+         * Set an element to a loading state
+         *
+         * @param element
+         * @private
+         */
+        _setLoading: function (element) {
+            if (!element) {
+                return false;
+            }
+            element.setAttribute('disabled', 'disabled');
+            element.addClassName('loading');
+        },
+
+        /**
+         * Unset the loading state
+         *
+         * @param element
+         * @private
+         */
+        _unsetLoading: function (element) {
+            if (!element) {
+                return false;
+            }
+            element.removeAttribute('disabled');
+            element.removeClassName('loading');
         }
     };
 
@@ -197,6 +349,7 @@ var ppExpress = (function() {
                     onSuccess: function (data) {
                         api.getModal().classList.remove('loading');
                         api.getModal().innerHTML = data.responseText;
+                        api.prepareCoupon();
                         ajaxHandler();
                     },
 

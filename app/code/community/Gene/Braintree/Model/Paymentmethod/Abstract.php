@@ -328,6 +328,81 @@ abstract class Gene_Braintree_Model_Paymentmethod_Abstract extends Mage_Payment_
     }
 
     /**
+     * Accept a payment that landed in payment review
+     *
+     * @param \Mage_Payment_Model_Info $payment
+     *
+     * @return mixed
+     */
+    public function acceptPayment(Mage_Payment_Model_Info $payment)
+    {
+        parent::acceptPayment($payment);
+
+        /* @var $order Mage_Sales_Model_Order */
+        $order = $payment->getOrder();
+
+        /* @var $invoice Mage_Sales_Model_Order_Invoice */
+        $invoice = $this->_getInvoiceForTransactionId($payment, $payment->getLastTransId());
+        if ($invoice && $invoice->getId()) {
+            if ($invoice->getState() == Mage_Sales_Model_Order_Invoice::STATE_PAID) {
+                // Invoice is already paid and captured, just move the order into processing
+                return false;
+            } else if ($invoice->canCapture()) {
+                return $invoice->capture();
+            }
+        } else if ($order->getPayment()->canCapture()) {
+            // We don't currently have an invoice for this order, let's create one whilst capturing
+            $order->getPayment()->capture(null);
+            /* @var $invoice Mage_Sales_Model_Order_Invoice */
+            $invoice = $order->getPayment()->getCreatedInvoice();
+            // Mark the invoice as paid
+            $invoice->pay();
+            return true;
+        }
+
+        Mage::throwException(Mage::helper('payment')->__('Unable to load invoice to accept the payment for this order.'));
+    }
+
+    /**
+     * Deny a payment that landed in payment review
+     *
+     * @param \Mage_Payment_Model_Info $payment
+     *
+     * @return mixed
+     */
+    public function denyPayment(Mage_Payment_Model_Info $payment)
+    {
+        parent::denyPayment($payment);
+
+        /* @var $invoice Mage_Sales_Model_Order_Invoice */
+        $invoice = $this->_getInvoiceForTransactionId($payment, $payment->getLastTransId());
+        if ($invoice && $invoice->getId()) {
+            if ($invoice->getState() == Mage_Sales_Model_Order_Invoice::STATE_CANCELED) {
+                // Invoice has already been cancelled
+                return false;
+            } else {
+                return $invoice->void();
+            }
+        } else {
+            // The order has no invoice, let's void the payment directly
+            $this->_getWrapper()->init();
+            $transaction = Braintree_Transaction::find($payment->getLastTransId());
+            if ($transaction->status == Braintree_Transaction::AUTHORIZED) {
+                try {
+                    Braintree_Transaction::void($payment->getLastTransId());
+                    return true;
+                } catch (Exception $e) {
+                    // Let's add the error into the session
+                    Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
+                    return false;
+                }
+            }
+        }
+
+        Mage::throwException(Mage::helper('payment')->__('Unable to load invoice to deny the payment for this order.'));
+    }
+
+    /**
      * Update the order status within Kount
      *
      * @param \Varien_Object $payment
@@ -435,5 +510,32 @@ abstract class Gene_Braintree_Model_Paymentmethod_Abstract extends Mage_Payment_
         Mage::register(self::BRAINTREE_ORIGINAL_TOKEN, $token);
 
         return $this;
+    }
+
+    /**
+     * Return invoice model for transaction
+     *
+     * @param \Varien_Object $payment
+     * @param                $transactionId
+     *
+     * @return bool
+     */
+    protected function _getInvoiceForTransactionId(Varien_Object $payment, $transactionId)
+    {
+        foreach ($payment->getOrder()->getInvoiceCollection() as $invoice) {
+            if ($invoice->getTransactionId() == $transactionId) {
+                $invoice->load($invoice->getId());
+                return $invoice;
+            }
+        }
+        foreach ($payment->getOrder()->getInvoiceCollection() as $invoice) {
+            if ($invoice->getState() == Mage_Sales_Model_Order_Invoice::STATE_OPEN
+                && $invoice->load($invoice->getId())
+            ) {
+                $invoice->setTransactionId($transactionId);
+                return $invoice;
+            }
+        }
+        return false;
     }
 }

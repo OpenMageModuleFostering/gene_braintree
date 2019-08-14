@@ -40,9 +40,16 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
     protected $_canUseForMultishipping = true;
     protected $_isInitializeNeeded = false;
     protected $_canFetchTransactionInfo = false;
-    protected $_canReviewPayment = false;
+    protected $_canReviewPayment = true;
     protected $_canCreateBillingAgreement = false;
     protected $_canManageRecurringProfiles = false;
+
+    /**
+     * Are we submitting the payment after the initial payment validate?
+     *
+     * @var bool
+     */
+    protected $_submitAfterPayment = false;
 
     /**
      * Place Braintree specific data into the additional information of the payment instance object
@@ -60,6 +67,10 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             ->setAdditionalInformation('payment_method_nonce', $data->getData('payment_method_nonce'))
             ->setAdditionalInformation('save_card', $data->getData('save_card'))
             ->setAdditionalInformation('device_data', $data->getData('device_data'));
+
+        if ($submitAfterPayment = $data->getData('submit_after_payment')) {
+            $this->_submitAfterPayment = $submitAfterPayment;
+        }
 
         return $this;
     }
@@ -192,6 +203,11 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
     {
         // Run the built in Magento validation
         parent::validate();
+
+        // Validation doesn't need to occur now, as the payment has not yet been tokenized
+        if ($this->_submitAfterPayment) {
+            return $this;
+        }
 
         // Confirm that we have a nonce from Braintree
         if (!$this->getPaymentMethodToken() || ($this->getPaymentMethodToken() && $this->getPaymentMethodToken() == 'threedsecure')) {

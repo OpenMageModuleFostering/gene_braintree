@@ -110,6 +110,8 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
             // Pull the billing address from the multishipping experience
             if ($this->getRequest()->getParam('billing') == 'multishipping') {
                 $billing = Mage::getSingleton('checkout/type_multishipping')->getQuote()->getBillingAddress();
+            } else if ($this->getRequest()->getParam('billing') == 'quote') {
+                $billing = Mage::getSingleton('checkout/session')->getQuote()->getBillingAddress();
             } else {
                 $billing = $this->getRequest()->getParam('billing');
             }

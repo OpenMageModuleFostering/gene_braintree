@@ -779,7 +779,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
 
         // Include level 2 data if the user has provided a VAT ID
         if ($order->getBillingAddress()->getVatId()) {
-            $request['taxAmount'] = $order->getTaxAmount();
+            $request['taxAmount'] = Mage::helper('gene_braintree')->formatPrice($order->getTaxAmount());
             $request['taxExempt'] = true;
             $request['purchaseOrderNumber'] = $order->getIncrementId();
         }

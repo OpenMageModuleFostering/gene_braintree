@@ -20,7 +20,6 @@
     <?php if ($this->hasShippingRates()): ?>
         <div class="shipping-row item-row">
             <strong><?php echo $this->__('Shipping method:'); ?></strong>
-
             <?php foreach($this->getShippingRates() as $_rate): ?>
                 <label class="item-subrow">
                     <input type="radio" name="shipping_method" value="<?php echo $_rate->getCode(); ?>" onchange="ppExpress.updateShipping('<?php echo $_rate->getCode(); ?>')" />
@@ -29,13 +28,18 @@
                     <strong><?php echo Mage::helper('core')->currency($_rate->getPrice(), true, false); ?></strong>
                 </label>
             <?php endforeach; ?>
-
+        </div>
+        <div class="coupon-row item-row">
+            <div id="paypal-express-coupon-error" class="error" style="display: none;"></div>
+            <input type="text" name="coupon" id="paypal-express-coupon" placeholder="<?php echo $this->__('Coupon Code'); ?>" />
+            <button type="button" name="coupon-apply" id="paypal-express-coupon-apply" class="coupon-submit button" onclick="return ppExpress.updateCoupon();"><?php echo $this->__('Apply Coupon'); ?></button>
+            <button type="button" name="coupon-remove" id="paypal-express-coupon-remove" class="coupon-submit button" onclick="return ppExpress.removeCoupon();" style="display: none;"><?php echo $this->__('Remove Coupon'); ?></button>
         </div>
         <div class="item-row" id="paypal-express-totals">
             <?php echo $this->getChildHtml('totals'); ?>
         </div>
 
-        <button type="submit" class="button"><?php echo $this->__('Place Order'); ?></button>
+        <button type="submit" class="button" id="paypal-express-submit"><?php echo $this->__('Place Order'); ?></button>
     <?php else: ?>
         <p><?php echo $this->__('There are no shipping methods available for your address.'); ?></p>
         <p><?php echo $this->__('Please repeat the process, selecting an address that we\'re able to deliver to.'); ?></p>
