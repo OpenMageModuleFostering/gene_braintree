@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_ExpressController
  *
- * @author Aidan Threadgold <aidan@gene.co.uk> & Dave Macaulay <dave@gene.co.uk>
+ * @author Aidan Threadgold <braintreesupport@gene.co.uk> & Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
 {
@@ -175,20 +175,13 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
             ->setCity($paypalData['shippingAddress']['city'])
             ->setCountryId($paypalData['shippingAddress']['countryCode'])
             ->setPostcode($paypalData['shippingAddress']['postalCode'])
-            ->setTelephone('0000000000');
+            ->setTelephone(isset($paypalData['phone']) ? $paypalData['phone'] : '00000000000');
 
-        // Check if the region is needed
-        if (Mage::helper('directory')->isRegionRequired($address->getCountryId())) {
-            $region = Mage::getModel('directory/region')->loadbyCode($paypalData['shippingAddress']['state'], $address->getCountryId());
-            $regionId = $region->getRegionId();
-
-            if (empty($regionId)) {
-                Mage::getSingleton('core/session')->addError(Mage::helper('gene_braintree')->__('We were unable to process the country.'));
-
-                return $this->_redirect("braintree/express/error");
+        // Determine if a region is required for the selected country
+        if (Mage::helper('directory')->isRegionRequired($address->getCountryId()) && isset($paypalData['shippingAddress']['state'])) {
+            if ($regionId = $this->getRegionId($address, $paypalData['shippingAddress']['state'])) {
+                $address->setRegionId($regionId);
             }
-
-            $address->setRegionId($region->getRegionId());
         }
 
         // Save the addresses
@@ -201,6 +194,34 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
 
         // redirect to choose shipping method
         return $this->_redirect("braintree/express/shipping");
+    }
+
+    /**
+     * Retrieve the region_id based on various items
+     *
+     * @param $address
+     * @param $regionId
+     *
+     * @return bool|mixed
+     */
+    protected function getRegionId($address, $regionId)
+    {
+        $region = Mage::getResourceModel('directory/region_collection')
+            ->addFieldToFilter('country_id', $address->getCountryId())
+            ->addFieldToFilter(
+                array('code', 'default_name'),
+                array(
+                    array('eq' => $regionId),
+                    array('eq' => $regionId)
+                )
+            );
+
+        // Check we have a region
+        if ($region->count() >= 1) {
+            return $region->getFirstItem()->getId();
+        }
+
+        return false;
     }
 
     /**

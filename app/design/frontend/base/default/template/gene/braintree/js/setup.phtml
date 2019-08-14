@@ -11,13 +11,14 @@
         // Pass some data over to vZero integration JS
         var vzero = new vZero(
             'gene_braintree_creditcard',
-            '<?php echo $this->getClientToken(); ?>',
+            false,
             <?php echo $this->is3DEnabled(); ?>,
             true,
             false,
             false,
             '<?php echo Mage::getUrl('braintree/checkout/quoteTotal', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>',
-            '<?php echo Mage::getUrl('braintree/checkout/tokenizeCard', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>'
+            '<?php echo Mage::getUrl('braintree/checkout/tokenizeCard', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>',
+            '<?php echo Mage::getUrl('braintree/checkout/clientToken', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>'
         );
 
         // Pass the supported card types over to the front-end
@@ -38,12 +39,13 @@
         <?php if ($this->isPayPalActive()) : ?>
         // Pass some data through to the PayPal integration
         var vzeroPaypal = new vZeroPayPalButton(
-            '<?php echo $this->getClientToken(); ?>',
+            false,
             '<?php echo Mage::app()->getStore()->getFrontendName(); ?>',
             <?php echo $this->getSingleUse(); ?>,
             '<?php echo $this->getLocale(); ?>',
             <?php echo $this->getSingleFutureUse(); ?>,
-            <?php echo $this->shouldOnlyVaultOnVault() ? $this->shouldOnlyVaultOnVault() : 'false'; ?>
+            <?php echo $this->shouldOnlyVaultOnVault() ? $this->shouldOnlyVaultOnVault() : 'false'; ?>,
+            '<?php echo Mage::getUrl('braintree/checkout/clientToken', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>'
         );
         <?php endif; ?>
     }
@@ -53,7 +55,7 @@
     <button type="button" name="braintree-paypal-button" class="braintree-paypal-button">
         <span>
             <span>
-                <?php echo $this->__('Checkout with'); ?>
+                <?php echo $this->__('Login to'); ?>
             </span>
         </span>
     </button>

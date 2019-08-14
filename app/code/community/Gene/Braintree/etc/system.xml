@@ -11,7 +11,7 @@
                     <show_in_store>1</show_in_store>
                     <comment><![CDATA[
                         <div class="braintree-logos" style="float: left;width: 100%;margin: 8px 0 24px 0;">
-                            <img src="https://www.braintreepayments.com/images/bt-logo-black-d9116046.png" height="36" style="display: inline-block; vertical-align: middle;" border="0" />
+                            <img src="https://www.braintreepayments.com/images/bt-logo-black-2dc4ba9a.png" height="36" style="display: inline-block; vertical-align: middle;" border="0" />
                             <div style="display: inline-block;padding: 0 14px;vertical-align: middle;opacity: 0.7;">by</div>
                             <a href="http://gene.co.uk/" title="Gene Commerce" target="_blank"><img src="https://i.imgur.com/OAXtYNg.png" style="display: inline-block;vertical-align: middle;" height="36" /></a>
                         </div>
@@ -553,7 +553,7 @@
                     <show_in_store>1</show_in_store>
                     <comment>
                         <![CDATA[
-                            <img src="https://www.braintreepayments.com/images/bt-logo-black-d9116046.png" height="30" style="margin-top: 6px; display: inline-block; vertical-align: middle;" border="0" /><br />
+                            <img src="https://www.braintreepayments.com/images/bt-logo-black-2dc4ba9a.png" height="30" style="margin-top: 6px; display: inline-block; vertical-align: middle;" border="0" /><br />
                             <img src="https://s3-us-west-1.amazonaws.com/bt-partner-assets/payment-method-cards.png" style="margin: 12px 0 10px 0;" alt="Accept Visa, Mastercard, Discover, and American Express payments" width="140"><br />
                             You must first configure the <strong>Braintree Payments - Configuration</strong> section with your Braintree account details.
                         ]]>
@@ -744,21 +744,6 @@
                             <show_in_store>0</show_in_store>
                         </specificcountry>
 
-                        <!-- @todo to be included in a future release -->
-                        <!--<dynamic_descriptors translate="label comment">-->
-                            <!--<label>Dynamic Descriptors</label>-->
-                            <!--<frontend_type>select</frontend_type>-->
-                            <!--<source_model>adminhtml/system_config_source_yesno</source_model>-->
-                            <!--<sort_order>100</sort_order>-->
-                            <!--<show_in_default>1</show_in_default>-->
-                            <!--<show_in_website>1</show_in_website>-->
-                            <!--<show_in_store>0</show_in_store>-->
-                            <!--<comment><![CDATA[-->
-                                <!--Dyanmic descriptors allow you to modify the entry shown on the customers statement. This will include the company name, company phone number and the company URL.<br />-->
-                                <!--<strong>Note:</strong> You must have this enabled on your account, you can find out more information <a href="https://developers.braintreepayments.com/javascript+php/sdk/server/transaction-processing/dynamic-descriptors">here</a>.-->
-                            <!--]]></comment>-->
-                        <!--</dynamic_descriptors>-->
-
                         <threedsecure_heading translate="label">
                             <label>3D Secure</label>
                             <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
@@ -772,7 +757,7 @@
                             <label>Enable 3D Secure</label>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>100</sort_order>
+                            <sort_order>101</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
@@ -785,13 +770,13 @@
                             <label>Failed Liability Shift Action</label>
                             <frontend_type>select</frontend_type>
                             <source_model>gene_braintree/system_config_source_payment_liabilityaction</source_model>
-                            <sort_order>101</sort_order>
+                            <sort_order>102</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                             <comment><![CDATA[
                                 Action to complete if the liability shift fails after the 3D secure. If the liability cannot be shifted the merchant is liable for charge backs.<br />
-                                <strong>Request Alternative Payment Method</strong> - Block the payment and inform the customer to choose a different payment method.<br />
+                                <strong>Request Alternative Payment Method</strong> - Block the payment and inform the customer to choose a different payment method. This will also block any cards that do not support 3DSecure.<br />
                                 <strong>Accept & Mark as Fraud</strong> - Will accept the payment but mark as fraudulent within Magento for manual inspection.<br />
                                 <strong>Accept</strong> - Will accept the payment and be processed as a normal order (this setting is not recommended).
                             ]]></comment>
@@ -890,6 +875,19 @@
                                 Your Kount API authentication token. This can be located through the Kount AWC panel, via Admin > API Keys. Please ensure it has all permissions.
                             ]]></comment>
                         </kount_api_key>
+
+                        <skip_advanced_fraud_checking translate="label comment">
+                            <label>Skip Advanced Fraud Checks on Admin Orders</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>136</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                Prevents the transaction from being sent to Kount for evaluation as part of Advanced Fraud Tools checks, on orders placed through the admin only.
+                            ]]></comment>
+                        </skip_advanced_fraud_checking>
 
                         <kount_ens_url translate="label comment">
                             <label>Event Notification System (ENS) URL</label>

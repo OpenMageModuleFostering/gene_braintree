@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Block_Express_Button
  *
- * @author Aidan Threadgold <aidan@gene.co.uk>
+ * @author Aidan Threadgold <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Block_Express_Setup extends Gene_Braintree_Block_Express_Abstract
 {
@@ -15,21 +15,16 @@ class Gene_Braintree_Block_Express_Setup extends Gene_Braintree_Block_Express_Ab
     protected $_token = null;
 
     /**
-     * Generate braintree token
-     */
-    protected function _construct()
-    {
-        parent::_construct();
-        $this->_token = Mage::getModel('gene_braintree/wrapper_braintree')->init()->generateToken();
-    }
-
-    /**
      * Get braintree token
      *
      * @return string
      */
     public function getToken()
     {
+        if ($this->_token === null) {
+            $this->_token = Mage::getModel('gene_braintree/wrapper_braintree')->init()->generateToken();
+        }
+
         return $this->_token;
     }
 

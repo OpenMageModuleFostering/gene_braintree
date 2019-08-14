@@ -3,10 +3,30 @@
 /**
  * Class Gene_Braintree_CheckoutController
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Action
 {
+    /**
+     * Return a client token to the browser
+     *
+     * @return \Gene_Braintree_CheckoutController
+     */
+    public function clientTokenAction()
+    {
+        try {
+            return $this->_returnJson(array(
+                'success' => true,
+                'client_token' => Mage::getSingleton('gene_braintree/wrapper_braintree')->init()->generateToken()
+            ));
+        } catch (Exception $e) {
+            return $this->_returnJson(array(
+                'success' => false,
+                'error' => $e->getMessage()
+            ));
+        }
+    }
+
     /**
      * The front-end is requesting the grand total of the quote
      *

@@ -2,7 +2,7 @@
  * Separate class to handle functionality around the vZero PayPal button
  *
  * @class vZeroPayPalButton
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 var vZeroPayPalButton = Class.create();
 vZeroPayPalButton.prototype = {
@@ -16,9 +16,11 @@ vZeroPayPalButton.prototype = {
      * @param locale The locale for the payment
      * @param futureSingleUse When using future payments should we process the transaction as a single payment?
      * @param onlyVaultOnVault Should we only show the Vault flow if the customer has opted into saving their details?
+     * @param clientTokenUrl URL to retrieve client token from
      */
-    initialize: function (clientToken, storeFrontName, singleUse, locale, futureSingleUse, onlyVaultOnVault) {
-        this.clientToken = clientToken;
+    initialize: function (clientToken, storeFrontName, singleUse, locale, futureSingleUse, onlyVaultOnVault, clientTokenUrl) {
+        this.clientToken = clientToken || false;
+        this.clientTokenUrl = clientTokenUrl;
         this.storeFrontName = storeFrontName;
         this.singleUse = singleUse;
         this.locale = locale;
@@ -33,6 +35,47 @@ vZeroPayPalButton.prototype = {
     },
 
     /**
+     * Retrieve the client token
+     *
+     * @param callbackFn
+     * @returns {*}
+     */
+    getClientToken: function (callbackFn) {
+        if (this.clientToken !== false) {
+            return callbackFn(this.clientToken);
+        } else if (window.braintreeClientToken) {
+            return callbackFn(window.braintreeClientToken);
+        } else {
+            new Ajax.Request(
+                this.clientTokenUrl,
+                {
+                    method: 'get',
+                    onSuccess: function (transport) {
+                        // Verify we have some response text
+                        if (transport && (transport.responseJSON || transport.responseText)) {
+                            // Parse the response from the server
+                            var response = this._parseTransportAsJson(transport);
+                            if (response.success == true && typeof response.client_token === 'string') {
+                                this.clientToken = response.client_token;
+                                window.braintreeClientToken = response.client_token;
+                                return callbackFn(this.clientToken);
+                            } else {
+                                console.error('We were unable to retrieve a client token from the server to initialize the Braintree flow.');
+                                if (response.error) {
+                                    console.error(response.error);
+                                }
+                            }
+                        }
+                    }.bind(this),
+                    onFailure: function () {
+                        console.error('We were unable to retrieve a client token from the server to initialize the Braintree flow.');
+                    }.bind(this)
+                }
+            );
+        }
+    },
+
+    /**
      * Retrieve the client from the class, or initialize the client if not already present
      *
      * @param callbackFn
@@ -43,19 +86,22 @@ vZeroPayPalButton.prototype = {
                 callbackFn(this.client);
             }
         } else {
-            // Create a new braintree client instance
-            braintree.client.create({
-                authorization: this.clientToken
-            }, function (clientErr, clientInstance) {
-                if (clientErr) {
-                    // Handle error in client creation
-                    console.log(clientErr);
-                    return;
-                }
+            // Retrieve a client token
+            this.getClientToken(function (clientToken) {
+                // Create a new braintree client instance
+                braintree.client.create({
+                    authorization: clientToken
+                }, function (clientErr, clientInstance) {
+                    if (clientErr) {
+                        // Handle error in client creation
+                        console.log(clientErr);
+                        return;
+                    }
 
-                this.client = clientInstance;
-                callbackFn(this.client);
-            }.bind(this));
+                    this.client = clientInstance;
+                    callbackFn(this.client);
+                }.bind(this));
+            });
         }
     },
 
@@ -147,7 +193,10 @@ vZeroPayPalButton.prototype = {
             }, function (paypalErr, paypalInstance) {
                 if (paypalErr) {
                     console.error('Error creating PayPal:', paypalErr);
-                    return;
+                    options.onReady = false;
+                    options.paypalErr = paypalErr;
+                } else {
+                    options.paypalErr = null;
                 }
 
                 // Run the onReady callback
@@ -171,7 +220,7 @@ vZeroPayPalButton.prototype = {
      * @private
      */
     _attachPayPalButtonEvent: function (buttons, paypalInstance, options) {
-        if (buttons && paypalInstance) {
+        if (buttons && paypalInstance || options.paypalErr !== null) {
 
             // Convert the buttons to an array and handle them all at once
             if (!Array.isArray(buttons)) {
@@ -189,6 +238,12 @@ vZeroPayPalButton.prototype = {
                 // Observe the click event to fire the tokenization of PayPal (ie open the window)
                 Event.observe(button, 'click', function (event) {
                     Event.stop(event);
+
+                    if (options.paypalErr !== null) {
+                        alert(Translator.translate('Paypal is not available ('  + options.paypalErr.message + '). Please try an alternative payment method.'));
+                        return;
+                    }
+
                     if (typeof options.validate === 'function') {
                         if (options.validate()) {
                             // Fire the integration
@@ -288,5 +343,26 @@ vZeroPayPalButton.prototype = {
         }
 
         return flow;
+    },
+
+    /**
+     * Parse a transports response into JSON
+     *
+     * @param transport
+     * @returns {*}
+     * @private
+     */
+    _parseTransportAsJson: function (transport) {
+        if (transport.responseJSON && typeof transport.responseJSON === 'object') {
+            return transport.responseJSON;
+        } else if (transport.responseText) {
+            if (typeof JSON === 'object' && typeof JSON.parse === 'function') {
+                return JSON.parse(transport.responseText);
+            } else {
+                return eval('(' + transport.responseText + ')');
+            }
+        }
+
+        return {};
     }
 };

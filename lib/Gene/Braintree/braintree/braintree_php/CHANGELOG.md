@@ -1,3 +1,23 @@
+## 3.21.1
+* Add back in `options->three_d_secure` to transaction params that was accidentally removed in v3.14.0
+
+## 3.21.0
+* Allow optional configuration of SSL version
+* Replace `var_dump` with `print_r`. Thanks, @mnlg
+* Add functionality to list all merchant accounts for a merchant with `merchantAccount->all`
+* Stop sending account_description field from us bank accounts
+
+## 3.20.0
+* Add option `skip_advanced_fraud_check` for transaction flows
+
+## 3.19.0
+* Add multi-currency updates to merchants onboarded through Braintree Auth
+* Raise an exception if fetching pages of results times out during a transaction search
+
+## 3.18.0
+* Fix `UsBankAccount` support for `Customer`s
+* Update `Grant` api to support options hash
+
 ## 3.17.0
 * Add 'UsBankAccount' payment method
 
@@ -10,6 +30,8 @@
 * Add 'default_payment_method' option for Customer
 
 ## 3.14.0
+**Note: This version introduced an unintentional breaking change where the `options->three_d_secure` transaction parameter was changed to `options->threeDSecure`. Starting in v3.21.1, both case conventions are supported for backwards compatibility.**
+
 * Add OrderId to refund
 * Add 3DS Pass thru support
 * Expose IDs in resource collections

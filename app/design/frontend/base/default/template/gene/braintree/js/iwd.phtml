@@ -2,7 +2,7 @@
 /**
  * Add in support for IWD One Step Checkout
  * https://www.iwdagency.com/extensions/one-step-page-checkout.html
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 ?>
 <!-- IWD BRAINTREE SUPPORT -->
@@ -157,8 +157,14 @@
             };
 
             // Stop the system from validating the credit card hosted fields form for hosted fields
-            IWD.OPC.validatePayment = function() {
-                if (IWD.OPC.saveOrderStatus === true || vzeroIntegration.getPaymentMethod() != 'gene_braintree_creditcard' || (vzeroIntegration.getPaymentMethod() == 'gene_braintree_creditcard' && !vzeroIntegration.vzero.hostedFields)) {
+            IWD.OPC.validatePayment = function () {
+                if (
+                    IWD.OPC.saveOrderStatus === true ||
+                    (
+                        vzeroIntegration.getPaymentMethod() != 'gene_braintree_applepay' &&
+                        vzeroIntegration.getPaymentMethod() != 'gene_braintree_creditcard'
+                    )
+                ) {
                     return vzeroIntegration._originalValidatePaymentFn.apply(this, arguments);
                 }
             };

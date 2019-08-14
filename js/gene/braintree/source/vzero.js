@@ -2,7 +2,7 @@
  * Magento Braintree class to bridge the v.zero JS SDK and Magento
  *
  * @class vZero
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 var vZero = Class.create();
 vZero.prototype = {
@@ -18,10 +18,12 @@ vZero.prototype = {
      * @param billingPostcode Billing postcode also needed to verify the card
      * @param quoteUrl The URL to update the quote totals
      * @param tokenizeUrl The URL to re-tokenize 3D secure cards
+     * @param clientTokenUrl Ajax end point to retrieve client token
      */
-    initialize: function (code, clientToken, threeDSecure, hostedFields, billingName, billingPostcode, quoteUrl, tokenizeUrl) {
+    initialize: function (code, clientToken, threeDSecure, hostedFields, billingName, billingPostcode, quoteUrl, tokenizeUrl, clientTokenUrl) {
         this.code = code;
-        this.clientToken = clientToken;
+        this.clientToken = clientToken || false;
+        this.clientTokenUrl = clientTokenUrl;
         this.threeDSecure = threeDSecure;
         this.hostedFields = hostedFields; /* deprecated, hosted fields is the only option */
 
@@ -193,6 +195,47 @@ vZero.prototype = {
     },
 
     /**
+     * Retrieve the client token
+     *
+     * @param callbackFn
+     * @returns {*}
+     */
+    getClientToken: function (callbackFn) {
+        if (this.clientToken !== false) {
+            return callbackFn(this.clientToken);
+        } else if (window.braintreeClientToken) {
+            return callbackFn(window.braintreeClientToken);
+        } else {
+            new Ajax.Request(
+                this.clientTokenUrl,
+                {
+                    method: 'get',
+                    onSuccess: function (transport) {
+                        // Verify we have some response text
+                        if (transport && (transport.responseJSON || transport.responseText)) {
+                            // Parse the response from the server
+                            var response = this._parseTransportAsJson(transport);
+                            if (response.success == true && typeof response.client_token === 'string') {
+                                this.clientToken = response.client_token;
+                                window.braintreeClientToken = response.client_token;
+                                return callbackFn(this.clientToken);
+                            } else {
+                                console.error('We were unable to retrieve a client token from the server to initialize the Braintree flow.');
+                                if (response.error) {
+                                    console.error(response.error);
+                                }
+                            }
+                        }
+                    }.bind(this),
+                    onFailure: function () {
+                        console.error('We were unable to retrieve a client token from the server to initialize the Braintree flow.');
+                    }.bind(this)
+                }
+            );
+        }
+    },
+
+    /**
      * Retrieve the client from the class, or initialize the client if not already present
      *
      * @param callbackFn
@@ -203,19 +246,22 @@ vZero.prototype = {
                 callbackFn(this.client);
             }
         } else {
-            // Create a new braintree client instance
-            braintree.client.create({
-                authorization: this.clientToken
-            }, function (clientErr, clientInstance) {
-                if (clientErr) {
-                    // Handle error in client creation
-                    console.error(clientErr);
-                    return;
-                }
+            // Retrieve a client token
+            this.getClientToken(function (clientToken) {
+                // Create a new braintree client instance
+                braintree.client.create({
+                    authorization: clientToken
+                }, function (clientErr, clientInstance) {
+                    if (clientErr) {
+                        // Handle error in client creation
+                        console.error(clientErr);
+                        return;
+                    }
 
-                this.client = clientInstance;
-                callbackFn(this.client);
-            }.bind(this));
+                    this.client = clientInstance;
+                    callbackFn(this.client);
+                }.bind(this));
+            });
         }
     },
 
@@ -298,6 +344,8 @@ vZero.prototype = {
 
         this._hostedIntegration = false;
 
+        this.checkSubmitAfterPayment();
+
         // Retrieve the client from the class
         this.getClient(function (clientInstance) {
             // Build our hosted fields options
@@ -328,9 +376,11 @@ vZero.prototype = {
             }
 
             // Detect if AVS is enabled, if so we need to display a postal code field
-            var config = clientInstance.getConfiguration();
+            // Don't show the field if we've got a billing address postcode
+            /*var config = clientInstance.getConfiguration();
             if (typeof config.gatewayConfiguration.challenges === 'object'
                 && config.gatewayConfiguration.challenges.indexOf('postal_code') !== -1
+                && !this.getBillingPostcode()
             ) {
                 if ($$('.braintree-avs-postal-code').first() == undefined) {
                     console.error('We\'ve detected you have AVS rules enabled, however the braintree-avs-postal-code field is not present in your Hosted Fields form. Please ensure you haven\'t overriden hostedfields.phtml and if you have please update it.');
@@ -340,7 +390,7 @@ vZero.prototype = {
                         selector: "#postal-code"
                     };
                 }
-            }
+            }*/
 
             // Create a new instance of hosted fields
             braintree.hostedFields.create(options, function (hostedFieldsErr, hostedFieldsInstance) {
@@ -375,19 +425,28 @@ vZero.prototype = {
             $$('#credit-card-form.loading').first().removeClassName('loading');
         }
 
+        this.checkSubmitAfterPayment();
+
+        // Handle card type changes
+        integration.on('cardTypeChange', this.hostedFieldsCardTypeChange.bind(this));
+    },
+
+    /**
+     * Check if the submit after payment should be present on the page
+     */
+    checkSubmitAfterPayment: function () {
         // Will this checkout submit the payment after the "payment" step. This is typically used in non one step checkouts
         // which contains a review step.
         if (this.integration.submitAfterPayment) {
-            var input = new Element('input', {type: 'hidden', name: 'payment[submit_after_payment]', value: 1, id: 'braintree-submit-after-payment'});
-            $('payment_form_gene_braintree_creditcard').insert(input);
+            if ($('braintree-submit-after-payment') == null) {
+                var input = new Element('input', {type: 'hidden', name: 'payment[submit_after_payment]', value: 1, id: 'braintree-submit-after-payment'});
+                $('payment_form_gene_braintree_creditcard').insert(input);
+            }
         } else {
             if ($('braintree-submit-after-payment')) {
                 $('braintree-submit-after-payment').remove();
             }
         }
-
-        // Handle card type changes
-        integration.on('cardTypeChange', this.hostedFieldsCardTypeChange.bind(this));
     },
 
     /**
@@ -686,22 +745,26 @@ vZero.prototype = {
     },
 
     /**
-     * Return the billing name
+     * Return the billing post code
      *
      * @returns {*}
      */
     getBillingPostcode: function () {
 
-        // If billingName is an object we're wanting to grab the data from elements
-        if (typeof this.billingPostcode == 'object') {
+        if (typeof this.billingPostcode == 'string') {
+            return this.billingPostcode;
+        } else if (typeof this.billingPostcode == 'object') {
+            // If billingName is an object we're wanting to grab the data from elements
 
             // Combine them with a space
             return this.combineElementsValues(this.billingPostcode);
-
         } else {
+            var billing = this.getBillingAddress();
+            if (typeof billing['billing[postcode]'] !== 'undefined') {
+                return billing['billing[postcode]'];
+            }
 
-            // Otherwise we can presume that the billing name is a string
-            return this.billingPostcode;
+            return null;
         }
     },
 
@@ -906,7 +969,7 @@ vZero.prototype = {
             var callbacks = this._updateDataCallbacks;
             this._updateDataCallbacks = [];
 
-            this.fireEvent(this, 'integration.onBeforeUpdateData', {params: params});
+            this.fireEvent(this, 'onBeforeUpdateData', {params: params});
 
             // Make a new ajax request to the server
             new Ajax.Request(
@@ -1148,8 +1211,20 @@ vZero.prototype = {
      */
     processCard: function (options) {
 
+        // Retrieve billing address postcode & pass to api (as of SDK 3.9.0)
+        var postcode = this.getBillingPostcode(),
+            opt = {};
+
+        if (postcode) {
+            opt = {
+                billingAddress: {
+                    postalCode: postcode
+                }
+            };
+        }
+
         // Tokenize using hosted fields
-        this._hostedIntegration.tokenize(function (tokenizeErr, payload) {
+        this._hostedIntegration.tokenize(opt, function (tokenizeErr, payload) {
             if (tokenizeErr) {
 
                 if (typeof options.onFailure === 'function') {

@@ -171,11 +171,13 @@ class TransactionTest extends Setup
         $this->assertEquals(Braintree\Transaction::SETTLEMENT_PENDING, $transaction->status);
         $this->assertEquals(Braintree\Transaction::SALE, $transaction->type);
         $this->assertEquals('100.00', $transaction->amount);
-        $this->assertEquals('123456789', $transaction->usBankAccount->routingNumber);
+        $this->assertEquals('021000021', $transaction->usBankAccount->routingNumber);
         $this->assertEquals('1234', $transaction->usBankAccount->last4);
         $this->assertEquals('checking', $transaction->usBankAccount->accountType);
-        $this->assertEquals('PayPal Checking - 1234', $transaction->usBankAccount->accountDescription);
         $this->assertEquals('Dan Schulman', $transaction->usBankAccount->accountHolderName);
+        $this->assertRegExp('/CHASE/', $transaction->usBankAccount->bankName);
+        $this->assertEquals('cl mandate text', $transaction->usBankAccount->achMandate->text);
+        $this->assertEquals('DateTime', get_class($transaction->usBankAccount->achMandate->acceptedAt));
     }
 
   public function testSaleWithUsBankAccountNonceAndVaultedToken()
@@ -195,11 +197,12 @@ class TransactionTest extends Setup
         $this->assertEquals(Braintree\Transaction::SETTLEMENT_PENDING, $transaction->status);
         $this->assertEquals(Braintree\Transaction::SALE, $transaction->type);
         $this->assertEquals('100.00', $transaction->amount);
-        $this->assertEquals('123456789', $transaction->usBankAccount->routingNumber);
+        $this->assertEquals('021000021', $transaction->usBankAccount->routingNumber);
         $this->assertEquals('1234', $transaction->usBankAccount->last4);
         $this->assertEquals('checking', $transaction->usBankAccount->accountType);
-        $this->assertEquals('PayPal Checking - 1234', $transaction->usBankAccount->accountDescription);
         $this->assertEquals('Dan Schulman', $transaction->usBankAccount->accountHolderName);
+        $this->assertEquals('cl mandate text', $transaction->usBankAccount->achMandate->text);
+        $this->assertEquals('DateTime', get_class($transaction->usBankAccount->achMandate->acceptedAt));
 
         $result = Braintree\Transaction::sale([
             'amount' => '100.00',
@@ -215,11 +218,12 @@ class TransactionTest extends Setup
         $this->assertEquals(Braintree\Transaction::SETTLEMENT_PENDING, $transaction->status);
         $this->assertEquals(Braintree\Transaction::SALE, $transaction->type);
         $this->assertEquals('100.00', $transaction->amount);
-        $this->assertEquals('123456789', $transaction->usBankAccount->routingNumber);
+        $this->assertEquals('021000021', $transaction->usBankAccount->routingNumber);
         $this->assertEquals('1234', $transaction->usBankAccount->last4);
         $this->assertEquals('checking', $transaction->usBankAccount->accountType);
-        $this->assertEquals('PayPal Checking - 1234', $transaction->usBankAccount->accountDescription);
         $this->assertEquals('Dan Schulman', $transaction->usBankAccount->accountHolderName);
+        $this->assertEquals('cl mandate text', $transaction->usBankAccount->achMandate->text);
+        $this->assertEquals('DateTime', get_class($transaction->usBankAccount->achMandate->acceptedAt));
     }
 
   public function testSaleWithInvalidUsBankAccountNonce()
@@ -239,6 +243,22 @@ class TransactionTest extends Setup
       $this->assertEquals(Braintree\Error\Codes::TRANSACTION_PAYMENT_METHOD_NONCE_UNKNOWN, $baseErrors[0]->code);
   }
 
+  public function testSaleAndSkipAdvancedFraudChecking()
+  {
+      $result = Braintree\Transaction::sale([
+          'amount' => Braintree\Test\TransactionAmounts::$authorize,
+          'creditCard' => [
+              'number' => Braintree\Test\CreditCardNumbers::$visa,
+              'expirationDate' => '05/2009',
+          ],
+          'options' => [
+              'skipAdvancedFraudChecking' => true
+          ]
+      ]);
+      $this->assertTrue($result->success);
+      $transaction = $result->transaction;
+      $this->assertNull($transaction->riskData->id);
+  }
 
   public function testSettleAltPayTransaction()
     {
@@ -405,6 +425,21 @@ class TransactionTest extends Setup
     }
 
   public function testCreateTransactionUsingRawApplePayParams()
+    {
+        $result = Braintree\Transaction::sale([
+            'amount' => '1.02',
+            'applePayCard' => [
+                'number' => "370295001292109",
+                'cardholderName' => "JANE SMITH",
+                'cryptogram' => "AAAAAAAA/COBt84dnIEcwAA3gAAGhgEDoLABAAhAgAABAAAALnNCLw==",
+                'expirationMonth' => "10",
+                'expirationYear' => "17"
+            ]
+        ]);
+        $this->assertTrue($result->success);
+    }
+
+  public function testCreateTransactionUsingRawApplePayParamsInSnakeCaseForBackwardsCompatibility()
     {
         $result = Braintree\Transaction::sale([
             'amount' => '1.02',
@@ -1924,6 +1959,7 @@ class TransactionTest extends Setup
         $this->assertNotNull($transaction->paypalDetails->payerId);
         $this->assertNotNull($transaction->paypalDetails->payerFirstName);
         $this->assertNotNull($transaction->paypalDetails->payerLastName);
+        $this->assertNotNull($transaction->paypalDetails->payerStatus);
         $this->assertNotNull($transaction->paypalDetails->sellerProtectionStatus);
         $this->assertNotNull($transaction->paypalDetails->captureId);
         $this->assertNotNull($transaction->paypalDetails->refundId);
@@ -2176,6 +2212,34 @@ class TransactionTest extends Setup
             ],
             'options' => [
                 'threeDSecure' => [
+                    'required' => true
+                ]
+            ]
+        ]);
+        $this->assertFalse($result->success);
+        $this->assertEquals(Braintree\Transaction::THREE_D_SECURE, $result->transaction->gatewayRejectionReason);
+    }
+
+  public function testSale_withThreeDSecureOptionRequiredInSnakeCase()
+    {
+        $http = new HttpClientApi(Braintree\Configuration::$global);
+        $nonce = $http->nonce_for_new_card([
+            "creditCard" => [
+                "number" => "4111111111111111",
+                "expirationMonth" => "11",
+                "expirationYear" => "2099"
+            ]
+        ]);
+
+        $result = Braintree\Transaction::sale([
+            'merchantAccountId' => Test\Helper::threeDSecureMerchantAccountId(),
+            'amount' => '100.00',
+            'creditCard' => [
+                'number' => '4111111111111111',
+                'expirationDate' => '05/09'
+            ],
+            'options' => [
+                'three_d_secure' => [
                     'required' => true
                 ]
             ]
@@ -4038,7 +4102,63 @@ class TransactionTest extends Setup
             $result->transaction->facilitatorDetails->oauthApplicationName,
             "PseudoShop"
         );
+
+        $this->assertNull($result->transaction->billing["postalCode"]);
     }
+
+    public function testBillingPostalCodeIsReturnedWhenRequestedOnTransactionsCreatedViaNonceGranting()
+    {
+        $partnerMerchantGateway = new Braintree\Gateway([
+            'environment' => 'development',
+            'merchantId' => 'integration_merchant_public_id',
+            'publicKey' => 'oauth_app_partner_user_public_key',
+            'privateKey' => 'oauth_app_partner_user_private_key'
+        ]);
+
+        $customer = $partnerMerchantGateway->customer()->create([
+            'firstName' => 'Joe',
+            'lastName' => 'Brown'
+        ])->customer;
+        $creditCard = $partnerMerchantGateway->creditCard()->create([
+            'customerId' => $customer->id,
+            'cardholderName' => 'Adam Davis',
+            'number' => '4111111111111111',
+            'expirationDate' => '05/2009',
+            'billingAddress' => [
+                'firstName' => 'Adam',
+                'lastName' => 'Davis',
+                'postalCode' => '95131'
+            ]
+        ])->creditCard;
+
+        $oauthAppGateway = new Braintree\Gateway([
+            'clientId' =>  'client_id$development$integration_client_id',
+            'clientSecret' => 'client_secret$development$integration_client_secret'
+        ]);
+
+        $code = Test\Braintree\OAuthTestHelper::createGrant($oauthAppGateway, [
+            'merchant_public_id' => 'integration_merchant_id',
+            'scope' => 'grant_payment_method'
+        ]);
+
+        $credentials = $oauthAppGateway->oauth()->createTokenFromCode([
+            'code' => $code,
+        ]);
+
+        $grantingGateway = new Braintree\Gateway([
+            'accessToken' => $credentials->accessToken
+        ]);
+
+        $grantResult = $grantingGateway->paymentMethod()->grant($creditCard->token, ['allow_vaulting' => false, 'include_billing_postal_code' => true]);
+
+        $result = Braintree\Transaction::sale([
+            'amount' => '100.00',
+            'paymentMethodNonce' => $grantResult->paymentMethodNonce->nonce
+        ]);
+
+        $this->assertEquals($result->transaction->billing["postalCode"], "95131");
+    }
+
 
     public function testTransactionsCanBeCreatedWithSharedParams()
     {

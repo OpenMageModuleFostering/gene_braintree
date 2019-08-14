@@ -29,11 +29,12 @@ if (!$this->isEnabledPdp()) {
     (function () {
         document.observe("dom:loaded", function() {
             var express = new BraintreePayPalExpress(
-                '<?php echo $this->getToken(); ?>',
+                false,
                 '<?php echo Mage::app()->getStore()->getFrontendName(); ?>',
                 '<?php echo Mage::getSingleton('core/session')->getFormKey(); ?>',
                 'product',
                 {
+                    clientTokenUrl: '<?php echo $this->getUrl('braintree/checkout/clientToken') ?>',
                     authUrl:        '<?php echo $this->getUrl('braintree/express/authorization') ?>',
                     shippingSaveUrl:'<?php echo $this->getUrl('braintree/express/saveShipping') ?>',
                     couponSaveUrl:  '<?php echo $this->getUrl('braintree/express/saveCoupon') ?>',

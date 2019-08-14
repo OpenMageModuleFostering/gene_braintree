@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Model_Observer
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Model_Observer
 {
@@ -107,34 +107,34 @@ class Gene_Braintree_Model_Observer
 
         // Should we capture the payment in shipment?
         if ($this->_shouldCaptureShipment($order)) {
-
             // Check the order can be invoiced
-            if ($order->canInvoice()) {
-
-                /* @var @invoice Mage_Sales_Model_Order_Invoice */
-                $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
-
-                // Check the invoice has items to invoice
-                if ($invoice->getTotalQty()) {
-
-                    // Set the requested capture case
-                    $invoice->setRequestedCaptureCase(Mage_Sales_Model_Order_Invoice::CAPTURE_ONLINE);
-
-                    // Register the invoice
-                    $invoice->register();
-
-                    // Save the transaction
-                    $transactionSave = Mage::getModel('core/resource_transaction')
-                        ->addObject($invoice)
-                        ->addObject($invoice->getOrder());
-
-                    // Save the transaction
-                    $transactionSave->save();
-
+            if ($shipment->getTotalQty() && $order->canInvoice()) {
+                $invoiceItems = array();
+                /* @var $item Mage_Sales_Model_Order_Shipment_Item */
+                foreach ($shipment->getAllItems() as $item) {
+                    $invoiceItems[$item->getOrderItemId()] = $item->getQty();
+                }
+                foreach ($order->getAllVisibleItems() as $item) {
+                    if (!isset($invoiceItems[$item->getId()])) {
+                        $invoiceItems[$item->getId()] = 0;
+                    }
                 }
 
-            }
+                /* @var $invoice Mage_Sales_Model_Order_Invoice */
+                $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice($invoiceItems);
 
+                // Set the requested capture case
+                $invoice->setRequestedCaptureCase(Mage_Sales_Model_Order_Invoice::CAPTURE_ONLINE);
+                $invoice->register();
+
+                // Save the transaction
+                $transactionSave = Mage::getModel('core/resource_transaction')
+                    ->addObject($invoice)
+                    ->addObject($invoice->getOrder());
+
+                // Save the transaction
+                $transactionSave->save();
+            }
         }
 
         return $this;
@@ -191,19 +191,22 @@ class Gene_Braintree_Model_Observer
     {
         // Determine whether the compiler has been enabled
         if(defined('COMPILER_INCLUDE_PATH')) {
-            $certificates = array('api_braintreegateway_com.ca.crt', 'sandbox_braintreegateway_com.ca.crt');
+            $certificates = array('api_braintreegateway_com.ca.crt');
             $compilerPath = COMPILER_INCLUDE_PATH;
-            $directory = '/ssl/';
+            $directory = 'Braintree' . DS . 'braintree' . DS . 'braintree_php' . DS . 'lib' . DS . 'ssl' . DS;
 
             // Verify the SSL folder exists
-            if(!is_dir($compilerPath . '/..' . $directory)) {
-                mkdir($compilerPath . '/..' . $directory, 0777, true);
+            if(!is_dir($compilerPath . DS . '..' . DS . $directory)) {
+                mkdir($compilerPath . DS . '..' . DS . $directory, 0777, true);
             }
 
             // Loop through each certificate and check whether it's in the includes directory, if not copy it!
             foreach($certificates as $file) {
-                if(!file_exists($compilerPath . '/..' . $directory . $file)) {
-                    copy(Mage::getBaseDir('lib') . DS . 'Gene' . DS . $directory . $file, $compilerPath . '/..' . $directory . $file);
+                if(!file_exists($compilerPath . DS . '..' . DS . $directory . $file)) {
+                    copy(
+                        Mage::getBaseDir('lib') . DS . 'Gene' . DS . $directory . $file,
+                        $compilerPath . DS . '..' . DS . $directory . $file
+                    );
                 }
             }
         }

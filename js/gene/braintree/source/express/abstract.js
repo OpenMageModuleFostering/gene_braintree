@@ -3,7 +3,7 @@
  *
  * @class BraintreeExpressAbstract
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 var BraintreeExpressAbstract = Class.create();
 BraintreeExpressAbstract.prototype = {
@@ -14,11 +14,12 @@ BraintreeExpressAbstract.prototype = {
      * @param clientToken Client token generated from server
      * @param storeFrontName The store name to show within the PayPal modal window
      * @param formKey
+     * @param source
      * @param urls
      * @param config
      */
     initialize: function (clientToken, storeFrontName, formKey, source, urls, config) {
-        this.clientToken = clientToken;
+        this.clientToken = clientToken || false;
         this.storeFrontName = storeFrontName;
         this.formKey = formKey;
         this.source = source;

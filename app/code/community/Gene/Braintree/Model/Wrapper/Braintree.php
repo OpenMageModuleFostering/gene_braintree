@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Model_Wrapper_Braintree
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
 {

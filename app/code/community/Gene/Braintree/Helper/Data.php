@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Helper_Data
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Helper_Data extends Mage_Core_Helper_Abstract
 {
@@ -61,6 +61,9 @@ class Gene_Braintree_Helper_Data extends Mage_Core_Helper_Abstract
     public function convertToMagentoAddress($address)
     {
         $addressModel = Mage::getModel('customer/address');
+        if (!$address) {
+            return $addressModel;
+        }
 
         $addressModel->addData(array(
             'firstname' => $address->firstName,
@@ -164,21 +167,41 @@ class Gene_Braintree_Helper_Data extends Mage_Core_Helper_Abstract
      * Utilising the 'setup_required' feature in XML files, loop through and determine if setup is required based on
      * various modules being "available"
      *
+     * @param $storeId
+     *
      * @return bool
      */
-    public function isSetupRequired()
+    public function isSetupRequired($storeId = false)
     {
+        // If a store ID is specific emulate the store first
+        if ($storeId !== false) {
+            /* @var $appEmulation Mage_Core_Model_App_Emulation */
+            $appEmulation = Mage::getSingleton('core/app_emulation');
+            $initialEnvironmentInfo = $appEmulation->startEnvironmentEmulation($storeId);
+        }
+
         $methodCodes = Mage::getConfig()->getNode('global/payment/setup_required')->asArray();
         if (is_array($methodCodes) && count($methodCodes) > 0) {
             foreach (array_keys($methodCodes) as $methodCode) {
                 $methodModel = Mage::getConfig()->getNode('default/payment/' . (string) $methodCode . '/model');
                 if ($methodModel) {
                     $model = Mage::getModel($methodModel);
+                    $model->setIsSetupRequiredCall(true);
                     if ($model && method_exists($model, 'isAvailable') && $model->isAvailable()) {
+                        // Stop the app emulation is running
+                        if (isset($appEmulation) && isset($initialEnvironmentInfo)) {
+                            $appEmulation->stopEnvironmentEmulation($initialEnvironmentInfo);
+                        }
+
                         return true;
                     }
                 }
             }
+        }
+
+        // Stop the app emulation is running
+        if (isset($appEmulation) && isset($initialEnvironmentInfo)) {
+            $appEmulation->stopEnvironmentEmulation($initialEnvironmentInfo);
         }
 
         return false;

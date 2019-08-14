@@ -2,7 +2,7 @@
 /**
  * Add in support for Fire Checkout
  * http://templates-master.com/magento-one-page-checkout.html
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 ?>
 <!-- FIRECHECKOUT BRAINTREE SUPPORT -->
@@ -22,6 +22,7 @@
          */
         captureOriginalSubmitFn: function () {
             this._originalSubmitFn = FireCheckout.prototype.save;
+            this._originalPaymentInitialize = Payment.prototype.init;
             return true;
         },
 
@@ -34,7 +35,7 @@
             var vzeroIntegration = this;
 
             // Re-define the original method so we can do some jazz with it
-            FireCheckout.prototype.save = function () {
+            FireCheckout.prototype.save = function (urlSuffix, forceSave) {
 
                 if (vzeroIntegration.shouldInterceptSubmit('creditcard')) {
 
@@ -55,6 +56,12 @@
                     return vzeroIntegration._originalSubmitFn.apply(this, arguments);
                 }
 
+            };
+
+            // Ensure initSavedMethods is ran on initialize
+            Payment.prototype.init = function () {
+                vzeroIntegration.initSavedMethods();
+                return vzeroIntegration._originalPaymentInitialize.apply(this, arguments);
             };
 
         },

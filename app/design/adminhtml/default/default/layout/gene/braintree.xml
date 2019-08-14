@@ -22,7 +22,15 @@
         </reference>
         <reference name="js">
             <!-- Include all Braintree assets through a dynamic block -->
-            <block type="gene_braintree/assets" name="gene.braintree.head.assets" template="gene/braintree/assets.phtml" after="-" />
+            <block type="gene_braintree/assets" name="gene.braintree.head.assets" template="gene/braintree/assets.phtml" after="-">
+                <action method="addExternalJs"><url>https://js.braintreegateway.com/web/{SDK_VERSION}/js/client.min.js</url></action>
+                <action method="addExternalJs"><url>https://js.braintreegateway.com/web/{SDK_VERSION}/js/hosted-fields.min.js</url></action>
+                <action method="addExternalJs"><url>https://js.braintreegateway.com/web/{SDK_VERSION}/js/three-d-secure.min.js</url></action>
+                <action method="addExternalJs"><url>https://js.braintreegateway.com/web/{SDK_VERSION}/js/data-collector.min.js</url></action>
+                <action method="addJs"><url>gene/braintree/{MODULE_VERSION}/vzero-min.js</url></action>
+                <action method="addJs"><url>gene/braintree/{MODULE_VERSION}/vzero-paypal-min.js</url></action>
+                <action method="addJs"><url>gene/braintree/{MODULE_VERSION}/vzero-integration-min.js</url></action>
+            </block>
         </reference>
         <reference name="before_body_end">
             <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js.phtml" />

@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Adminhtml_BraintreeController
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Adminhtml_BraintreeController extends Mage_Adminhtml_Controller_Action
 {

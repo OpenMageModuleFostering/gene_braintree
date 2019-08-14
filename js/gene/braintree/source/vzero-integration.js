@@ -2,7 +2,7 @@
  * The integration class for the Default checkout
  *
  * @class vZeroIntegration
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 var vZeroIntegration = Class.create();
 vZeroIntegration.prototype = {
@@ -323,7 +323,8 @@ vZeroIntegration.prototype = {
                     'number': Translator.translate('Card Number'),
                     'expirationMonth': Translator.translate('Expiry Month'),
                     'expirationYear': Translator.translate('Expiry Year'),
-                    'cvv': Translator.translate('CVV')
+                    'cvv': Translator.translate('CVV'),
+                    'postalCode': Translator.translate('Postal Code')
                 };
 
             // Loop through each field and ensure it's validity
@@ -580,6 +581,10 @@ vZeroIntegration.prototype = {
                                         this.vzero._hostedFieldsTokenGenerated = false;
                                         this.hostedFieldsGenerated = false;
 
+                                        alert(Translator.translate(
+                                            'We\'re unable to process your payment, please try another card or payment method.'
+                                        ));
+
                                         this.resetLoading();
                                         this.afterSubmit();
                                         if (typeof failedCallback === 'function') {
@@ -744,7 +749,16 @@ vZeroIntegration.prototype = {
      */
     afterPayPalComplete: function () {
         this.resetLoading();
-        return this.submitCheckout();
+
+        // Re-show the original placeorder button if present; binding only our submit method to the element
+        var btn = $$(this.paypalButtonClass).first();
+        if (btn) {
+            btn.stopObserving('click').observe('click', this.submitCheckout);
+            this.updatePayPalButton('remove');
+            return true;
+        } else {
+            return this.submitCheckout();
+        }
     },
 
     /**

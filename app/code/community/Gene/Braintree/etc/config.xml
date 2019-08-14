@@ -2,7 +2,7 @@
 <config>
     <modules>
         <Gene_Braintree>
-            <version>2.1.7</version>
+            <version>2.2.0</version>
         </Gene_Braintree>
     </modules>
     <global>
@@ -126,6 +126,7 @@
                 <environment>sandbox</environment>
                 <allowspecific>0</allowspecific>
                 <form_integration>hosted</form_integration>
+                <disable_auto_formatting>0</disable_auto_formatting>
                 <use_vault>0</use_vault>
                 <threedsecure>0</threedsecure>
                 <threedsecure_failed_liability>1</threedsecure_failed_liability>

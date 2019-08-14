@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Model_Kount_Ens
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Model_Kount_Ens extends Mage_Core_Model_Abstract
 {

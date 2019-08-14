@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Block_Adminhtml_System_Config_Braintree_Currency
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Block_Adminhtml_System_Config_Braintree_Currency
     extends Mage_Adminhtml_Block_System_Config_Form_Field

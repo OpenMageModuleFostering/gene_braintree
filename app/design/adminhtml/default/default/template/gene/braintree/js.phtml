@@ -3,11 +3,14 @@
     // Pass some data over to vZero integration JS
     var vzero = new vZero(
         'gene_braintree_creditcard',
-        '<?php echo $this->getClientToken(); ?>',
+        false,
         false,
         true,
         ['order-billing_address_firstname', 'order-billing_address_lastname'],
-        ['order-billing_address_postcode']
+        ['order-billing_address_postcode'],
+        false,
+        false,
+        '<?php echo Mage::getUrl('braintree/checkout/clientToken', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>'
     );
 
     // Pass the supported card types over to the front-end

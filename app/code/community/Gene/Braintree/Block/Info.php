@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Block_Info
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Block_Info extends Mage_Payment_Block_Info
 {

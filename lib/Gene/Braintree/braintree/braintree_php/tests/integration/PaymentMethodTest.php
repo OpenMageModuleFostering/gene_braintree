@@ -243,11 +243,11 @@ class PaymentMethodTest extends Setup
         ]);
 
         $usBankAccount = $result->paymentMethod;
-        $this->assertEquals('123456789', $usBankAccount->routingNumber);
+        $this->assertEquals('021000021', $usBankAccount->routingNumber);
         $this->assertEquals('1234', $usBankAccount->last4);
         $this->assertEquals('checking', $usBankAccount->accountType);
-        $this->assertEquals('PayPal Checking - 1234', $usBankAccount->accountDescription);
         $this->assertEquals('Dan Schulman', $usBankAccount->accountHolderName);
+        $this->assertRegexp('/CHASE/', $usBankAccount->bankName);
     }
 
     public function testCreate_fromAbstractPaymentMethodNonce()
@@ -372,6 +372,30 @@ class PaymentMethodTest extends Setup
 
         $card = $result->paymentMethod;
         $this->assertEquals($secondToken, $card->token);
+    }
+
+    public function testCreateWithVerificationAmount()
+    {
+        $http = new HttpClientApi(Braintree\Configuration::$global);
+        $nonce = $http->nonce_for_new_card([
+            'credit_card' => [
+                'number' => '4000111111111115',
+                'expirationMonth' => '11',
+                'expirationYear' => '2099',
+            ]
+        ]);
+        $customer = Braintree\Customer::createNoValidate();
+        $result = Braintree\PaymentMethod::create([
+            'paymentMethodNonce' => $nonce,
+            'customerId' => $customer->id,
+            'options' => [
+                'verifyCard' => 'true',
+                'verificationAmount' => '5.00',
+            ]
+        ]);
+
+        $this->assertFalse($result->success);
+        $this->assertEquals(Braintree\Result\CreditCardVerification::PROCESSOR_DECLINED, $result->creditCardVerification->status);
     }
 
     public function testCreate_respectsVerifyCardAndVerificationMerchantAccountIdWhenIncludedOutsideOfTheNonce()
@@ -739,11 +763,11 @@ class PaymentMethodTest extends Setup
 
         $foundUsBankAccount = Braintree\PaymentMethod::find($result->paymentMethod->token);
         $this->assertInstanceOf('Braintree\UsBankAccount', $foundUsBankAccount);
-        $this->assertEquals('123456789', $foundUsBankAccount->routingNumber);
+        $this->assertEquals('021000021', $foundUsBankAccount->routingNumber);
         $this->assertEquals('1234', $foundUsBankAccount->last4);
         $this->assertEquals('checking', $foundUsBankAccount->accountType);
-        $this->assertEquals('PayPal Checking - 1234', $foundUsBankAccount->accountDescription);
         $this->assertEquals('Dan Schulman', $foundUsBankAccount->accountHolderName);
+        $this->assertRegExp('/CHASE/', $foundUsBankAccount->bankName);
     }
 
     public function testFind_returnsApplePayCards()
@@ -1300,7 +1324,7 @@ class PaymentMethodTest extends Setup
         ]);
         $this->assertTrue($paypalAccountResult->success);
 
-        Braintree\PaymentMethod::delete($paymentMethodToken);
+        Braintree\PaymentMethod::delete($paymentMethodToken, ['revokeAllGrants' => false]);
 
         $this->setExpectedException('Braintree\Exception\NotFound');
         Braintree\PaymentMethod::find($paymentMethodToken);
@@ -1344,7 +1368,7 @@ class PaymentMethodTest extends Setup
             'accessToken' => $credentials->accessToken
         ]);
 
-        $grantResult = $grantingGateway->paymentMethod()->grant($creditCard->token, false);
+        $grantResult = $grantingGateway->paymentMethod()->grant($creditCard->token);
         $this->assertTrue($grantResult->success);
 
         $result = Braintree\Transaction::sale([
@@ -1398,7 +1422,7 @@ class PaymentMethodTest extends Setup
             'accessToken' => $credentials->accessToken
         ]);
 
-        $grantResult = $grantingGateway->paymentMethod()->grant($creditCard->token, false);
+        $grantResult = $grantingGateway->paymentMethod()->grant($creditCard->token, ['allow_vaulting' => false]);
 
         $customer = $partnerMerchantGateway->customer()->create([
             'firstName' => 'Bob',
@@ -1449,7 +1473,7 @@ class PaymentMethodTest extends Setup
             'accessToken' => $credentials->accessToken
         ]);
 
-        $grantResult = $grantingGateway->paymentMethod()->grant($creditCard->token, true);
+        $grantResult = $grantingGateway->paymentMethod()->grant($creditCard->token, ['allow_vaulting' => true]);
 
         $customer = Braintree\Customer::create([
             'firstName' => 'Bob',

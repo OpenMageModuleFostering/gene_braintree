@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Model_Paymentmethod_Legacy_Paypal
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Model_Paymentmethod_Legacy_Paypal extends Gene_Braintree_Model_Paymentmethod_Paypal
 {

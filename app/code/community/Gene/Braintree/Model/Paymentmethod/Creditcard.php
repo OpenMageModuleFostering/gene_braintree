@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Model_Paymentmethod_Creditcard
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model_Paymentmethod_Abstract
 {
@@ -150,6 +150,20 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
     }
 
     /**
+     * Skip advanced fraud on this order
+     *
+     * @return bool
+     */
+    protected function _skipAdvancedFraudChecking()
+    {
+        if (Mage::app()->getStore()->isAdmin() && $this->_getConfig('skip_advanced_fraud_checking')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Should we save this method in the database?
      *
      * @param \Varien_Object $payment
@@ -277,6 +291,12 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
                 $this->shouldSaveMethod($payment),
                 $this->_is3DEnabled()
             );
+
+            // If in the admin and we want to skip advanced fraud checks.
+            // @see https://developers.braintreepayments.com/reference/request/transaction/sale/php#options.skip_advanced_fraud_checking
+            if ($this->_skipAdvancedFraudChecking()) {
+                $saleArray['options']['skipAdvancedFraudChecking'] = true;
+            }
 
             // Attempt to create the sale
             $result = $this->_getWrapper()->makeSale(

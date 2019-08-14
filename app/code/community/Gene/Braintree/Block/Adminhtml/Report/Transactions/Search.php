@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Block_Adminhtml_Report_Transactions_Search
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Block_Adminhtml_Report_Transactions_Search extends Mage_Core_Block_Template
 {

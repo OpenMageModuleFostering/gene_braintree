@@ -124,6 +124,14 @@ class Helper
         return $response['threeDSecureVerification']['threeDSecureToken'];
     }
 
+    public static function generate3DSNonce($params)
+    {
+        $http = new Braintree\Http(Braintree\Configuration::$global);
+        $path = Braintree\Configuration::$global->merchantPath() . '/three_d_secure/create_nonce/' . self::threeDSecureMerchantAccountId();
+        $response = $http->post($path, $params);
+        return $response['paymentMethodNonce']['nonce'];
+    }
+
     public static function nowInEastern()
     {
         $eastern = new DateTimeZone('America/New_York');
@@ -139,6 +147,7 @@ class Helper
     public static function generateValidUsBankAccountNonce() {
         $client_token = json_decode(Helper::decodedClientToken(), true);
         $url = $client_token['braintree_api']['url'] . '/tokens';
+        $token = $client_token['braintree_api']['access_token'];
 
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
@@ -146,7 +155,7 @@ class Helper
 
         $headers[] = 'Content-Type: application/json';
         $headers[] = 'Braintree-Version: 2015-11-01';
-        $headers[] = 'Authorization: Bearer integratexxxxxx_xxxxxx_xxxxxx_xxxxxx_xx1';
+        $headers[] = 'Authorization: Bearer ' . $token;
         curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
 
         $requestBody = [
@@ -158,12 +167,12 @@ class Helper
                 'postal_code' => '94112'
             ],
             'account_type' => 'checking',
-            'routing_number' => '123456789',
+            'routing_number' => '021000021',
             'account_number' => '567891234',
             'account_holder_name' => 'Dan Schulman',
             'account_description' => 'PayPal Checking - 1234',
             'ach_mandate' => [
-                'text' => ''
+                'text' => 'cl mandate text'
             ]
         ];
 

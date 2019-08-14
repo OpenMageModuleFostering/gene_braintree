@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Model_Entity_Setup
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Model_Entity_Setup extends Mage_Eav_Model_Entity_Setup
 {

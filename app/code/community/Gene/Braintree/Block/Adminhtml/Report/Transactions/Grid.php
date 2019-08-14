@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Block_Adminhtml_Report_Transactions_Grid
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Block_Adminhtml_Report_Transactions_Grid extends Mage_Adminhtml_Block_Widget_Grid
 {
@@ -114,14 +114,16 @@ class Gene_Braintree_Block_Adminhtml_Report_Transactions_Grid extends Mage_Admin
 
             /* @var $transaction Braintree_Transaction */
             foreach ($transactions as $transaction) {
+                $transaction = (array) $transaction;
+                $transaction = current($transaction);
 
                 // Create a new varien object
                 $transactionItem = new Varien_Object();
-                $transactionItem->setData((array)$transaction->_attributes);
+                $transactionItem->setData($transaction);
 
                 // Grab the Magento order from the previously built collection
                 /* @var $magentoOrder Mage_Sales_Model_Order */
-                $magentoOrder = $orders->getItemByColumnValue('increment_id', $transaction->orderId);
+                $magentoOrder = $orders->getItemByColumnValue('increment_id', $transaction['orderId']);
 
                 // Set the Magento Order ID into the collection
                 // Not all transactions maybe coming from Magento

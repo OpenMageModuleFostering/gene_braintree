@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Block_Saved_Edit
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Block_Saved_Edit extends Mage_Customer_Block_Address_Edit
 {

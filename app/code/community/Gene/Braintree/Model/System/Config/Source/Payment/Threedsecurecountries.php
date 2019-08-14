@@ -3,7 +3,7 @@
 /**
  * Class Gene_Braintree_Model_System_Config_Source_Payment_Threedsecurecountries
  *
- * @author Dave Macaulay <dave@gene.co.uk>
+ * @author Dave Macaulay <braintreesupport@gene.co.uk>
  */
 class Gene_Braintree_Model_System_Config_Source_Payment_Threedsecurecountries
 {

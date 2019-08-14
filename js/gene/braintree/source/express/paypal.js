@@ -8,10 +8,13 @@ var BraintreePayPalExpress = Class.create(BraintreeExpressAbstract, {
      */
     _init: function () {
         this.vzeroPayPal = new vZeroPayPalButton(
-            this.config.token,
+            false,
             '',
             false, /* Vault flow forced as the final amount can change */
-            this.config.locale
+            this.config.locale,
+            false,
+            false,
+            this.urls.clientTokenUrl
         );
     },
 
