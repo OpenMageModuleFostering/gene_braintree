@@ -931,9 +931,19 @@ vZero.prototype = {
                         } else if (payload.liabilityShiftPossible) {
                             // Liablity may still be shifted
                             // Decide if you want to submit the nonce
+
+                            // Treat as success, allow the server to handle the decision
+                            if (options.onSuccess) {
+                                options.onSuccess(payload);
+                            }
                         } else {
                             // Liablity has not shifted and will not shift
                             // Decide if you want to submit the nonce
+
+                            // Treat as success, allow the server to handle the decision
+                            if (options.onSuccess) {
+                                options.onSuccess(payload);
+                            }
                         }
                     } else {
                         if (options.onFailure) {

@@ -29,6 +29,7 @@
                     locale:         '<?php echo strtolower($this->getStoreLocale()); ?>',
                     token:          '<?php echo $this->getToken(); ?>',
                     productId:      <?php echo (int) $this->getProduct()->getId(); ?>,
+                    singleUse:      <?php echo $this->getSingleUse(); ?>
                 }
             );
             express.attachToButtons($$('[data-paypalexpress]'));

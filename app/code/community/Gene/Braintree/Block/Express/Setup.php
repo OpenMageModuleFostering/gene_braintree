@@ -78,6 +78,23 @@ class Gene_Braintree_Block_Express_Setup extends Mage_Core_Block_Template
     }
 
     /**
+     * Shall we do a single use payment?
+     *
+     * @return string
+     */
+    public function getSingleUse()
+    {
+        // We prefer to do future payments, so anything else is future
+        if (Mage::getSingleton('gene_braintree/paymentmethod_paypal')->getPaymentType() ==
+            Gene_Braintree_Model_Source_Paypal_Paymenttype::GENE_BRAINTREE_PAYPAL_SINGLE_PAYMENT
+        ) {
+            return 'true';
+        }
+
+        return 'false';
+    }
+
+    /**
      * Get store currency code.
      *
      * @return string
@@ -94,7 +111,7 @@ class Gene_Braintree_Block_Express_Setup extends Mage_Core_Block_Template
      */
     public function getStoreLocale()
     {
-        return Mage::app()->getLocale()->getLocaleCode();;
+        return Mage::app()->getLocale()->getLocaleCode();
     }
 
     /**
