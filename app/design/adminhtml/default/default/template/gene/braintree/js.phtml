@@ -5,7 +5,7 @@
         'gene_braintree_creditcard',
         '<?php echo $this->getClientToken(); ?>',
         false,
-        <?php echo $this->isHostedFields(); ?>,
+        true,
         ['order-billing_address_firstname', 'order-billing_address_lastname'],
         ['order-billing_address_postcode']
     );

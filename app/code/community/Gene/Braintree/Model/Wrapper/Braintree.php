@@ -974,8 +974,17 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
             // Verify it decoded correctly
             if (is_array($mapping) && !empty($mapping)) {
 
-                // If we haven't been given an order use the quote currency code
-                $currency = (!$order ? $this->getQuote()->getQuoteCurrencyCode() : $order->getOrderCurrencyCode());
+                // If we don't have an order but have a selected currency code use that
+                if (!$order && Mage::app()->getStore()->getCurrentCurrencyCode()) {
+                    // Use the current set current code
+                    $currency = Mage::app()->getStore()->getCurrentCurrencyCode();
+                } elseif (!$order && $this->getQuote()->getQuoteCurrencyCode()) {
+                    // If we haven't been given an order use the quote currency code
+                    $currency = $this->getQuote()->getQuoteCurrencyCode();
+                } else {
+                    // Use the currency code for tomorrow
+                    $currency = $order->getOrderCurrencyCode();
+                }
 
                 // Verify we have a mapping value for this currency
                 if (isset($mapping[$currency]) && !empty($mapping[$currency])) {
@@ -999,7 +1008,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function currencyMappingEnabled(Mage_Sales_Model_Order $order = null)
     {
         return Mage::getStoreConfigFlag(self::BRAINTREE_MULTI_CURRENCY)
-        && Mage::getStoreConfig(self::BRAINTREE_MULTI_CURRENCY_MAPPING);
+            && Mage::getStoreConfig(self::BRAINTREE_MULTI_CURRENCY_MAPPING);
     }
 
     /**
