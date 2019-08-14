@@ -1,203 +1,132 @@
 <?php
 /**
  * Intercept various functions for the default checkout flow
+ * @author Dave Macaulay <dave@gene.co.uk>
  */
 ?>
 <!-- DEFAULT BRAINTREE SUPPORT -->
 <script type="text/javascript">
 
-    // Store the current paymentMethod
-    var paymentMethod = false;
+    vZeroIntegration.addMethods({
 
-    // Store the original payment method
-    var paymentOriginal = Payment.prototype.save;
+        /**
+         * Attach observer events for saving the payment step, alongside the review step
+         */
+        prepareSubmitObserver: function() {
 
-    // Intercept the save function
-    Payment.prototype.save = function() {
+            // Store a pointer to the vZero integration
+            var vzeroIntegration = this;
 
-        if (checkout.loadWaiting != false) return;
+            // Store the original version of Payment.save();
+            var _originalPaymentSave = Payment.prototype.save;
+            Payment.prototype.save = function() {
 
-        // Update our paymentMethod
-        paymentMethod = this.currentMethod;
+                // Do the standard validation
+                var validator = new Validation(this.form);
+                if (this.validate() && validator.validate() && vzeroIntegration.shouldInterceptSubmit('creditcard')) {
 
-        // Check we're dealing with the current method
-        if (paymentMethod == 'gene_braintree_creditcard') {
+                    // Store a pointer to the payment class
+                    var paymentThis = this;
+                    var paymentArguments = arguments;
 
-            // Always attempt to update the card type on submission
-            if($$('[data-genebraintree-name="number"]').first() != undefined) {
-                vzero.updateCardType($$('[data-genebraintree-name="number"]').first().value);
-            }
+                    // If everything was a success on the checkout end, let's submit the vZero integration
+                    vzeroIntegration.submit('creditcard', function () {
+                        return _originalPaymentSave.apply(paymentThis, paymentArguments);
+                    });
 
-            // Set the payment to loading
-            checkout.setLoadWaiting('payment');
-
-            // Do the standard validation
-            var validator = new Validation(this.form);
-            if (this.validate() && validator.validate()) {
-
-                // Store these to be used later on
-                var paymentThis = this;
-                var paymentArgs = arguments;
-
-                // Process the card
-                vzero.process({
-                    onSuccess: function () {
-
-                        // Reset the waiting for the parent function
-                        checkout.setLoadWaiting(false);
-
-                        // Disable the standard credit card form so the values don't get passed through to the checkout
-                        $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
-                            if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault') {
-                                formElement.setAttribute('disabled', 'disabled');
-                            }
-                        });
-
-                        if($('device_data')) {
-                            // Always make sure device data is sent with the request
-                            $('device_data').removeAttribute('disabled');
-                        }
-
-                        // Fire the original event and return the response
-                        paymentResponse = paymentOriginal.apply(paymentThis, paymentArgs);
-
-                        // Re-enable any form elements which were disabled
-                        $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
-                            formElement.removeAttribute('disabled');
-                        });
-
-                        // Run the original function
-                        return paymentResponse;
-                    },
-                    onFailure: function() {
-                        checkout.setLoadWaiting(false);
-                    }
-                });
-            } else {
-                checkout.setLoadWaiting(false);
-            }
-
-        } else {
-            // Proxy the function through
-            return paymentOriginal.apply(this, arguments);
-        }
-    };
-
-    // Store the original payment method
-    var reviewInitOriginal = Review.prototype.initialize;
-
-    // Intercept the save function
-    Review.prototype.initialize = function(saveUrl, successUrl, agreementsForm) {
-
-        // Do the original action
-        var reviewResponse = reviewInitOriginal.apply(this, arguments);
-
-        // Swap out the buttons
-        if((paymentMethod == 'gene_braintree_paypal' && $('paypal-saved-accounts') == undefined) || ($$('#paypal-saved-accounts input:checked[type=radio]').first() != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first().value == 'other')) {
-
-            // Hide the checkout button
-            if ($$('#review-buttons-container button').first() != undefined) {
-                $$('#review-buttons-container button').first().hide();
-            }
-
-            // Insert out PayPal button
-            $('review-buttons-container').insert('<div id="paypal-complete"><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label><div id="paypal-container"></div></div>');
-
-            // Add in the PayPal button
-            vzeroPaypal.addPayPalButton();
-
-            // Style the label nicely
-            $('paypal-label').setStyle({
-                'lineHeight': '44px',
-                'float': 'left',
-                'marginRight': '12px'
-            });
-
-            // If this button exists swap some minor styling things
-            if($('braintree-paypal-button') != undefined) {
-
-                // Fix some styling issues where we're placing the button
-                $('braintree-paypal-button').setStyle({
-                    'lineHeight': 'auto',
-                    'padding': '0',
-                    'float': 'left'
-                });
-            }
-
-        } else {
-
-            // Revert our madness
-            if ($$('#review-buttons-container button').first() != undefined) {
-                $$('#review-buttons-container button').first().show();
-            }
-
-            // Remove the PayPal element
-            if($$('#paypal-complete').first() != undefined) {
-                $('paypal-complete').remove();
-            }
-        }
-
-        // If we're using braintree credit card disable the form on submission
-        if (paymentMethod == 'gene_braintree_creditcard') {
-
-            // Re-enable the form elements just in case something went wrong
-            $$('#credit-card-form input, #credit-card-form select').each(function(formElement) {
-                formElement.removeAttribute('disabled');
-            });
-        }
-
-        // Return the normal response
-        return reviewResponse;
-
-    };
-
-    // Store the original payment method
-    var reviewSaveOriginal = Review.prototype.save;
-
-    // Intercept the save function
-    Review.prototype.save = function() {
-
-        // If we're using braintree credit card disable the form on submission
-        if (paymentMethod == 'gene_braintree_creditcard') {
-
-            // Disable the standard credit card form so the values don't get passed through to the checkout
-            $$('#credit-card-form input, #credit-card-form select').each(function(formElement) {
-                if(formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault') {
-                    formElement.setAttribute('disabled', 'disabled');
+                } else {
+                    // If not run the original code
+                    return _originalPaymentSave.apply(this, arguments);
                 }
-            });
+
+            };
+
+            // As the default checkout submits more data on the review step, we need to make sure various elements are disabled
+            var _originalReviewSave = Review.prototype.save;
+            Review.prototype.save = function() {
+
+                // Force on device data
+                vzeroIntegration.enableDeviceData();
+
+                // If we should intercept the submit, disable the credit card form
+                if (vzeroIntegration.shouldInterceptSubmit('creditcard')) {
+                    vzeroIntegration.disableCreditCardForm();
+                }
+
+                // Do the original action
+                var reviewResponse = _originalReviewSave.apply(this, arguments);
+
+                // Just in case there is an error
+                if (vzeroIntegration.shouldInterceptSubmit('creditcard')) {
+                    vzeroIntegration.enableCreditCardForm();
+                }
+
+                return reviewResponse;
+            };
+
+        },
+
+        /**
+         * Attach an event to insert the PayPal button on the review step of the checkout
+         */
+        preparePaymentMethodSwitchObserver: function() {
+
+            // Store a pointer to the vZero integration
+            var vzeroIntegration = this;
+
+            // Store a pointer to the original review step
+            var _originalReviewInitialize = Review.prototype.initialize;
+
+            // Intercept the save function
+            Review.prototype.initialize = function(saveUrl, successUrl, agreementsForm) {
+
+                // Do the original action
+                var reviewResponse = _originalReviewInitialize.apply(this, arguments);
+
+                // Run our magical function
+                vzeroIntegration.updatePayPalButton();
+
+                return reviewResponse;
+            };
+
+            // When the credit card payment methods is loaded init the hosted fields if enabled
+            vZero.prototype.creditCardLoaded = function() {
+                // When the credit card is loaded call the init hosted fields function
+                vzeroIntegration.initHostedFields();
+                vzeroIntegration.initSavedMethods();
+            };
+            vZero.prototype.paypalLoaded = function() {
+                vzeroIntegration.initSavedMethods();
+            };
+
         }
-
-        if($('device_data')) {
-            // Always make sure device data is sent with the request
-            $('device_data').removeAttribute('disabled');
-        }
-
-        // Do the original action
-        var reviewSaveResponse = reviewSaveOriginal.apply(this, arguments);
-
-        // If we're using braintree credit card disable the form on submission
-        if (paymentMethod == 'gene_braintree_creditcard') {
-
-            // Re-enable the form elements just in case something went wrong
-            $$('#credit-card-form input, #credit-card-form select').each(function(formElement) {
-                formElement.removeAttribute('disabled');
-            });
-        }
-
-        return reviewSaveResponse;
-    };
-
-    vzero.close3dSecureMethod(function() {
-
-        // Re-tokenize all the saved cards
-        vzero.tokenize3dSavedCards(function() {
-            checkout.setLoadWaiting(false);
-        });
 
     });
+
+    /**
+     * Start a new instance of our integration
+     *
+     * @type {vZeroIntegration}
+     */
+    new vZeroIntegration(
+        (window.vzero || false),
+        (window.vzeroPaypal || false),
+        '<div id="paypal-complete"><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label><div id="paypal-container"></div></div>',
+        '#review-buttons-container button'
+    );
+
 </script>
 <style type="text/css">
+    #paypal-label {
+        line-height: 44px;
+        float: left;
+        margin-right: 12px;
+    }
+    #braintree-paypal-button {
+        line-height: initial;
+        padding: 0;
+        float: left;
+    }
     #braintree-paypal-loggedin {
         display: none!important;
     }

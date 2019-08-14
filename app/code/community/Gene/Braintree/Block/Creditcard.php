@@ -13,12 +13,24 @@ class Gene_Braintree_Block_Creditcard extends Mage_Payment_Block_Form_Cc
     private $_savedDetails = false;
 
     /**
+     * We can use the same token twice
+     * @var bool
+     */
+    private $token = false;
+
+    /**
      * Set the template
      */
     protected function _construct()
     {
         parent::_construct();
-        $this->setTemplate('gene/braintree/creditcard.phtml');
+
+        // Utilise a differente template if we're using Hosted Fields
+        if(Mage::getModel('gene_braintree/paymentmethod_creditcard')->getConfigData('form_integration') == Gene_Braintree_Model_Source_Creditcard_FormIntegration::INTEGRATION_HOSTED) {
+            $this->setTemplate('gene/braintree/creditcard/hostedfields.phtml');
+        } else {
+            $this->setTemplate('gene/braintree/creditcard.phtml');
+        }
     }
 
     /**
@@ -138,6 +150,19 @@ class Gene_Braintree_Block_Creditcard extends Mage_Payment_Block_Form_Cc
 
         // Otherwise return the standard card image
         return 'card.png';
+    }
+
+    /**
+     * Generate and return a token
+     *
+     * @return mixed
+     */
+    protected function getClientToken()
+    {
+        if(!$this->token) {
+            $this->token = Mage::getSingleton('gene_braintree/wrapper_braintree')->init()->generateToken();
+        }
+        return $this->token;
     }
 
 }

@@ -16,6 +16,10 @@
         <?php endif; ?>
         BraintreeData.setup("<?php echo Mage::getStoreConfig(Gene_Braintree_Model_Wrapper_Braintree::BRAINTREE_MERCHANT_ID_PATH); ?>", '<?php echo ($this->getPaymentFormId() ? $this->getPaymentFormId() : 'co-payment-form'); ?>', braintreeDataEnv);
 
+        // Update the device_data's field name to contain payment
+        if ($('device_data')) {
+            $('device_data').setAttribute('name', 'payment[device_data]');
+        }
     }
 </script>
 

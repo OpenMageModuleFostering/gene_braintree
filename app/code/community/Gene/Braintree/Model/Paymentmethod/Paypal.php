@@ -45,18 +45,102 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
     protected $_canManageRecurringProfiles = false;
 
     /**
+     * Place Braintree specific data into the additional information of the payment instance object
+     *
+     * @param   mixed $data
+     * @return  Mage_Payment_Model_Info
+     */
+    public function assignData($data)
+    {
+        if (!($data instanceof Varien_Object)) {
+            $data = new Varien_Object($data);
+        }
+        $info = $this->getInfoInstance();
+        $info->setAdditionalInformation('paypal_payment_method_token', $data->getData('paypal_payment_method_token'))
+            ->setAdditionalInformation('payment_method_nonce', $data->getData('payment_method_nonce'))
+            ->setAdditionalInformation('save_paypal', $data->getData('save_paypal'))
+            ->setAdditionalInformation('device_data', $data->getData('device_data'));
+
+        return $this;
+    }
+
+    /**
+     * Return the PayPal payment type
+     *
+     * @return mixed
+     */
+    public function getPaymentType()
+    {
+        $object = new Varien_Object();
+        $object->setType($this->_getConfig('payment_type'));
+
+        // Specific event for this method
+        Mage::dispatchEvent('gene_paypal_get_payment_type', array('object' => $object));
+
+        return $object->getType();
+    }
+
+    /**
      * Is the vault enabled?
      *
      * @return bool
      */
     public function isVaultEnabled()
     {
-        if ($this->_getConfig('payment_type') == Gene_Braintree_Model_Source_Paypal_Paymenttype::GENE_BRAINTREE_PAYPAL_FUTURE_PAYMENTS
-            && $this->_getConfig('use_vault'))
-        {
-            return true;
-        }
-        return false;
+        $object = new Varien_Object();
+        $object->setResponse(($this->getPaymentType() == Gene_Braintree_Model_Source_Paypal_Paymenttype::GENE_BRAINTREE_PAYPAL_FUTURE_PAYMENTS && $this->_getConfig('use_vault')));
+
+        // Specific event for this method
+        Mage::dispatchEvent('gene_braintree_paypal_is_vault_enabled', array('object' => $object));
+
+        // General event if we want to enforce saving of all payment methods
+        Mage::dispatchEvent('gene_braintree_is_vault_enabled', array('object' => $object));
+
+        return $object->getResponse();
+    }
+
+    /**
+     * Should we save this method in the database?
+     *
+     * @param \Varien_Object $payment
+     *
+     * @return mixed
+     */
+    public function shouldSaveMethod($payment)
+    {
+        // Retrieve whether or not we should save the card from the info instance
+        $savePaypal = $this->getInfoInstance()->getAdditionalInformation('save_paypal');
+
+        $object = new Varien_Object();
+        $object->setResponse(($this->isVaultEnabled() && $savePaypal == 1));
+
+        // Specific event for this method
+        Mage::dispatchEvent('gene_braintree_paypal_should_save_method', array('object' => $object, 'payment' => $payment));
+
+        // General event if we want to enforce saving of all payment methods
+        Mage::dispatchEvent('gene_braintree_save_method', array('object' => $object, 'payment' => $payment));
+
+        return $object->getResponse();
+    }
+
+    /**
+     * Return the payment method token from the info instance
+     *
+     * @return null|string
+     */
+    public function getPaymentMethodToken()
+    {
+        return $this->getInfoInstance()->getAdditionalInformation('paypal_payment_method_token');
+    }
+
+    /**
+     * Return the payment method nonce from the info instance
+     *
+     * @return null|string
+     */
+    public function getPaymentMethodNonce()
+    {
+        return $this->getInfoInstance()->getAdditionalInformation('payment_method_nonce');
     }
 
     /**
@@ -69,36 +153,24 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
      */
     public function capture(Varien_Object $payment, $amount)
     {
-        // Retrieve the payment data from the request
-        $paymentPost = Mage::app()->getRequest()->getPost('payment');
-
         // Confirm that we have a nonce from Braintree
         // We cannot utilise the validate() function as these checks need to happen at the capture point
-        if(!isset($paymentPost['paypal_payment_method_token'])) {
-            if ((!isset($paymentPost['payment_method_nonce']) || empty($paymentPost['payment_method_nonce']))) {
-                Mage::throwException(
-                    $this->_getHelper()->__('There has been an issue processing your PayPal payment, please try again.')
-                );
-            }
-        } else if(isset($paymentPost['paypal_payment_method_token']) && empty($paymentPost['paypal_payment_method_token'])) {
+        if(!$this->getPaymentMethodToken() && !$this->getPaymentMethodNonce()) {
             Mage::throwException(
                 $this->_getHelper()->__('There has been an issue processing your PayPal payment, please try again.')
             );
         }
 
-        // Get the device data for fraud screening
-        $deviceData = Mage::app()->getRequest()->getPost('device_data');
-
         // Init the environment
         $this->_getWrapper()->init();
 
-        if(isset($paymentPost['paypal_payment_method_token']) && !empty($paymentPost['paypal_payment_method_token']) && $paymentPost['paypal_payment_method_token'] != 'other') {
+        if($this->getPaymentMethodToken() && $this->getPaymentMethodToken() != 'other') {
             $paymentArray = array(
-                'paymentMethodToken' => $paymentPost['paypal_payment_method_token']
+                'paymentMethodToken' => $this->getPaymentMethodToken()
             );
         } else {
             $paymentArray = array(
-                'paymentMethodNonce' => $paymentPost['payment_method_nonce']
+                'paymentMethodNonce' => $this->getPaymentMethodNonce()
             );
         }
 
@@ -113,8 +185,8 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
                 $paymentArray,
                 $payment->getOrder(),
                 true,
-                $deviceData,
-                ($this->isVaultEnabled() && isset($paymentPost['save_paypal']) && $paymentPost['save_paypal'] == 1)
+                $this->getInfoInstance()->getAdditionalInformation('device_data'),
+                $this->shouldSaveMethod($payment)
             );
 
             // Pass the sale array into a varien object
@@ -204,9 +276,6 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
         if (isset($result->transaction->paypal['token']) && !empty($result->transaction->paypal['token'])) {
             $payment->setAdditionalInformation('token', $result->transaction->paypal['token']);
         }
-
-        // Save the payment data
-        $payment->save();
 
         return $payment;
     }

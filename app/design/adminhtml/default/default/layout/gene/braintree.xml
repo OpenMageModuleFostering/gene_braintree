@@ -14,8 +14,8 @@
 
     <adminhtml_sales_order_create_index>
         <reference name="head">
-            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
-            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addJs"><file>gene/braintree/braintree-0.1.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero-0.7-min.js</file></action>
         </reference>
         <reference name="before_body_end">
             <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js.phtml" />

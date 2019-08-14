@@ -2,352 +2,147 @@
 /**
  * Add in support for Aheadworks One Step Checkout
  * http://ecommerce.aheadworks.com/magento-extensions/one-step-checkout.html
+ * @author Dave Macaulay <dave@gene.co.uk>
  */
 ?>
 <!-- AHEADWORKS BRAINTREE SUPPORT -->
 <script type="text/javascript">
 
-    // Wrap this in some error handling, just in case some checkouts attempt to include us twice
-    if(awPlaceOrderOriginal === undefined) {
-
-        // Store the original payment method
-        var awPlaceOrderOriginal = AWOnestepcheckoutForm.prototype._sendPlaceOrderRequest;
-
-        // Intercept the save function
-        AWOnestepcheckoutForm.prototype._sendPlaceOrderRequest = function () {
-
-            if ($('device_data')) {
-                // Device data should never be disabled
-                $('device_data').removeAttribute('disabled');
-            }
-
-            // Always attempt to update the card type on submission
-            if ($$('[data-genebraintree-name="number"]').first() != undefined) {
-                vzero.updateCardType($$('[data-genebraintree-name="number"]').first().value);
-            }
-
-            // Are we dealing with the credit card method?
-            if (awOSCPayment.currentMethod == 'gene_braintree_creditcard') {
-
-                // Do we want to pass any extra paramters into the updateData request
-                var parameters = {};
-
-                // If the billing address is selected and we're wanting to ship to that address we need to pass the addressId
-                if ($('billing-address-select') != undefined && $('billing-address-select').value != '') {
-                    parameters.addressId = $('billing-address-select').value;
-                }
-
-                // Update the data as we're in a one step
-                vzero.updateData(
-                    function () {
-
-                        // Verify we're not using a saved address
-                        if ($('billing-address-select') != undefined && $('billing-address-select').value == '' || $('billing-address-select') == undefined) {
-
-                            // Grab these directly from the form and update
-                            if ($('billing:firstname') != undefined && $('billing:lastname') != undefined) {
-                                vzero.setBillingName($('billing:firstname').value + ' ' + $('billing:lastname').value);
-                            }
-                            if ($('billing:postcode') != undefined) {
-                                vzero.setBillingPostcode($('billing:postcode').value);
-                            }
-                        }
-
-                        // Process the card
-                        vzero.process({
-                            onSuccess: function () {
-
-                                // Disable the standard credit card form so the values don't get passed through to the checkout
-                                $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
-                                    if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault') {
-                                        formElement.setAttribute('disabled', 'disabled');
-                                    }
-                                });
-
-                                if ($('device_data')) {
-                                    // Always make sure device data is sent with the request
-                                    $('device_data').removeAttribute('disabled');
-                                }
-
-                                // Fire the original event and return the response
-                                completeCheckoutResponse = awPlaceOrderOriginal.apply(this, arguments);
-
-                                // Re-enable any form elements which were disabled
-                                $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
-                                    formElement.removeAttribute('disabled');
-                                });
-
-                                // Run the original function
-                                return completeCheckoutResponse;
-                            }.bind(this),
-                            onFailure: function () {
-
-                                // Reset the waiting for the parent function
-                                this.enablePlaceOrderButton();
-                                this.hidePleaseWaitNotice();
-                                this.hideOverlay();
-
-                            }.bind(this)
-                        });
-
-                    }.bind(this),
-                    parameters
-                );
-
-                // We're updating data don't do anything else for now
-                return false;
-
-            }
-
-            // Stop further processing
-            return awPlaceOrderOriginal.apply(this, arguments);
-
-        };
-
-        // It's not been ran so set it to false
-        var PayPalCompleteRan = false;
+    vZeroIntegration.addMethods({
 
         /**
-         * Function to run once PayPal has been completed
+         * Validate the entire checkout
          */
-        completePayPal = function (obj) {
-
-            // Check the flag to make sure we're good to run the function
-            if (!PayPalCompleteRan) {
-
-                // Mark the flag as true
-                PayPalCompleteRan = true;
-
-                // Force check
-                awOSCPayment.switchToMethod('gene_braintree_paypal', true);
-
-                // Re-enable the form
-                $('paypal-payment-nonce').removeAttribute('disabled');
-                $('paypal-payment-nonce').value = obj.nonce;
-
-                // Show the button again
-                hidePayPalButton();
-
-                // No longer running
-                checkoutRunning = false;
-
-                // Show the loading thing
-                awOSCForm.disablePlaceOrderButton();
-
-                if ($('device_data')) {
-                    // Always make sure device data is sent with the request
-                    $('device_data').removeAttribute('disabled');
-                }
-
-                // Run the complete checkout method
-                return awOSCForm.placeOrder();
-
-            }
-
-        };
-
-        // Flag to check if the PayPal button is already loading
-        var PayPalButtonLoading = false;
+        validateAll: function() {
+            return awOSCForm.validate();
+        },
 
         /**
-         * Easily add the PayPal button into the DOM
+         * Return the payment method from the checkouts methods
          */
-        addPayPalButton = function () {
+        getPaymentMethod: function() {
+            return awOSCPayment.currentMethod;
+        },
 
-            // Check we can locate the submit button
-            if ($('aw-onestepcheckout-place-order-button') != undefined && $('paypal-complete') == undefined && PayPalButtonLoading == false) {
+        /**
+         * Activate the loading state of this checkout
+         */
+        setLoading: function() {
+            awOSCForm.disablePlaceOrderButton();
+            awOSCForm.showPleaseWaitNotice();
+            awOSCForm.showOverlay();
+            checkoutRunning = true;
+        },
 
-                // The button is loading
-                PayPalButtonLoading = true;
+        /**
+         * Reset the loading state of the checkout
+         */
+        resetLoading: function() {
+            awOSCForm.enablePlaceOrderButton();
+            awOSCForm.hidePleaseWaitNotice();
+            awOSCForm.hideOverlay();
+            checkoutRunning = false;
+        },
 
-                // As the PayPal button has to request data from the server show the loader
-                awOSCForm.disablePlaceOrderButton();
+        /**
+         * Attach an observer to the submit action of the checkout to tokenize the card details
+         */
+        prepareSubmitObserver: function() {
 
-                // Update the data contained within the classes
-                vzero.updateData(function () {
+            // Store a pointer to the vZero integration
+            var vzeroIntegration = this;
 
-                    // The button is no longer loading
-                    PayPalButtonLoading = false;
+            // Store the original payment method
+            var _originalSendPlaceOrderRequest = AWOnestepcheckoutForm.prototype._sendPlaceOrderRequest;
 
-                    // Hide it once we're done
-                    awOSCForm.enablePlaceOrderButton();
+            // Intercept the save function
+            AWOnestepcheckoutForm.prototype._sendPlaceOrderRequest = function () {
 
-                    // Validate the payment method is still correct
-                    if (awOSCPayment.currentMethod == 'gene_braintree_paypal' && $('paypal-complete') == undefined) {
+                if (vzeroIntegration.shouldInterceptSubmit('creditcard')) {
 
-                        // Set the flag to false as we've created a new button
-                        PayPalCompleteRan = false;
+                    // Store a pointer to the payment class
+                    var paymentThis = this;
+                    var paymentArguments = arguments;
 
-                        // Hide the submit button
-                        $('aw-onestepcheckout-place-order-button').hide();
+                    // If everything was a success on the checkout end, let's submit the vZero integration
+                    vzeroIntegration.submit('creditcard', function () {
+                        return _originalSendPlaceOrderRequest.apply(paymentThis, paymentArguments);
+                    });
 
-                        // Add in our PayPal button
-                        $('aw-onestepcheckout-place-order-button').insert({after: '<div id="paypal-complete"><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label><div id="paypal-container"></div></div>'});
+                } else {
+                    // If not run the original code
+                    return _originalSendPlaceOrderRequest.apply(this, arguments);
+                }
 
-                        // Always stop the window from opening
-                        $('paypal-complete').observe('click', function (event) {
+            };
 
-                            // Validate the form before we open the PayPal modal window
-                            if (!awOSCForm.validate()) {
+        },
 
-                                // Sadly we're unable to intercept the PayPal window in any other way then just hard closing it
-                                vzeroPaypal.closePayPalWindow();
-                            }
-                        });
+        /**
+         * Prepare an event to insert the PayPal button in place of the complete checkout button
+         */
+        preparePaymentMethodSwitchObserver: function() {
 
-                        // Add in the PayPal button
-                        vzeroPaypal.addPayPalButton({
-                            onSuccess: completePayPal
-                        });
+            // Store a pointer to the vZero integration
+            var vzeroIntegration = this;
 
+            // Store the original payment method
+            var _originalSwitchToMethod = AWOnestepcheckoutPayment.prototype.switchToMethod;
+
+            // Intercept the save function
+            AWOnestepcheckoutPayment.prototype.switchToMethod = function (method) {
+
+                // Run our method switch function
+                vzeroIntegration.paymentMethodSwitch(method);
+
+                // Run the original function
+                return _originalSwitchToMethod.apply(this, arguments);
+            };
+
+            Event.observe(window, 'load', function(e) {
+                // Block the change events fired by Aheadworks
+                $$('#payment_form_gene_braintree_paypal input, #payment_form_gene_braintree_creditcard input').each(function (element) {
+                    if (element.identify() != 'other-creditcard' && element.identify() != 'other-paypal') {
+                        element.stopObserving('change');
                     }
-
                 });
-
-            } else if ($('paypal-complete') != undefined) {
-
-                // The button is loading
-                PayPalButtonLoading = true;
-
-                // As the PayPal button has to request data from the server show the loader
-                awOSCForm.disablePlaceOrderButton();
-
-                // Update the data contained within the classes
-                vzero.updateData(function () {
-
-                    // The button is no longer loading
-                    PayPalButtonLoading = false;
-
-                    // Hide it once we're done
-                    awOSCForm.enablePlaceOrderButton();
-
-                    // Validate the payment method is still correct
-                    if (awOSCPayment.currentMethod == 'gene_braintree_paypal') {
-
-                        // Set the flag to false as we've created a new button
-                        PayPalCompleteRan = false;
-
-                        // Hide the submit button
-                        $('aw-onestepcheckout-place-order-button').hide();
-
-                        // Add in the PayPal button
-                        $('paypal-complete').show();
-
-                    }
-
-                });
-
-            }
-
-        };
-
-        /**
-         * As we need to remove the PayPal button in multiple places
-         */
-        hidePayPalButton = function () {
-
-            // If the user has selected a different payment method make some modifications
-            if ($('aw-onestepcheckout-place-order-button') != undefined) {
-                $('aw-onestepcheckout-place-order-button').show();
-            }
-
-            // Remove the PayPal element
-            if ($('paypal-complete') != undefined) {
-                $('paypal-complete').hide();
-            }
-
-        };
-
-        // Check if the payment method is the default
-        if (awOSCPayment !== undefined) {
-            if ((awOSCPayment.currentMethod == 'gene_braintree_paypal' && $('paypal-saved-accounts') == undefined) || ($$('#paypal-saved-accounts input:checked[type=radio]').first() != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first().value == 'other')) {
-
-                // Verify that vzero is defined before attempting to use it
-                if (typeof vzeroPaypal !== 'undefined') {
-
-                    // Always set the amount as it's needed within 3D secure requests
-                    vzeroPaypal.setPricing('<?php echo Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getGrandTotal(); ?>', '<?php echo Mage::getSingleton('checkout/cart')->getQuote()->getBaseCurrencyCode(); ?>');
-                }
-
-                addPayPalButton();
-            }
-        }
-
-        // Store the original payment method
-        var aWPaymentOriginal = AWOnestepcheckoutPayment.prototype.switchToMethod;
-
-        // Intercept the save function
-        AWOnestepcheckoutPayment.prototype.switchToMethod = function (method, skipOverride) {
-
-            // Make sure the paypal complete action hasn't just ran
-            if (PayPalCompleteRan != true) {
-
-                // Detect PayPal choice
-                if (method == 'gene_braintree_paypal' && typeof skipOverride === 'undefined') {
-
-                    if ($('paypal-saved-accounts') == undefined) {
-                        addPayPalButton();
-                    } else if ($('paypal-saved-accounts') != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first() != undefined && $$('#paypal-saved-accounts input:checked[type=radio]').first().value == 'other') {
-                        addPayPalButton();
-                    } else {
-                        hidePayPalButton();
-                    }
-
-                } else if(typeof skipOverride === 'undefined') {
-                    hidePayPalButton();
-                }
-            }
-
-
-            // Run the original function
-            return aWPaymentOriginal.apply(this, arguments);
-
-        };
-
-        // What should happen if the user closes the 3D secure window?
-        vzero.close3dSecureMethod(function () {
-
-            // Re-tokenize all the saved cards
-            vzero.tokenize3dSavedCards(function () {
-
-                // Hide the loading
-                awOSCForm.enablePlaceOrderButton();
-                awOSCForm.hidePleaseWaitNotice();
-                awOSCForm.hideOverlay();
-
             });
 
-        });
+            // Stop the checkout from validating the form when the customer switches to credit card
+            // This would cause Hosted Fields to automatically submit
+            var _originalSavePayment = AWOnestepcheckoutPayment.prototype.savePayment;
+            AWOnestepcheckoutPayment.prototype.savePayment = function() {
+                if (this.currentMethod != 'gene_braintree_creditcard' || (this.currentMethod == 'gene_braintree_creditcard' && !vzeroIntegration.vzero.hostedFields)) {
+                    return _originalSavePayment.apply(this, arguments);
+                }
+            };
 
-        // Observe the card type here as it'll fail within creditCard.phtml
-        vzero.observeCardType();
+        },
 
-        // Observe all Ajax requests for changes
-        vzero.observeAjaxRequests(function () {
+        /**
+         * The action to run after the PayPal action has been completed
+         */
+        submitCheckout: function() {
+            this.updatePayPalButton('remove');
+            return awOSCForm.placeOrder();
+        }
 
-            // If the method is PayPal remove and re-add the PayPal button
-            if (awOSCPayment.currentMethod == 'gene_braintree_paypal') {
-                hidePayPalButton();
-                addPayPalButton();
-            } else {
-                vzero.updateData();
-            }
+    });
 
-        });
-
-    }
+    /**
+     * Start a new instance of our integration
+     *
+     * @type {vZeroIntegration}
+     */
+    new vZeroIntegration(
+        (window.vzero || false),
+        (window.vzeroPaypal || false),
+        '<div id="paypal-complete"><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label><div id="paypal-container"></div></div>',
+        '#aw-onestepcheckout-place-order-button',
+        true,
+        {
+            ignoreAjax: ['onestepcheckout/ajax/saveOrder']
+        }
+    );
 
 </script>
-<style type="text/css">
-    #braintree-paypal-button {
-        line-height: unset;
-        padding: 0;
-        float: left;
-    }
-    #braintree-paypal-loggedin {
-        display: none!important;
-    }
-    #braintree-paypal-loggedout {
-        display: block!important;
-    }
-</style>

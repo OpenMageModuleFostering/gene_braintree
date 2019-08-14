@@ -45,9 +45,7 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
             'threeDSecure' => Mage::getSingleton('gene_braintree/paymentmethod_creditcard')->is3DEnabled()
         );
 
-        // Set the response
-        $this->getResponse()->setBody(Mage::helper('core')->jsonEncode($jsonResponse));
-        return false;
+        return $this->_returnJson($jsonResponse);
     }
 
     /**
@@ -76,10 +74,120 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
                 }
 
                 // Set the response
-                $this->getResponse()->setBody(Mage::helper('core')->jsonEncode($jsonResponse));
-                return false;
+                return $this->_returnJson($jsonResponse);
             }
         }
+    }
+
+    /**
+     * Vault the nonce with it's billing details, then convert it back into a nonce
+     *
+     * @return bool
+     */
+    public function vaultToNonceAction()
+    {
+        // Check we have a nonce in the request
+        if($nonce = $this->getRequest()->getParam('nonce')) {
+
+            // Retrieve the billing address
+            if(!$this->getRequest()->getParam('billing')) {
+                return $this->_returnJson(array(
+                    'success' => false,
+                    'error' => 'Billing address is not present'
+                ));
+            }
+
+            // Create a new payment method in the vault
+            $wrapper = Mage::getSingleton('gene_braintree/wrapper_braintree');
+            $wrapper->init();
+
+            // Retrieve and convert the billing address
+            $billingAddress = $wrapper->convertBillingAddress($this->getRequest()->getParam('billing'));
+
+            $token = false;
+
+            try {
+                if ($wrapper->checkIsCustomer()) {
+                    $response = $wrapper->storeInVault($nonce, $billingAddress);
+                    if (isset($response->success) && $response->success == true && isset($response->paymentMethod->token)) {
+                        $token = $response->paymentMethod->token;
+                        Mage::getSingleton('checkout/session')->setTemporaryPaymentToken($token);
+                    }
+                } else {
+                    $response = $wrapper->storeInGuestVault($nonce, $billingAddress);
+                    if (isset($response->success) && $response->success == true && isset($response->customer->creditCards) && count($response->customer->creditCards) >= 1) {
+
+                        // Store this customers ID in the session so we can remove the customer at the end of the checkout
+                        if (isset($response->customer->id)) {
+                            Mage::getSingleton('checkout/session')->setGuestBraintreeCustomerId($response->customer->id);
+                        }
+
+                        $method = $response->customer->creditCards[0];
+                        if (isset($method->token)) {
+                            $token = $method->token;
+                            Mage::getSingleton('checkout/session')->setGuestPaymentToken($token);
+                        }
+
+                    }
+                }
+            } catch (Exception $e) {
+                return $this->_returnJson(array(
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ));
+            }
+
+            // Was the request to store this in the vault a success?
+            if($token) {
+
+                // Build up our response
+                $response = array(
+                    'success' => true,
+                    'nonce' => $wrapper->getThreeDSecureVaultNonce($token)
+                );
+
+            } else {
+
+                // Return a different message for declined cards
+                if(isset($response->transaction->status)) {
+
+                    // Return a custom response for processor declined messages
+                    if($response->transaction->status == Braintree_Transaction::PROCESSOR_DECLINED) {
+
+                        return $this->_returnJson(array(
+                            'success' => false,
+                            'error' => Mage::helper('gene_braintree')->__('Your transaction has been declined, please try another payment method or contacting your issuing bank.')
+                        ));
+
+                    }
+                }
+
+                return $this->_returnJson(array(
+                    'success' => false,
+                    'error' => Mage::helper('gene_braintree')->__('%s. Please try again or attempt refreshing the page.', $wrapper->parseMessage($response->message))
+                ));
+
+            }
+
+            return $this->_returnJson($response);
+        }
+
+        return $this->_returnJson(array('success' => false));
+    }
+
+    /**
+     * Return JSON to the browser
+     *
+     * @param $array
+     *
+     * @return $this
+     */
+    protected function _returnJson($array)
+    {
+        $this->getResponse()->setBody(Mage::helper('core')->jsonEncode($array));
+        $this->getResponse()->setHeader('Content-type', 'application/json');
+
+        return $this;
     }
 
 }

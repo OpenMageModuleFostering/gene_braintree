@@ -161,6 +161,12 @@ class Gene_Braintree_Block_Info extends Mage_Payment_Block_Info
             }
 
             return $this->_getWrapper()->getCleanTransactionId($this->getViewedObject()->getTransactionId());
+        } else if(!$this->getViewedObject()) {
+            // If we don't have a viewed object just utilise the information in the model
+            $info = $this->getData('info');
+            if ($info instanceof Mage_Payment_Model_Info && $this->getInfo()->getLastTransId()) {
+                return $this->_getWrapper()->getCleanTransactionId($this->getInfo()->getLastTransId());
+            }
         }
 
         return false;

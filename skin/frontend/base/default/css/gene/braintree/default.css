@@ -1,28 +1,5 @@
-/* This checkout extension has lots of fixed widths, leaving styling as default */
-
-#braintree-paypal-button {
-    line-height: unset;
-    padding: 0;
-}
-#paypal-complete {
-    position: relative;
-    background: #fbfaf6;
-    text-align: center;
-    z-index: 6;
-}
 #paypal-container iframe {
     display: none;
-}
-#paypal-complete label {
-    margin-bottom: 8px;
-}
-#braintree-paypal-button {
-    margin: 0 auto;
-}
-
-#payment_form_gene_braintree_paypal, #payment_form_gene_braintree_creditcard {
-    padding-top: 6px;
-    padding-bottom: 6px;
 }
 
 /* Saved Accounts */
@@ -33,35 +10,53 @@
 #creditcard-saved-accounts tr, #paypal-saved-accounts tr {
     border-bottom: 1px dotted lightgrey;
 }
+#creditcard-saved-accounts tr td, #paypal-saved-accounts tr td {
+    vertical-align: middle;
+}
+#payment_form_gene_braintree_creditcard label, #payment_form_gene_braintree_paypal label {
+    width: 100%;
+    padding: 0;
+    text-align: left;
+    float: none;
+}
+#payment_form_gene_braintree_creditcard p, #payment_form_gene_braintree_paypal p {
+    padding: 0;
+}
 #creditcard-saved-accounts tr.other-row, #paypal-saved-accounts tr.other-row {
     border-bottom: 0;
 }
 #creditcard-saved-accounts label {
-    padding: 14px 0;
-    line-height: 48px;
-    width: auto;
+    float: left;
+    padding: 10px 0;
+    line-height: 40px;
+    width: 100%;
 }
 #creditcard-saved-accounts tr.other-row label, #paypal-saved-accounts tr.other-row label {
-    padding: 18px 0;
+    padding: 8px 0;
 }
 #paypal-saved-accounts label {
-    padding: 8px 0;
-    line-height: 48px;
-    width: auto;
+    padding: 6px 0;
+    line-height: 40px;
 }
-#creditcard-saved-accounts label img {
+#creditcard-saved-accounts label img, #paypal-saved-accounts label img {
+    margin-left: 6px;
+    height: 40px;
     float: left;
 }
 #creditcard-saved-accounts label .saved-card-info, #paypal-saved-accounts label .saved-paypal-email {
-    margin-left: 12px;
+    margin-left: 14px;
     float: left;
 }
 #creditcard-saved-accounts label .saved-card-info span {
-    display: block;
-    line-height: 24px;
+    line-height: 40px;
 }
 #creditcard-saved-accounts label .saved-card-info span.saved-expiry-date {
     font-size: 12px;
+    font-weight: normal;
+    margin-left: 14px;
+}
+#gene_braintree_creditcard_store_in_vault_div label, label[for="gene_braintree_paypal_store_in_vault"]  {
+    width: auto!important;
 }
 
 /* Hosted Fields */

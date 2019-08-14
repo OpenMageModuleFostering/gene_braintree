@@ -40,7 +40,12 @@ class Gene_Braintree_Model_Saved extends Mage_Core_Model_Abstract
                 if ($customer = $wrapper->getCustomer($customerSession->getCustomer()->getBraintreeCustomerId())) {
 
                     // Assign them into our model
-                    $this->savedAccounts = array_merge($customer->creditCards, $customer->paypalAccounts);
+                    $object = new Varien_Object();
+                    $object->setSavedAccounts(array_merge($customer->creditCards, $customer->paypalAccounts));
+
+                    Mage::dispatchEvent('gene_braintree_get_saved_methods', array('object' => $object));
+
+                    $this->savedAccounts = $object->getSavedAccounts();
                 }
 
             }

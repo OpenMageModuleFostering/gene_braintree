@@ -45,6 +45,45 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
     protected $_canManageRecurringProfiles = false;
 
     /**
+     * Place Braintree specific data into the additional information of the payment instance object
+     *
+     * @param   mixed $data
+     * @return  Mage_Payment_Model_Info
+     */
+    public function assignData($data)
+    {
+        if (!($data instanceof Varien_Object)) {
+            $data = new Varien_Object($data);
+        }
+        $info = $this->getInfoInstance();
+        $info->setAdditionalInformation('card_payment_method_token', $data->getData('card_payment_method_token'))
+            ->setAdditionalInformation('payment_method_nonce', $data->getData('payment_method_nonce'))
+            ->setAdditionalInformation('save_card', $data->getData('save_card'))
+            ->setAdditionalInformation('device_data', $data->getData('device_data'));
+
+        return $this;
+    }
+
+    /**
+     * Determine whether or not the vault is enabled, can be modified by numerous events
+     *
+     * @return bool
+     */
+    public function isVaultEnabled()
+    {
+        $object = new Varien_Object();
+        $object->setResponse($this->_getConfig('use_vault'));
+
+        // Specific event for this method
+        Mage::dispatchEvent('gene_braintree_creditcard_is_vault_enabled', array('object' => $object));
+
+        // General event if we want to enforce saving of all payment methods
+        Mage::dispatchEvent('gene_braintree_is_vault_enabled', array('object' => $object));
+
+        return $object->getResponse();
+    }
+
+    /**
      * If we're trying to charge a 3D secure card in the vault we need to build a special nonce
      *
      * @param $paymentMethodToken
@@ -89,16 +128,47 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
     }
 
     /**
-     * Do we need to send the CCV, which Braintree calls a CVV?
+     * Should we save this method in the database?
+     *
+     * @param \Varien_Object $payment
      *
      * @return mixed
      */
-    public function requireCcv()
+    public function shouldSaveMethod($payment)
     {
-        if($this->_getConfig('useccv')) {
-            return true;
-        }
-        return false;
+        // Retrieve whether or not we should save the card from the info instance
+        $saveCard = $this->getInfoInstance()->getAdditionalInformation('save_card');
+
+        $object = new Varien_Object();
+        $object->setResponse(($this->isVaultEnabled() && $saveCard == 1));
+
+        // Specific event for this method
+        Mage::dispatchEvent('gene_braintree_creditcard_should_save_method', array('object' => $object, 'payment' => $payment));
+
+        // General event if we want to enforce saving of all payment methods
+        Mage::dispatchEvent('gene_braintree_save_method', array('object' => $object, 'payment' => $payment));
+
+        return $object->getResponse();
+    }
+
+    /**
+     * Return the payment method token from the info instance
+     *
+     * @return null|string
+     */
+    public function getPaymentMethodToken()
+    {
+        return $this->getInfoInstance()->getAdditionalInformation('card_payment_method_token');
+    }
+
+    /**
+     * Return the payment method nonce from the info instance
+     *
+     * @return null|string
+     */
+    public function getPaymentMethodNonce()
+    {
+        return $this->getInfoInstance()->getAdditionalInformation('payment_method_nonce');
     }
 
     /**
@@ -111,78 +181,55 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         // Run the built in Magento validation
         parent::validate();
 
-        // Retrieve the post data from the request
-        $paymentPost = Mage::app()->getRequest()->getPost('payment');
-
         // Confirm that we have a nonce from Braintree
-        if (!isset($paymentPost['card_payment_method_token']) || (isset($paymentPost['card_payment_method_token']) && $paymentPost['card_payment_method_token'] == 'threedsecure')) {
-            if ((!isset($paymentPost['payment_method_nonce']) || empty($paymentPost['payment_method_nonce']))) {
+        if (!$this->getPaymentMethodToken() || ($this->getPaymentMethodToken() && $this->getPaymentMethodToken() == 'threedsecure')) {
 
+            if (!$this->getPaymentMethodNonce()) {
                 Gene_Braintree_Model_Debug::log('Card payment has failed, missing token/nonce');
+                Gene_Braintree_Model_Debug::log($_SERVER['HTTP_USER_AGENT']);
 
                 Mage::throwException(
                     $this->_getHelper()->__('Your card payment has failed, please try again.')
                 );
             }
-        } else if (isset($paymentPost['card_payment_method_token']) && empty($paymentPost['card_payment_method_token'])) {
+        } else if (!$this->getPaymentMethodToken()) {
 
             Gene_Braintree_Model_Debug::log('No saved card token present');
+            Gene_Braintree_Model_Debug::log($_SERVER['HTTP_USER_AGENT']);
 
             Mage::throwException(
                 $this->_getHelper()->__('Your card payment has failed, please try again.')
             );
         }
 
-        // If the CVV is required and it's not been sent in the request throw an error
-        if ($this->requireCcv() && (!isset($paymentPost['cc_cid']) || empty($paymentPost['cc_cid'])) && empty($paymentPost['card_payment_method_token'])) {
-
-            // Log it
-            Gene_Braintree_Model_Debug::log('CVV required but not present in request');
-
-            // Politely inform the user
-            Mage::throwException(
-                $this->_getHelper()->__('We require a CVV when creating card transactions.')
-            );
-
-        }
-
-
         return $this;
     }
 
     /**
      * Psuedo _authorize function so we can pass in extra data
-     * @param Varien_Object $payment
-     * @param               $amount
-     * @param bool          $shouldCapture
      *
-     * @throws Mage_Core_Exception
+     * @param \Varien_Object $payment
+     * @param                $amount
+     * @param bool|false     $shouldCapture
+     * @param bool|false     $token
+     *
+     * @return $this
+     * @throws \Mage_Core_Exception
      */
     protected function _authorize(Varien_Object $payment, $amount, $shouldCapture = false, $token = false)
     {
-        // Retrieve the post data from the request
-        $paymentPost = Mage::app()->getRequest()->getPost('payment');
-
-        // Get the device data for fraud screening
-        $deviceData = Mage::app()->getRequest()->getPost('device_data');
-
         // Init the environment
         $this->_getWrapper()->init();
 
         // Attempt to create the sale
         try {
 
-            // Pass over the CVV/CCV
-            if ($this->requireCcv() && isset($paymentPost['cc_cid'])) {
-                $paymentArray['cvv'] = $paymentPost['cc_cid'];
-            }
-
             // Check to see whether we're using a payment method token?
-            if(isset($paymentPost['card_payment_method_token']) && !empty($paymentPost['card_payment_method_token']) && !in_array($paymentPost['card_payment_method_token'], array('other', 'threedsecure'))) {
+            if($this->getPaymentMethodToken() && !in_array($this->getPaymentMethodToken(), array('other', 'threedsecure'))) {
 
                 // Build our payment array
                 $paymentArray = array(
-                    'paymentMethodToken' => $paymentPost['card_payment_method_token'],
+                    'paymentMethodToken' => $this->getPaymentMethodToken(),
                 );
 
                 unset($paymentArray['cvv']);
@@ -191,7 +238,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
 
                 // Build our payment array with a nonce
                 $paymentArray = array(
-                    'paymentMethodNonce' => $paymentPost['payment_method_nonce']
+                    'paymentMethodNonce' => $this->getPaymentMethodNonce()
                 );
 
             }
@@ -200,7 +247,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             $threeDSecure = $this->is3DEnabled();
 
             // If the user is using a stored card with 3D secure, enable it in the request and remove CVV
-            if(isset($paymentPost['card_payment_method_token']) && $paymentPost['card_payment_method_token'] == 'threedsecure') {
+            if ($this->getPaymentMethodToken() && $this->getPaymentMethodToken() == 'threedsecure') {
 
                 // If we're using 3D secure token card don't send CVV
                 unset($paymentArray['cvv']);
@@ -208,7 +255,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
                 // Force 3D secure on
                 $threeDSecure = true;
 
-            } elseif(isset($paymentPost['card_payment_method_token']) && !empty($paymentPost['card_payment_method_token']) && $paymentPost['card_payment_method_token'] != 'other') {
+            } elseif ($this->getPaymentMethodToken() && $this->getPaymentMethodToken() != 'other') {
 
                 // Force 3D secure off
                 $threeDSecure = false;
@@ -233,8 +280,8 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
                 $paymentArray,
                 $payment->getOrder(),
                 $shouldCapture,
-                $deviceData,
-                ($this->isVaultEnabled() && isset($paymentPost['save_card']) && $paymentPost['save_card'] == 1),
+                $this->getInfoInstance()->getAdditionalInformation('device_data'),
+                $this->shouldSaveMethod($payment),
                 $threeDSecure
             );
 
@@ -264,6 +311,9 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             // If there's an error
             Gene_Braintree_Model_Debug::log($e);
 
+            // Clean up
+            Gene_Braintree_Model_Wrapper_Braintree::cleanUp();
+
             Mage::throwException(
                 $this->_getHelper()->__('There was an issue whilst trying to process your card payment, please try again or another method.')
             );
@@ -275,12 +325,18 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         // If the transaction was 3Ds but doesn't contain a 3Ds response
         if(($this->is3DEnabled() && isset($saleArray['options']['three_d_secure']['required']) && $saleArray['options']['three_d_secure']['required'] == true) && (!isset($result->transaction->threeDSecureInfo) || (isset($result->transaction->threeDSecureInfo) && is_null($result->transaction->threeDSecureInfo)))) {
 
+            // Clean up
+            Gene_Braintree_Model_Wrapper_Braintree::cleanUp();
+
             // Inform the user that their payment didn't go through 3Ds and thus failed
             Mage::throwException($this->_getHelper()->__('This transaction must be passed through 3D secure, please try again or consider using an alternate payment method.'));
         }
 
         // If the sale has failed
         if ($result->success != true) {
+
+            // Clean up
+            Gene_Braintree_Model_Wrapper_Braintree::cleanUp();
 
             // Dispatch an event for when a payment fails
             Mage::dispatchEvent('gene_braintree_creditcard_failed', array('payment' => $payment, 'result' => $result));
@@ -309,7 +365,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
                 }
             }
 
-            Mage::throwException($this->_getHelper()->__('%s. Please try again or attempt refreshing the page.', $result->message));
+            Mage::throwException($this->_getHelper()->__('%s. Please try again or attempt refreshing the page.', $this->_getWrapper()->parseMessage($result->message)));
         }
 
         $this->_processSuccessResult($payment, $result, $amount);
@@ -319,6 +375,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
 
     /**
      * Authorize the requested amount
+     *
      * @param Varien_Object $payment
      * @param float         $amount
      *
@@ -332,6 +389,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
 
     /**
      * Process capturing of a payment
+     *
      * @param Varien_Object $payment
      * @param float         $amount
      *
@@ -396,8 +454,16 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             if($result->success) {
                 $this->_processSuccessResult($payment, $result, $amount);
             } else if($result->errors->deepSize() > 0) {
+
+                // Clean up
+                Gene_Braintree_Model_Wrapper_Braintree::cleanUp();
+
                 Mage::throwException($this->_getWrapper()->parseErrors($result->errors->deepAll()));
             } else {
+
+                // Clean up
+                Gene_Braintree_Model_Wrapper_Braintree::cleanUp();
+
                 Mage::throwException($result->transaction->processorSettlementResponseCode.': '.$result->transaction->processorSettlementResponseText);
             }
 
@@ -476,7 +542,7 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
      *
      * @param Varien_Object $payment
      * @param Braintree_Result_Successful $result
-     * @param decimal amount
+     * @param float $amount
      * @return Varien_Object
      */
     protected function _processSuccessResult(Varien_Object $payment, $result, $amount)

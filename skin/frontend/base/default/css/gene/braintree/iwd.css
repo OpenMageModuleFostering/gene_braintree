@@ -1,5 +1,124 @@
+#paypal-saved-accounts, .paypal-info, #creditcard-saved-accounts, #credit-card-form {
+    margin-bottom: 20px;
+}
+#paypal-complete {
+    text-align: center;
+    padding: 4px 0;
+}
+#paypal-complete label {
+    margin-bottom: 8px;
+}
+#paypal-container iframe {
+    display: none;
+}
 #braintree-paypal-button {
     line-height: unset;
     padding: 0;
+}
+a#braintree-paypal-button {
+    margin: 0 auto;
+}
+
+/* Saved Accounts */
+#creditcard-saved-accounts, #paypal-saved-accounts {
+    font-size: 0;
+    width: 100%;
+}
+#creditcard-saved-accounts tr, #paypal-saved-accounts tr {
+    border-bottom: 1px dotted lightgrey;
+}
+#creditcard-saved-accounts tr.other-row, #paypal-saved-accounts tr.other-row {
+    border-bottom: 0;
+}
+#creditcard-saved-accounts label {
+    padding: 14px 0;
+    line-height: 48px;
+    width: auto;
+}
+#creditcard-saved-accounts tr.other-row label, #paypal-saved-accounts tr.other-row label {
+    padding: 0;
+}
+#paypal-saved-accounts label {
+    padding: 8px 0;
+    line-height: 48px;
+    width: auto;
+}
+#creditcard-saved-accounts label img, #paypal-saved-accounts label img {
+    margin-left: 6px;
     float: left;
+}
+#creditcard-saved-accounts label .saved-card-info, #paypal-saved-accounts label .saved-paypal-email {
+    margin-left: 14px;
+    float: left;
+}
+#creditcard-saved-accounts label .saved-card-info span {
+    display: block;
+    line-height: 24px;
+}
+#creditcard-saved-accounts label .saved-card-info span.saved-expiry-date {
+    font-size: 12px;
+}
+
+/* Hosted Fields */
+#braintree-hosted-submit {
+    display: none;
+}
+.braintree-input-field {
+    height: 42px;
+    max-width: 340px;
+    padding: 0 10px;
+    border: 1px solid lightgrey;
+    background: white;
+}
+.braintree-card-input-field {
+    height: 50px;
+    width: 100%;
+    max-width: 372px;
+    border: 1px solid lightgrey;
+    position: relative;
+    background: white;
+}
+.braintree-card-input-field .card-type {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    padding: 0 10px 0 8px;
+}
+.braintree-card-input-field .card-type img {
+    height: 48px;
+}
+.braintree-card-input-field #card-number {
+    float: left;
+    height: 48px;
+    width: 100%;
+    padding-left: 66px;
+    box-sizing: border-box;
+}
+#braintree-expiration-container {
+    display: block;
+    width: 100%;
+    vertical-align: middle;
+    font-size: 0;
+}
+.braintree-expiration {
+    width: 70px;
+    display: inline-block;
+    *zoom: 1;
+    *display: inline;
+}
+.braintree-expiration-seperator {
+    vertical-align: top;
+    line-height: 42px;
+    display: inline-block;
+    *zoom: 1;
+    *display: inline;
+    font-size: 30px;
+    padding: 0 8px;
+}
+.braintree-cvv {
+    width: 80px;
+}
+.braintree-hostedfield .cvv-what-is-this {
+    margin-left: 0;
 }

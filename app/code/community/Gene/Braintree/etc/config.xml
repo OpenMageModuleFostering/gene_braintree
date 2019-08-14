@@ -2,7 +2,7 @@
 <config>
     <modules>
         <Gene_Braintree>
-            <version>1.0.4.1</version>
+            <version>1.0.5.4</version>
         </Gene_Braintree>
     </modules>
     <global>
@@ -86,6 +86,7 @@
                 <title>Credit Card (Braintree)</title>
                 <environment>sandbox</environment>
                 <allowspecific>0</allowspecific>
+                <form_integration>default</form_integration>
                 <use_vault>0</use_vault>
                 <threedsecure>0</threedsecure>
                 <threedsecure_threshold>0</threedsecure_threshold>
@@ -167,6 +168,7 @@
         </translate>
 
         <events>
+            <!-- Check whether we should capture the payment on shipment -->
             <sales_order_shipment_save_after>
                 <observers>
                     <capture_braintree_payment>
@@ -175,6 +177,16 @@
                     </capture_braintree_payment>
                 </observers>
             </sales_order_shipment_save_after>
+
+            <!-- If the compilation mode is enabled copy over the SSL certificates -->
+            <controller_action_postdispatch>
+                <observers>
+                    <check_compilation>
+                        <class>gene_braintree/observer</class>
+                        <method>checkCompilation</method>
+                    </check_compilation>
+                </observers>
+            </controller_action_postdispatch>
         </events>
     </adminhtml>
 

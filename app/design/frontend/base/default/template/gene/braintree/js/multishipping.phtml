@@ -1,0 +1,103 @@
+<?php
+/**
+ * Intercept various functions for the multi shipping checkout flow
+ * @author Dave Macaulay <dave@gene.co.uk>
+ */
+?>
+<!-- MULTI SHIPPING BRAINTREE SUPPORT -->
+<script type="text/javascript">
+
+    vZeroIntegration.addMethods({
+
+        setLoading: function () {
+
+        },
+
+        resetLoading: function () {
+
+        },
+
+        /**
+         * Attach an observer to the submit action of the checkout to tokenize the card details
+         */
+        prepareSubmitObserver: function () {
+
+            // Store a pointer to the vZero integration
+            var vzeroIntegration = this;
+
+            // Observe the click event
+            var _originalSubmitEvent = $('multishipping-billing-form').submit;
+            $('multishipping-billing-form').submit = function braintreeOverride() {
+
+                if (vzeroIntegration.shouldInterceptSubmit('creditcard')) {
+
+                    // If everything was a success on the checkout end, let's submit the vZero integration
+                    vzeroIntegration.submit('creditcard', function () {
+                        return _originalSubmitEvent.call($('multishipping-billing-form'), arguments);
+                    });
+
+                } else {
+                    return _originalSubmitEvent.call($('multishipping-billing-form'), arguments);
+                }
+
+            };
+
+        },
+
+        /**
+         * Replace the PayPal button at the correct time
+         *
+         * This should be overridden within each checkouts .phtml file
+         * vZeroIntegration.prototype.preparePaymentMethodSwitchObserver = function() {}
+         */
+        preparePaymentMethodSwitchObserver: function() {
+            // Store a pointer to the vZero integration
+            var vzeroIntegration = this;
+
+            // Store the original payment method
+            var paymentSwitchOriginal = payment.switchMethod;
+
+            // Intercept the save function
+            payment.switchMethod = function (method) {
+
+                // Run our method switch function
+                vzeroIntegration.paymentMethodSwitch(method);
+
+                // Run the original function
+                return paymentSwitchOriginal.apply(this, arguments);
+            };
+        }
+
+    });
+
+    /**
+     * Start a new instance of our integration
+     *
+     * @type {vZeroIntegration}
+     */
+    new vZeroIntegration(
+        (window.vzero || false),
+        (window.vzeroPaypal || false),
+        '<div id="paypal-complete"><label id="paypal-label"><?php echo $this->__('Complete checkout with'); ?> </label><div id="paypal-container"></div></div>',
+        '#review-buttons-container button'
+    );
+
+</script>
+<style type="text/css">
+    #paypal-label {
+        line-height: 44px;
+        float: left;
+        margin-right: 12px;
+    }
+    #braintree-paypal-button {
+        line-height: initial;
+        padding: 0;
+        float: left;
+    }
+    #braintree-paypal-loggedin {
+        display: none!important;
+    }
+    #braintree-paypal-loggedout {
+        display: block!important;
+    }
+</style>

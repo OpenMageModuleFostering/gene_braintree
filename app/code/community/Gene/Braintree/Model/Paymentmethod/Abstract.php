@@ -58,23 +58,13 @@ abstract class Gene_Braintree_Model_Paymentmethod_Abstract extends Mage_Payment_
     /**
      * Return configuration values
      *
-     * @param $value
+     * @param $key
      *
      * @return mixed
      */
     protected function _getConfig($key)
     {
         return Mage::getStoreConfig('payment/'.$this->_code.'/'.$key);
-    }
-
-    /**
-     * Is the vault enabled?
-     *
-     * @return bool
-     */
-    public function isVaultEnabled()
-    {
-        return $this->_getConfig('use_vault');
     }
 
     /**
@@ -147,7 +137,7 @@ abstract class Gene_Braintree_Model_Paymentmethod_Abstract extends Mage_Payment_
             }
 
             // Swap between refund and void
-            $result = ($transaction->status === Braintree_Transaction::SETTLED || (isset($transaction->paypal) && isset($transaction->paypal['paymentId']) && !empty($transaction->paypal['paymentId'])))
+            $result = ($transaction->status === Braintree_Transaction::SETTLED || $transaction->status == Braintree_Transaction::SETTLING || (isset($transaction->paypal) && isset($transaction->paypal['paymentId']) && !empty($transaction->paypal['paymentId'])))
                 ? Braintree_Transaction::refund($transactionId, $refundAmount)
                 : Braintree_Transaction::void($transactionId);
 
@@ -183,6 +173,7 @@ abstract class Gene_Braintree_Model_Paymentmethod_Abstract extends Mage_Payment_
 
     /**
      * Set transaction ID into creditmemo for informational purposes
+     *
      * @param Mage_Sales_Model_Order_Creditmemo $creditmemo
      * @param Mage_Sales_Model_Order_Payment $payment
      * @return Mage_Payment_Model_Method_Abstract

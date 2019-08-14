@@ -30,7 +30,7 @@ class Gene_Braintree_Block_Creditcard_Info extends Gene_Braintree_Block_Info
         $transport = parent::_prepareSpecificInformation($transport);
 
         // Only display this information if it's a single invoice
-        if($this->isSingleInvoice()) {
+        if($this->isSingleInvoice() || ($this->getInfo()->getCcLast4() && $this->getInfo()->getCcType())) {
 
             // Build up the data we wish to pass through
             $data = array(

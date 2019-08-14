@@ -60,6 +60,16 @@ class Gene_Braintree_Block_Js extends Mage_Core_Block_Template
     }
 
     /**
+     * Is the system set to use hosted fields for credit card processing?
+     *
+     * @return bool
+     */
+    protected function isHostedFields()
+    {
+        return var_export(Mage::getModel('gene_braintree/paymentmethod_creditcard')->getConfigData('form_integration') == Gene_Braintree_Model_Source_Creditcard_FormIntegration::INTEGRATION_HOSTED, true);
+    }
+
+    /**
      * Generate and return a token
      *
      * @return mixed
@@ -80,8 +90,7 @@ class Gene_Braintree_Block_Js extends Mage_Core_Block_Template
     protected function getSingleUse()
     {
         // We prefer to do future payments, so anything else is future
-        $paymentAction = Mage::getStoreConfig('payment/gene_braintree_paypal/payment_type');
-        if($paymentAction == Gene_Braintree_Model_Source_Paypal_Paymenttype::GENE_BRAINTREE_PAYPAL_SINGLE_PAYMENT) {
+        if(Mage::getSingleton('gene_braintree/paymentmethod_paypal')->getPaymentType() == Gene_Braintree_Model_Source_Paypal_Paymenttype::GENE_BRAINTREE_PAYPAL_SINGLE_PAYMENT) {
             return 'true';
         }
 
@@ -96,8 +105,7 @@ class Gene_Braintree_Block_Js extends Mage_Core_Block_Template
     protected function getSingleFutureUse()
     {
         // We prefer to do future payments, so anything else is future
-        $paymentAction = Mage::getStoreConfig('payment/gene_braintree_paypal/payment_type');
-        if($paymentAction == Gene_Braintree_Model_Source_Paypal_Paymenttype::GENE_BRAINTREE_PAYPAL_FUTURE_PAYMENTS
+        if(Mage::getSingleton('gene_braintree/paymentmethod_paypal')->getPaymentType() == Gene_Braintree_Model_Source_Paypal_Paymenttype::GENE_BRAINTREE_PAYPAL_FUTURE_PAYMENTS
             && !Mage::getModel('gene_braintree/paymentmethod_paypal')->isVaultEnabled()) {
             return 'true';
         }
@@ -122,8 +130,9 @@ class Gene_Braintree_Block_Js extends Mage_Core_Block_Template
      */
     protected function _toHtml()
     {
-        // Check the payment method is active
-        if($this->isCreditCardActive() || $this->isPayPalActive()) {
+        // Check the payment method is active, block duplicate rendering of this block
+        if(($this->isCreditCardActive() || $this->isPayPalActive()) && !Mage::registry('gene_js_loaded_' . $this->getTemplate())) {
+            Mage::register('gene_js_loaded_' . $this->getTemplate(), true);
             return parent::_toHtml();
         }
 

@@ -3,8 +3,9 @@
 
     <checkout_onepage_index>
         <reference name="head">
-            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
-            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addJs"><file>gene/braintree/braintree-0.1.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero-0.7-min.js</file></action>
+            <action method="addCss"><file>css/gene/braintree/default.css</file></action>
         </reference>
         <reference name="before_body_end">
             <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
@@ -20,9 +21,30 @@
         </reference>
     </checkout_onepage_index>
 
+    <checkout_multishipping_billing>
+        <reference name="head">
+            <action method="addJs"><file>gene/braintree/braintree-0.1.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero-0.7-min.js</file></action>
+            <action method="addCss"><file>css/gene/braintree/default.css</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js/multishipping.phtml" />
+
+            <!-- Set the payment form ID for the fraud prevention -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>multishipping-billing-form</value>
+                </action>
+            </block>
+        </reference>
+    </checkout_multishipping_billing>
+
     <!-- We have to use a customized version of the js.phtml file for Amasty's checkout solution -->
     <amasty_onestep_checkout>
         <reference name="head">
+            <action method="removeItem"><type>skin_css</type><name>css/gene/braintree/default.css</name></action>
             <action method="addCss"><file>css/gene/braintree/amasty.css</file></action>
         </reference>
         <reference name="before_body_end">
@@ -42,8 +64,8 @@
     <!-- Need to include the standard resources for the onestepcheckout.com solution -->
     <idev_onestepcheckout_index>
         <reference name="head">
-            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
-            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addJs"><file>gene/braintree/braintree-0.1.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero-0.7-min.js</file></action>
             <action method="addCss"><file>css/gene/braintree/idev.css</file></action>
         </reference>
         <reference name="before_body_end">
@@ -63,8 +85,8 @@
     <!-- Add in support for Magestores's one step checkout solution -->
     <magestore_onestepcheckout_index>
         <reference name="head">
-            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
-            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addJs"><file>gene/braintree/braintree-0.1.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero-0.7-min.js</file></action>
             <action method="addCss"><file>css/gene/braintree/magestore.css</file></action>
         </reference>
         <reference name="before_body_end">
@@ -84,8 +106,8 @@
     <!-- Add in support for the Aheadworks one step checkout solution -->
     <aw_onestepcheckout_index_index>
         <reference name="head">
-            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
-            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addJs"><file>gene/braintree/braintree-0.1.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero-0.7-min.js</file></action>
             <action method="addCss"><file>css/gene/braintree/aheadworks.css</file></action>
         </reference>
         <reference name="before_body_end">
@@ -105,8 +127,8 @@
     <!-- Add in support for IWD's one step checkout solution -->
     <opc_index_index>
         <reference name="head">
-            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
-            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addJs"><file>gene/braintree/braintree-0.1.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero-0.7-min.js</file></action>
             <action method="addCss"><file>css/gene/braintree/iwd.css</file></action>
         </reference>
         <reference name="before_body_end">
@@ -126,8 +148,8 @@
     <!-- Add in support for Fire Checkouts solution -->
     <firecheckout_index_index>
         <reference name="head">
-            <action method="addJs"><file>gene/braintree/braintree.js</file></action>
-            <action method="addJs"><file>gene/braintree/vzero.js</file></action>
+            <action method="addJs"><file>gene/braintree/braintree-0.1.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero-0.7-min.js</file></action>
             <action method="addCss"><file>css/gene/braintree/firecheckout.css</file></action>
         </reference>
         <reference name="before_body_end">
@@ -143,6 +165,69 @@
             </block>
         </reference>
     </firecheckout_index_index>
+
+    <!-- Add in support for Unicodes OP solution -->
+    <unicode_onestep_checkout>
+        <reference name="head">
+            <action method="removeItem"><type>skin_css</type><name>css/gene/braintree/default.css</name></action>
+            <action method="addJs"><file>gene/braintree/braintree-0.1.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero-0.7-min.js</file></action>
+            <action method="addCss"><file>css/gene/braintree/unicode.css</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js/unicode.phtml" />
+
+            <!-- We include device data at the end of the larger form -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>co-payment-form</value>
+                </action>
+            </block>
+        </reference>
+    </unicode_onestep_checkout>
+
+    <!-- Add in support for the Oye one step checkout -->
+    <oye_onestep_checkout>
+        <reference name="head">
+            <action method="removeItem"><type>skin_css</type><name>css/gene/braintree/default.css</name></action>
+            <action method="addCss"><file>css/gene/braintree/oye.css</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js/oye.phtml" />
+
+            <!-- We include device data at the end of the larger form -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>custom-checkout-form</value>
+                </action>
+            </block>
+        </reference>
+    </oye_onestep_checkout>
+
+    <!-- Add in support for the FME QuickCheckout -->
+    <checkout_onestep_index>
+        <reference name="head">
+            <action method="addJs"><file>gene/braintree/braintree-0.1.js</file></action>
+            <action method="addJs"><file>gene/braintree/vzero-0.7-min.js</file></action>
+            <action method="addCss"><file>css/gene/braintree/fme.css</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_setup" template="gene/braintree/js/setup.phtml" />
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js/fme.phtml" />
+
+            <!-- We include device data at the end of the larger form -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>onestepcheckout-form</value>
+                </action>
+            </block>
+        </reference>
+    </checkout_onestep_index>
 
     <checkout_onepage_paymentmethod>
         <reference name="root">

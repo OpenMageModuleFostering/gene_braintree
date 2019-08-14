@@ -31,6 +31,15 @@ class Gene_Braintree_Model_Observer
                 $layout->getUpdate()->addHandle('amasty_onestep_checkout');
             }
 
+            // Attempt to detect Unicode OP Checkout
+            if (Mage::helper('core')->isModuleEnabled('Uni_Opcheckout') && Mage::helper('opcheckout')->isActive()) {
+                $layout->getUpdate()->addHandle('unicode_onestep_checkout');
+            }
+
+            // Detect the Oye one step checkout
+            if(Mage::helper('core')->isModuleEnabled('Oye_Checkout') && Mage::helper('oyecheckout')->isOneStepLayout()) {
+                $layout->getUpdate()->addHandle('oye_onestep_checkout');
+            }
         }
 
         // As some 3rd party checkouts use the same handles, and URL we have to dynamically add new handles
@@ -44,20 +53,20 @@ class Gene_Braintree_Model_Observer
             }
 
             // Attempt to detect Idev_OneStepCheckout
-            // @todo add new handle for idev
             if (Mage::helper('core')->isModuleEnabled('Idev_OneStepCheckout')) {
                 $layout->getUpdate()->addHandle('idev_onestepcheckout_index');
             }
-
         }
 
         return $this;
     }
 
     /**
-     * Store the customer ID if set in session
+     * Store the generated customer ID if it's present in the session
      *
-     * @param Varien_Event_Observer $observer
+     * @param \Varien_Event_Observer $observer
+     *
+     * @return $this
      */
     public function completeCheckout(Varien_Event_Observer $observer)
     {
@@ -68,9 +77,12 @@ class Gene_Braintree_Model_Observer
             // Get the customer
             $customer = Mage::getSingleton('customer/session')->getCustomer();
 
-            // Save the braintree customer ID
+            // Save the Braintree customer ID
             $customer->setBraintreeCustomerId(Mage::getSingleton('checkout/session')->getBraintreeCustomerId())->save();
         }
+
+        // Perform any cleaning up required
+        Gene_Braintree_Model_Wrapper_Braintree::cleanUp();
 
         // Unset the ID from the session
         Mage::getSingleton('checkout/session')->unsetData('braintree_customer_id');
@@ -129,22 +141,9 @@ class Gene_Braintree_Model_Observer
     }
 
     /**
-     * Store the currency mapping as a JSON string
-     *
-     * @param \Varien_Event_Observer $observer
-     *
-     * @return $this
-     */
-    public function modifyCurrencyMapping(Varien_Event_Observer $observer)
-    {
-
-        return $this;
-    }
-
-    /**
      * Should we capture the payment?
      *
-     * @param $order Mage_Sales_Model_Order
+     * @param \Mage_Sales_Model_Order $order
      *
      * @return bool
      */
@@ -157,5 +156,34 @@ class Gene_Braintree_Model_Observer
             return true;
         }
         return false;
+    }
+
+    /**
+     * Check if compilation is enabled, if so copy over the certificates
+     *
+     * @return $this
+     */
+    public function checkCompilation()
+    {
+        // Determine whether the compiler has been enabled
+        if(defined('COMPILER_INCLUDE_PATH')) {
+            $certificates = array('api_braintreegateway_com.ca.crt', 'sandbox_braintreegateway_com.ca.crt');
+            $compilerPath = COMPILER_INCLUDE_PATH;
+            $directory = '/ssl/';
+
+            // Verify the SSL folder exists
+            if(!is_dir($compilerPath . '/..' . $directory)) {
+                mkdir($compilerPath . '/..' . $directory);
+            }
+
+            // Loop through each certificate and check whether it's in the includes directory, if not copy it!
+            foreach($certificates as $file) {
+                if(!file_exists($compilerPath . '/..' . $directory . $file)) {
+                    copy(Mage::getBaseDir('lib') . $directory . $file, $compilerPath . '/..' . $directory . $file);
+                }
+            }
+        }
+
+        return $this;
     }
 }

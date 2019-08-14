@@ -42,6 +42,7 @@ class Gene_Braintree_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function formatPrice($price)
     {
-        return number_format($price, 2, '.', '');
+        // Suppress errors from formatting the price, as we may have EUR12,00 etc
+        return @number_format($price, 2, '.', '');
     }
 }

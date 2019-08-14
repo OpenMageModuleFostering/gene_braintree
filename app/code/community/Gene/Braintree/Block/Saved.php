@@ -31,4 +31,14 @@ class Gene_Braintree_Block_Saved extends Mage_Core_Block_Template
         return Mage::getSingleton('gene_braintree/saved')->getSavedMethodsByType($type);
     }
 
+    /**
+     * Don't cache this block as it updates whenever the customers adds a new card
+     *
+     * @return int
+     */
+    public function getCacheLifetime()
+    {
+        return null;
+    }
+
 }

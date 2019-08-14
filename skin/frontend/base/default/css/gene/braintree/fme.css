@@ -1,23 +1,30 @@
-/* This checkout extension has lots of fixed widths, leaving styling as default */
-
 #braintree-paypal-button {
     line-height: unset;
     padding: 0;
+    margin: 0 auto;
 }
 #paypal-complete {
-    position: relative;
-    background: #fbfaf6;
+    margin-top: 12px;
     text-align: center;
-    z-index: 6;
+    float: left;
+    width: 100%;
 }
 #paypal-container iframe {
     display: none;
 }
-#paypal-complete label {
-    margin-bottom: 8px;
+#paypal-label {
+    line-height: 32px;
+    margin-right: 12px;
+    float: right;
 }
-#braintree-paypal-button {
-    margin: 0 auto;
+#paypal-container {
+    float: right;
+}
+#creditcard-saved-accounts td, #paypal-saved-accounts td {
+    vertical-align: middle;
+}
+#gene_braintree_creditcard_cc_number {
+    text-indent: 62px!important;
 }
 
 #payment_form_gene_braintree_paypal, #payment_form_gene_braintree_creditcard {

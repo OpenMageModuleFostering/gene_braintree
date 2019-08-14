@@ -5,6 +5,7 @@
         'gene_braintree_creditcard',
         '<?php echo $this->getClientToken(); ?>',
         false,
+        <?php echo $this->isHostedFields(); ?>,
         ['order-billing_address_firstname', 'order-billing_address_lastname'],
         ['order-billing_address_postcode']
     );
@@ -12,57 +13,128 @@
     // Init the environment
     vzero.init();
 
-    // Store the original payment method
-    var adminOrderOriginal = AdminOrder.prototype.submit;
+    vZero.addMethods({
+        /**
+         * Update data has no value in the admin
+         */
+        updateData: function(callback, params) {
+            callback();
+        }
+    });
 
-    // Intercept the save function
-    AdminOrder.prototype.submit = function() {
+    vZeroIntegration.addMethods({
 
-        // Check we're using the braintree card method
-        if(order.paymentMethod == 'gene_braintree_creditcard' && $('p_method_free') == null) {
+        /**
+         * The loading instance is to just disable the save button within the admin
+         */
+        setLoading: function () {
+            disableElements('save');
+        },
+        resetLoading: function () {
+            enableElements('save');
+        },
 
-            // Validate the form contents
-            if (editForm.validate()) {
+        /**
+         * Attach observer events for the submission of the page
+         */
+        prepareSubmitObserver: function () {
 
-                // Store these to be used later on
-                var adminThis = this;
-                var adminArgs = arguments;
+            // Store a pointer to the vZero integration
+            var vzeroIntegration = this;
 
-                // Process the card
-                vzero.process({
-                    onSuccess: function () {
+            // Store the original payment method
+            var _originalAdminOrderSubmit = AdminOrder.prototype.submit;
 
-                        // Disable the standard credit card form so the values don't get passed through to the checkout
-                        $$('#payment_form_gene_braintree_creditcard input, #payment_form_gene_braintree_creditcard select').each(function (formElement) {
-                            if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault') {
-                                formElement.setAttribute('disabled', 'disabled');
-                            }
-                        });
+            // Intercept the save function
+            AdminOrder.prototype.submit = function() {
 
-                        // Always make sure device data is sent with the request
-                        if($('device_data')) {
-                            $('device_data').removeAttribute('disabled');
-                        }
+                // Should we intercept?
+                if (vzeroIntegration.shouldInterceptSubmit('creditcard')) {
 
-                        // Fire the original event and return the response
-                        adminOrderResponse = adminOrderOriginal.apply(adminThis, adminArgs);
+                    // Store a pointer to the payment class
+                    var paymentThis = this;
+                    var paymentArguments = arguments;
 
-                        // Re-enable any form elements which were disabled
-                        $$('#payment_form_gene_braintree_creditcard input, #payment_form_gene_braintree_creditcard select').each(function (formElement) {
-                            formElement.removeAttribute('disabled');
-                        });
+                    // If everything was a success on the checkout end, let's submit the vZero integration
+                    vzeroIntegration.submit('creditcard', function () {
+                        return _originalAdminOrderSubmit.apply(paymentThis, paymentArguments);
+                    });
 
-                        // Run the original function
-                        return adminOrderResponse;
+                } else {
+                    return _originalAdminOrderSubmit.apply(this, arguments);
+                }
 
-                    }
-                });
-            }
+            };
 
-        } else {
-            return adminOrderOriginal.apply(this, arguments);
+            // On dom load init hosted fields if it's enabled
+            document.observe("dom:loaded", function () {
+                vzeroIntegration.paymentMethodSwitch();
+            }.bind(this));
+
+            // Intercept any area of the checkout being updated
+            this.vzero.observeAjaxRequests(function() {
+                vzeroIntegration.paymentMethodSwitch();
+            });
+
+        },
+
+        /**
+         * Observe the payment method switch
+         */
+        preparePaymentMethodSwitchObserver: function() {
+
+            // Store a pointer to the vZero integration
+            var vzeroIntegration = this;
+
+            // Store the original payment method
+            var paymentSwitchOriginal = AdminOrder.prototype.switchPaymentMethod;
+
+            // Intercept the save function
+            AdminOrder.prototype.switchPaymentMethod = function (method) {
+
+                // Run our method switch function
+                vzeroIntegration.paymentMethodSwitch(method);
+
+                // Run the original function
+                return paymentSwitchOriginal.apply(this, arguments);
+            };
+
+            // Re-assign payment switch method
+            payment.switchMethod = order.switchPaymentMethod.bind(order);
+
+        },
+
+        /**
+         * Return the current payment method
+         *
+         * @returns {*}
+         */
+        getPaymentMethod: function() {
+            return order.paymentMethod;
+        },
+
+        /**
+         * The action to run after the payment processing is completed
+         * As we aren't using a onepage checkout, we have to use the submitPayment action
+         */
+        submitPayment: function() {
+            // Run the original checkouts submit action
+            return order.submit();
         }
 
+    });
+
+    /**
+     * Start a new instance of our integration
+     *
+     * @type {vZeroIntegration}
+     */
+    var AdminVzero = new vZeroIntegration(vzero);
+
+    // stop Magento's card_validation ajax from running
+    AdminOrder.prototype._getPaymentDataOriginal = AdminOrder.prototype.getPaymentData;
+    AdminOrder.prototype.getPaymentData = function(currentMethod) {
+        return (currentMethod == 'gene_braintree_creditcard') ? false : this._getPaymentDataOriginal(currentMethod);
     };
     //]]>
 </script>

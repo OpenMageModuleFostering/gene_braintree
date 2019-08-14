@@ -101,35 +101,4 @@ $_code = $this->getMethodCode()
         vzero.setAmount('<?php echo Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getGrandTotal(); ?>');
     }
 
-    // Loop through each saved card being selected
-    $$('#creditcard-saved-accounts input[type="radio"]').each(function(elm) {
-
-        // Observe the elements changing
-        Element.observe(elm, 'change', function(event) {
-
-            // Has the user selected other?
-            if($$('#creditcard-saved-accounts input:checked[type=radio]').first().value == 'other') {
-
-                // Show the credit card form
-                $('credit-card-form').show();
-
-                // Enable the credit card form all the elements in the credit card form
-                $$('#credit-card-form input, #credit-card-form select').each(function(formElement) {
-                    formElement.removeAttribute('disabled');
-                });
-
-            } else {
-
-                // Hide the new credit card form
-                $('credit-card-form').hide();
-
-                // Disable all the elements in the credit card form
-                $$('#credit-card-form input, #credit-card-form select').each(function(formElement) {
-                    formElement.setAttribute('disabled', 'disabled');
-                });
-
-            }
-        });
-    });
-
 </script>

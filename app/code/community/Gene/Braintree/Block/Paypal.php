@@ -40,8 +40,7 @@ class Gene_Braintree_Block_Paypal extends Mage_Payment_Block_Form
     public function getSingleUse()
     {
         // We prefer to do future payments, so anything else is future
-        $paymentAction = Mage::getStoreConfig('payment/gene_braintree_paypal/payment_type');
-        if($paymentAction == Gene_Braintree_Model_Source_Paypal_Paymenttype::GENE_BRAINTREE_PAYPAL_SINGLE_PAYMENT) {
+        if(Mage::getSingleton('gene_braintree/paymentmethod_paypal')->getPaymentType() == Gene_Braintree_Model_Source_Paypal_Paymenttype::GENE_BRAINTREE_PAYPAL_SINGLE_PAYMENT) {
             return 'true';
         }
 
