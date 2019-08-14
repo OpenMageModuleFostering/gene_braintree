@@ -603,7 +603,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     }
 
     /**
-     * If we have a mapped currency code reutrn it
+     * If we have a mapped currency code return it
      *
      * @return bool
      */
@@ -618,23 +618,34 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
             // Verify it decoded correctly
             if(is_array($mapping) && !empty($mapping)) {
 
-                // If we're in the admin get the currency code from the admin session quote
-                if(Mage::app()->getStore()->isAdmin()) {
-                    $currency = $this->getAdminCurrency();
-                } else {
-                    // Retrieve the current from the session
-                    $currency = Mage::app()->getStore()->getCurrentCurrencyCode();
-                }
+                $currency = $this->getCurrencyCode();
 
                 // Verify we have a mapping value for this currency
                 if(isset($mapping[$currency]) && !empty($mapping[$currency])) {
 
-                    return $mapping[$currency];
+                    // These should never have spaces in so make sure we trim it
+                    return trim($mapping[$currency]);
                 }
             }
         }
 
         return false;
+    }
+
+    /**
+     * Return the users current currency code
+     *
+     * @return bool|string
+     */
+    public function getCurrencyCode()
+    {
+        // If we're in the admin get the currency code from the admin session quote
+        if(Mage::app()->getStore()->isAdmin()) {
+            return $this->getAdminCurrency();
+        }
+
+        // Retrieve the current from the session
+        return Mage::app()->getStore()->getCurrentCurrencyCode();
     }
 
     /**
@@ -659,18 +670,18 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     public function getCaptureAmount(Mage_Sales_Model_Order $order, $amount)
     {
         // If we've got a mapped currency code the amount is going to change
-        if($currencyCode = $this->hasMappedCurrencyCode()) {
+        if($this->hasMappedCurrencyCode()) {
 
             // Convert the current
-            $convertedCurrency = Mage::helper('directory')->currencyConvert($amount, $order->getBaseCurrencyCode(), $currencyCode);
+            $convertedCurrency = Mage::helper('directory')->currencyConvert($amount, $order->getBaseCurrencyCode(), $this->getCurrencyCode());
 
             // Format it to a precision of 2
             $options = array(
-                'currency' => $currencyCode,
+                'currency' => $this->getCurrencyCode(),
                 'display' => ''
             );
 
-            return Mage::app()->getLocale()->currency($currencyCode)->toCurrency($convertedCurrency, $options);
+            return Mage::app()->getLocale()->currency($this->getCurrencyCode())->toCurrency($convertedCurrency, $options);
         }
 
         return $amount;
