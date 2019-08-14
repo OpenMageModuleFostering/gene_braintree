@@ -30,4 +30,18 @@ class Gene_Braintree_Helper_Data extends Mage_Core_Helper_Abstract
             Braintree_Transaction::SETTLEMENT_PENDING => $this->__('Settlement Pending')
         );
     }
+
+    /**
+     * Force the prices to two decimal places
+     * Magento sometimes doesn't return certain totals in the correct format, yet Braintree requires them to always
+     * be in two decimal places, thus the need for this function
+     *
+     * @param $price
+     *
+     * @return string
+     */
+    public function formatPrice($price)
+    {
+        return number_format($price, 2, '.', '');
+    }
 }

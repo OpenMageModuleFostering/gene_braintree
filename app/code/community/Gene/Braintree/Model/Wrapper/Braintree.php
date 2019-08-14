@@ -248,6 +248,31 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         return $this->braintreeId;
     }
 
+    /**
+     * Return the admin config value
+     **/
+    protected function getAdminConfigValue($path)
+    {
+        // If we have the getConfigDataValue use that
+        if(method_exists('Mage_Adminhtml_Model_Config_Data','getConfigDataValue')) {
+            return Mage::getSingleton('adminhtml/config_data')->getConfigDataValue($path);
+        }
+
+        // Otherwise use the default amazing getStoreConfig
+        return Mage::getStoreConfig($path);
+    }
+
+    /**
+     * If a transaction has been voided it's transaction ID can change
+     *
+     * @param $transactionId
+     *
+     * @return string
+     */
+    public function getCleanTransactionId($transactionId)
+    {
+        return strtok($transactionId, '-');
+    }
 
     /**
      * Validate the credentials within the admin area
@@ -262,10 +287,10 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
 
                 // If we're within the admin we want to grab these values from whichever store we're modifying
                 if(Mage::app()->getStore()->isAdmin()) {
-                    Braintree_Configuration::environment(Mage::getSingleton('adminhtml/config_data')->getConfigDataValue(self::BRAINTREE_ENVIRONMENT_PATH));
-                    Braintree_Configuration::merchantId(Mage::getSingleton('adminhtml/config_data')->getConfigDataValue(self::BRAINTREE_MERCHANT_ID_PATH));
-                    Braintree_Configuration::publicKey(Mage::getSingleton('adminhtml/config_data')->getConfigDataValue(self::BRAINTREE_PUBLIC_KEY_PATH));
-                    Braintree_Configuration::privateKey(Mage::getSingleton('adminhtml/config_data')->getConfigDataValue(self::BRAINTREE_PRIVATE_KEY_PATH));
+                    Braintree_Configuration::environment($this->getAdminConfigValue(self::BRAINTREE_ENVIRONMENT_PATH));
+                    Braintree_Configuration::merchantId($this->getAdminConfigValue(self::BRAINTREE_MERCHANT_ID_PATH));
+                    Braintree_Configuration::publicKey($this->getAdminConfigValue(self::BRAINTREE_PUBLIC_KEY_PATH));
+                    Braintree_Configuration::privateKey($this->getAdminConfigValue(self::BRAINTREE_PRIVATE_KEY_PATH));
                 } else {
                     $this->init();
                 }
@@ -293,7 +318,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         // Check to see if we've been passed the merchant account ID?
         if(!$merchantAccountId) {
             if(Mage::app()->getStore()->isAdmin()) {
-                $merchantAccountId = Mage::getSingleton('adminhtml/config_data')->getConfigDataValue(self::BRAINTREE_MERCHANT_ACCOUNT_ID_PATH);
+                $merchantAccountId = $this->getAdminConfigValue(self::BRAINTREE_MERCHANT_ACCOUNT_ID_PATH);
             } else {
                 $merchantAccountId = $this->getMerchantAccountId();
             }
@@ -463,7 +488,7 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         $request = array(
             'amount'             => $amount,
             'orderId'            => $order->getIncrementId(),
-            'merchantAccountId'  => $this->getMerchantAccountId(),
+            'merchantAccountId'  => $this->getMerchantAccountId($order),
             'channel'            => 'MagentoVZero',
             'options'            => array(
                 'submitForSettlement' => $submitForSettlement,
@@ -608,17 +633,17 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
      *
      * @return mixed
      */
-    public function getMerchantAccountId()
+    public function getMerchantAccountId(Mage_Sales_Model_Order $order = null)
     {
         // If multi-currency is enabled use the mapped merchant account ID
-        if($currencyCode = $this->hasMappedCurrencyCode()) {
+        if($currencyCode = $this->hasMappedCurrencyCode($order)) {
 
             // Return the mapped currency code
             return $currencyCode;
         }
 
         // Otherwise return the one from the store
-        return Mage::getStoreConfig(self::BRAINTREE_MERCHANT_ACCOUNT_ID_PATH);
+        return Mage::getStoreConfig(self::BRAINTREE_MERCHANT_ACCOUNT_ID_PATH, ($order ? $order->getStoreId() : null));
     }
 
     /**
@@ -626,18 +651,19 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
      *
      * @return bool
      */
-    public function hasMappedCurrencyCode()
+    public function hasMappedCurrencyCode(Mage_Sales_Model_Order $order = null)
     {
         // If multi-currency is enabled use the mapped merchant account ID
-        if($this->currencyMappingEnabled()) {
+        if($this->currencyMappingEnabled($order)) {
 
             // Retrieve the mapping from the config
-            $mapping = Mage::helper('core')->jsonDecode(Mage::getStoreConfig(self::BRAINTREE_MULTI_CURRENCY_MAPPING));
+            $mapping = Mage::helper('core')->jsonDecode(Mage::getStoreConfig(self::BRAINTREE_MULTI_CURRENCY_MAPPING, ($order ? $order->getStoreId() : false)));
 
             // Verify it decoded correctly
             if(is_array($mapping) && !empty($mapping)) {
 
-                $currency = $this->getCurrencyCode();
+                // If we haven't been given an order use the quote currency code
+                $currency = (!$order ? $this->getQuote()->getQuoteCurrencyCode() : $order->getOrderCurrencyCode());
 
                 // Verify we have a mapping value for this currency
                 if(isset($mapping[$currency]) && !empty($mapping[$currency])) {
@@ -652,73 +678,78 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
     }
 
     /**
-     * Return the users current currency code
-     *
-     * @return bool|string
-     */
-    public function getCurrencyCode()
-    {
-        // If we're in the admin get the currency code from the admin session quote
-        if(Mage::app()->getStore()->isAdmin()) {
-            return $this->getAdminCurrency();
-        }
-
-        // Retrieve the current from the session
-        return Mage::app()->getStore()->getCurrentCurrencyCode();
-    }
-
-    /**
      * Do we have currency mapping enabled?
      *
      * @return bool
      */
-    public function currencyMappingEnabled()
+    public function currencyMappingEnabled(Mage_Sales_Model_Order $order = null)
     {
         return Mage::getStoreConfigFlag(self::BRAINTREE_MULTI_CURRENCY)
             && Mage::getStoreConfig(self::BRAINTREE_MULTI_CURRENCY_MAPPING)
-            && (Mage::app()->getStore()->getCurrentCurrencyCode() || (Mage::app()->getStore()->isAdmin() && $this->getAdminCurrency()));
+            && ((!$order ? $this->getQuote()->getQuoteCurrencyCode() : $order->getOrderCurrencyCode())
+                != (!$order ? $this->getQuote()->getBaseCurrencyCode() : $order->getBaseCurrencyCode()));
+    }
+
+    /**
+     * Get the current quote
+     *
+     * @return \Mage_Sales_Model_Quote
+     */
+    public function getQuote()
+    {
+        // If we're within the admin return the admin quote
+        if(Mage::app()->getStore()->isAdmin()) {
+            return Mage::getSingleton('adminhtml/session_quote')->getQuote();
+        }
+
+        return Mage::helper('checkout')->getQuote();
     }
 
     /**
      * If we have a mapped currency code we need to convert the currency
      *
-     * @param $amount
+     * @param \Mage_Sales_Model_Order $order
+     * @param                         $amount
      *
-     * @return mixed
+     * @return string
+     * @throws \Zend_Currency_Exception
      */
-    public function getCaptureAmount(Mage_Sales_Model_Order $order, $amount)
+    public function getCaptureAmount(Mage_Sales_Model_Order $order = null, $amount)
     {
         // If we've got a mapped currency code the amount is going to change
-        if($this->hasMappedCurrencyCode()) {
+        if($this->hasMappedCurrencyCode($order)) {
 
-            // Convert the current
-            $convertedCurrency = Mage::helper('directory')->currencyConvert($amount, $order->getBaseCurrencyCode(), $this->getCurrencyCode());
+            // If we don't have an order yet get the quote capture amount
+            if($order === null) {
+                return $this->convertCaptureAmount($this->getQuote()->getBaseCurrencyCode(), $this->getQuote()->getQuoteCurrencyCode(), $amount);
+            }
 
-            // Format it to a precision of 2
-            $options = array(
-                'currency' => $this->getCurrencyCode(),
-                'display' => ''
-            );
-
-            return Mage::app()->getLocale()->currency($this->getCurrencyCode())->toCurrency($convertedCurrency, $options);
+            // Convert the capture amount
+            return $this->convertCaptureAmount($order->getBaseCurrencyCode(), $order->getOrderCurrencyCode(), $amount);
         }
 
-        return $amount;
+        // Always make sure the number has two decimal places
+        return Mage::helper('gene_braintree')->formatPrice($amount);
     }
 
     /**
-     * Retrieve the admin currency
+     * @param $amount
      *
-     * @return bool
+     * @return string
+     * @throws \Zend_Currency_Exception
      */
-    private function getAdminCurrency()
+    public function convertCaptureAmount($baseCurrencyCode, $orderQuoteCurrencyCode, $amount)
     {
-        $order = Mage::app()->getRequest()->getPost('order');
-        if(isset($order['currency']) && !empty($order['currency'])) {
-            return $order['currency'];
-        }
+        // Convert the current
+        $convertedCurrency = Mage::helper('directory')->currencyConvert($amount, $baseCurrencyCode, $orderQuoteCurrencyCode);
 
-        return false;
+        // Format it to a precision of 2
+        $options = array(
+            'currency' => $orderQuoteCurrencyCode,
+            'display' => ''
+        );
+
+        return Mage::app()->getLocale()->currency($orderQuoteCurrencyCode)->toCurrency($convertedCurrency, $options);
     }
 
     /**
@@ -754,6 +785,53 @@ class Gene_Braintree_Model_Wrapper_Braintree extends Mage_Core_Model_Abstract
         }
 
         return $customer;
+    }
+
+    /**
+     * Clone a transaction
+     *
+     * @param $transactionId
+     * @param $amount
+     *
+     * @return bool|mixed
+     */
+    public function cloneTransaction($transactionId, $amount, $submitForSettlement = true)
+    {
+        // Attempt to clone the transaction
+        try {
+            $result = Braintree_Transaction::cloneTransaction($transactionId, array(
+                'amount'  => $amount,
+                'options' => array(
+                    'submitForSettlement' => $submitForSettlement
+                )
+            ));
+
+            return $result;
+
+        } catch (Exception $e) {
+
+            // Log the issue
+            Gene_Braintree_Model_Debug::log(array('cloneTransaction' => $e));
+
+            return false;
+        }
+    }
+
+    /**
+     * Parse Braintree errors as a string
+     *
+     * @param $braintreeErrors
+     *
+     * @return string
+     */
+    public function parseErrors($braintreeErrors)
+    {
+        $errors = array();
+        foreach($braintreeErrors as $error) {
+            $errors[] = $error->code . ': ' . $error->message;
+        }
+
+        return implode(', ', $errors);
     }
 
 }

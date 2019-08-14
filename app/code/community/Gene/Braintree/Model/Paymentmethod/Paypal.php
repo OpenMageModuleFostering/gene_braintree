@@ -32,8 +32,8 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
     protected $_canAuthorize = false;
     protected $_canCapture = true;
     protected $_canCapturePartial = false;
-    protected $_canRefund = false;
-    protected $_canRefundInvoicePartial = false;
+    protected $_canRefund = true;
+    protected $_canRefundInvoicePartial = true;
     protected $_canVoid = false;
     protected $_canUseInternal = false;
     protected $_canUseCheckout = true;
@@ -73,6 +73,7 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
         $paymentPost = Mage::app()->getRequest()->getPost('payment');
 
         // Confirm that we have a nonce from Braintree
+        // We cannot utilise the validate() function as these checks need to happen at the capture point
         if(!isset($paymentPost['paypal_payment_method_token'])) {
             if ((!isset($paymentPost['payment_method_nonce']) || empty($paymentPost['payment_method_nonce']))) {
                 Mage::throwException(

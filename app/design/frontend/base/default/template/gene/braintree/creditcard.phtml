@@ -6,8 +6,8 @@ $_code = $this->getMethodCode()
 
     <?php if($this->hasSavedDetails() && $this->getMethod()->isVaultEnabled()): ?>
 
-    <label><?php echo $this->__('Saved Cards'); ?></label>
-    <p><?php echo $this->__('The following credit cards accounts are currently linked with your account.'); ?></p>
+    <label><?php echo $this->__('Saved Cards'); ?></label><br />
+    <p style="padding-left: 0;"><?php echo $this->__('The following credit cards accounts are currently linked with your account.'); ?></p>
     <table cellspacing="0" cellpadding="0" id="creditcard-saved-accounts">
         <?php
         $count = 0;
@@ -22,7 +22,7 @@ $_code = $this->getMethodCode()
                     <?php endif; ?>
                 </td>
                 <td valign="middle">
-                    <label for="<?php echo $savedDetail->token; ?>" style="line-height: 48px;">
+                    <label for="<?php echo $savedDetail->token; ?>" style="line-height: 48px;width: auto;">
                         <img src="<?php echo $this->getSkinUrl('images/gene/braintree/' . $this->getCardIcon($savedDetail->cardType)) ?>" align="left" />&nbsp;&nbsp; xxxx - xxxx - xxxx - <?php echo $savedDetail->last4; ?> &nbsp;&nbsp;&nbsp; <em><?php echo $this->__('Expires:'); ?></em> <?php echo $savedDetail->expirationMonth; ?>/<?php echo $savedDetail->expirationYear; ?>
                     </label>
                 </td>
@@ -150,7 +150,7 @@ $_code = $this->getMethodCode()
             CreditCardInit = true;
 
             // Always set the amount as it's needed within 3D secure requests
-            vzero.setAmount('<?php echo Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getGrandTotal(); ?>');
+            vzero.setAmount('<?php echo Mage::helper('gene_braintree')->formatPrice(Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getGrandTotal()); ?>');
 
             // We now need to set this information into the browser
             vzero.setBillingName("<?php echo $this->jsQuoteEscape(Mage::getSingleton('checkout/session')->getQuote()->getBillingAddress()->getName(), '"'); ?>");

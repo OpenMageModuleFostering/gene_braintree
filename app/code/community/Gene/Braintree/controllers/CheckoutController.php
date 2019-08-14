@@ -40,7 +40,7 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
         $jsonResponse = array(
             'billingName' => $billingName,
             'billingPostcode' => $billingPostcode,
-            'grandTotal' => number_format($quote->getGrandTotal(), 2),
+            'grandTotal' => Mage::helper('gene_braintree')->formatPrice($quote->getGrandTotal()),
             'currencyCode' => $quote->getQuoteCurrencyCode(),
             'threeDSecure' => Mage::getSingleton('gene_braintree/paymentmethod_creditcard')->is3DEnabled()
         );

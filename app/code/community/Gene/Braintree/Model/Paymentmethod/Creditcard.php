@@ -32,9 +32,9 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
     protected $_canAuthorize = true;
     protected $_canCapture = true;
     protected $_canCapturePartial = true;
-    protected $_canRefund = false;
-    protected $_canRefundInvoicePartial = false;
-    protected $_canVoid = false;
+    protected $_canRefund = true;
+    protected $_canRefundInvoicePartial = true;
+    protected $_canVoid = true;
     protected $_canUseInternal = true;
     protected $_canUseCheckout = true;
     protected $_canUseForMultishipping = false;
@@ -102,6 +102,55 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
     }
 
     /**
+     * Validate payment method information object
+     *
+     * @return $this
+     */
+    public function validate()
+    {
+        // Run the built in Magento validation
+        parent::validate();
+
+        // Retrieve the post data from the request
+        $paymentPost = Mage::app()->getRequest()->getPost('payment');
+
+        // Confirm that we have a nonce from Braintree
+        if (!isset($paymentPost['card_payment_method_token']) || (isset($paymentPost['card_payment_method_token']) && $paymentPost['card_payment_method_token'] == 'threedsecure')) {
+            if ((!isset($paymentPost['payment_method_nonce']) || empty($paymentPost['payment_method_nonce']))) {
+
+                Gene_Braintree_Model_Debug::log('Card payment has failed, missing token/nonce');
+
+                Mage::throwException(
+                    $this->_getHelper()->__('Your card payment has failed, please try again.')
+                );
+            }
+        } else if (isset($paymentPost['card_payment_method_token']) && empty($paymentPost['card_payment_method_token'])) {
+
+            Gene_Braintree_Model_Debug::log('No saved card token present');
+
+            Mage::throwException(
+                $this->_getHelper()->__('Your card payment has failed, please try again.')
+            );
+        }
+
+        // If the CVV is required and it's not been sent in the request throw an error
+        if ($this->requireCcv() && (!isset($paymentPost['cc_cid']) || empty($paymentPost['cc_cid'])) && empty($paymentPost['card_payment_method_token'])) {
+
+            // Log it
+            Gene_Braintree_Model_Debug::log('CVV required but not present in request');
+
+            // Politely inform the user
+            Mage::throwException(
+                $this->_getHelper()->__('We require a CVV when creating card transactions.')
+            );
+
+        }
+
+
+        return $this;
+    }
+
+    /**
      * Psuedo _authorize function so we can pass in extra data
      * @param Varien_Object $payment
      * @param               $amount
@@ -109,23 +158,10 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
      *
      * @throws Mage_Core_Exception
      */
-    protected function _authorize(Varien_Object $payment, $amount, $shouldCapture = false)
+    protected function _authorize(Varien_Object $payment, $amount, $shouldCapture = false, $token = false)
     {
         // Retrieve the post data from the request
         $paymentPost = Mage::app()->getRequest()->getPost('payment');
-
-        // Confirm that we have a nonce from Braintree
-        if(!isset($paymentPost['card_payment_method_token']) || (isset($paymentPost['card_payment_method_token']) && $paymentPost['card_payment_method_token'] == 'threedsecure')) {
-            if ((!isset($paymentPost['payment_method_nonce']) || empty($paymentPost['payment_method_nonce']))) {
-                Mage::throwException(
-                    $this->_getHelper()->__('Your card payment has failed, please try again.')
-                );
-            }
-        } else if(isset($paymentPost['card_payment_method_token']) && empty($paymentPost['card_payment_method_token'])) {
-            Mage::throwException(
-                $this->_getHelper()->__('Your card payment has failed, please try again.')
-            );
-        }
 
         // Get the device data for fraud screening
         $deviceData = Mage::app()->getRequest()->getPost('device_data');
@@ -137,20 +173,8 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         try {
 
             // Pass over the CVV/CCV
-            if($this->requireCcv() && isset($paymentPost['cc_cid'])) {
-
+            if ($this->requireCcv() && isset($paymentPost['cc_cid'])) {
                 $paymentArray['cvv'] = $paymentPost['cc_cid'];
-
-            } else if($this->requireCcv() && !isset($paymentPost['cc_cid']) && empty($paymentPost['card_payment_method_token'])) {
-
-                // Log it
-                Gene_Braintree_Model_Debug::log('CVV required but not present in request');
-
-                // Politely inform the user
-                Mage::throwException(
-                    $this->_getHelper()->__('We require a CVV when creating card transactions.')
-                );
-
             }
 
             // Check to see whether we're using a payment method token?
@@ -188,6 +212,16 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
 
                 // Force 3D secure off
                 $threeDSecure = false;
+            }
+
+            // If a token is present in the request use that
+            if($token) {
+
+                // Remove this unneeded data
+                unset($paymentArray['paymentMethodNonce'], $paymentArray['cvv']);
+
+                // Send the token as the payment array
+                $paymentArray['paymentMethodToken'] = $token;
             }
 
             // Retrieve the amount we should capture
@@ -308,16 +342,61 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         // Has the payment already been authorized?
         if ($payment->getCcTransId()) {
 
-            // Init the environment
-            $result = $this->_getWrapper()->init()->submitForSettlement($payment->getCcTransId(), $amount);
+            // Convert the capture amount to the correct currency
+            $captureAmount = $this->_getWrapper()->getCaptureAmount($payment->getOrder(), $amount);
 
-            // Log the result
-            Gene_Braintree_Model_Debug::log(array('capture:submitForSettlement' => $result));
+            // Has the authorization already been settled? Partial invoicing
+            if($this->authorizationUsed($payment)) {
+
+                // Set the token as false
+                $token = false;
+
+                // Was the original payment created with a token?
+                if($additionalInfoToken = $payment->getAdditionalInformation('token')) {
+
+                    try {
+                        // Init the environment
+                        $this->_getWrapper()->init($payment->getOrder()->getStoreId());
+
+                        // Attempt to find the token
+                        Braintree_PaymentMethod::find($additionalInfoToken);
+
+                        // Set the token if a success
+                        $token = $additionalInfoToken;
+
+                    } catch (Exception $e) {
+                        $token = false;
+                    }
+
+                }
+
+                // If we managed to find a token use that for the capture
+                if($token) {
+
+                    // Stop processing the rest of the method
+                    // We pass $amount instead of $captureAmount as the authorize function contains the conversion
+                    $this->_authorize($payment, $amount, true, $token);
+                    return $this;
+
+                } else {
+
+                    // Attempt to clone the transaction
+                    $result = $this->_getWrapper()->init($payment->getOrder()->getStoreId())->cloneTransaction($payment->getLastTransId(), $captureAmount);
+                }
+
+            } else {
+
+                // Init the environment
+                $result = $this->_getWrapper()->init($payment->getOrder()->getStoreId())->submitForSettlement($payment->getCcTransId(), $captureAmount);
+
+                // Log the result
+                Gene_Braintree_Model_Debug::log(array('capture:submitForSettlement' => $result));
+            }
 
             if($result->success) {
                 $this->_processSuccessResult($payment, $result, $amount);
             } else if($result->errors->deepSize() > 0) {
-                Mage::throwException($result->errors);
+                Mage::throwException($this->_getWrapper()->parseErrors($result->errors->deepAll()));
             } else {
                 Mage::throwException($result->transaction->processorSettlementResponseCode.': '.$result->transaction->processorSettlementResponseText);
             }
@@ -325,6 +404,68 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
         } else {
             // Otherwise we need to do an auth & capture at once
             $this->_authorize($payment, $amount, true);
+        }
+
+        return $this;
+    }
+
+    /**
+     * If we're doing authorize, has the payment already got more than one transaction?
+     *
+     * @param \Varien_Object $payment
+     *
+     * @return int
+     */
+    public function authorizationUsed(Varien_Object $payment)
+    {
+        $collection = Mage::getModel('sales/order_payment_transaction')
+            ->getCollection()
+            ->addFieldToFilter('payment_id', $payment->getId())
+            ->addFieldToFilter('txn_type', Mage_Sales_Model_Order_Payment_Transaction::TYPE_CAPTURE);
+
+        return $collection->getSize();
+    }
+
+    /**
+     * Void payment abstract method
+     *
+     * @param Varien_Object $payment
+     *
+     * @return Mage_Payment_Model_Abstract
+     */
+    public function void(Varien_Object $payment)
+    {
+        try {
+            // Init the environment
+            $this->_getWrapper()->init($payment->getOrder()->getStoreId());
+
+            // Retrieve the transaction ID
+            $transactionId = $this->_getWrapper()->getCleanTransactionId($payment->getLastTransId());
+
+            // Load the transaction from Braintree
+            $transaction = Braintree_Transaction::find($transactionId);
+
+            // If the transaction hasn't yet settled we can't do partial refunds
+            if ($transaction->status !== Braintree_Transaction::AUTHORIZED || $transaction->status !== Braintree_Transaction::SUBMITTED_FOR_SETTLEMENT) {
+                Mage::throwException($this->_getHelper()->__('You can only void authorized/submitted for settlement payments, please setup a credit memo if you wish to refund this order.'));
+            }
+
+            // Swap between refund and void
+            $result = Braintree_Transaction::void($transactionId);
+
+            // If it's a success close the transaction
+            if ($result->success) {
+                $payment->setIsTransactionClosed(1);
+            } else {
+                if($result->errors->deepSize() > 0) {
+                    Mage::throwException($this->_getWrapper()->parseErrors($result->errors->deepAll()));
+                } else {
+                    Mage::throwException('Unknown');
+                }
+            }
+
+        } catch (Exception $e) {
+            Mage::throwException($this->_getHelper()->__('An error occurred whilst trying to void the transaction: ') . $e->getMessage());
         }
 
         return $this;

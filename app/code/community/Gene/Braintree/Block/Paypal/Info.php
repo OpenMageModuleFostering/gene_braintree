@@ -5,7 +5,7 @@
  *
  * @author Dave Macaulay <dave@gene.co.uk>
  */
-class Gene_Braintree_Block_Paypal_Info extends Mage_Payment_Block_Info
+class Gene_Braintree_Block_Paypal_Info extends Gene_Braintree_Block_Info
 {
 
     /**
@@ -37,14 +37,14 @@ class Gene_Braintree_Block_Paypal_Info extends Mage_Payment_Block_Info
         // Check we're in the admin area
         if(Mage::app()->getStore()->isAdmin()) {
 
+            // Include live details for this transaction
+            $this->includeLiveDetails($data);
+
             // Show these details to the admin only
             $data = array_merge(
                 $data, array(
-                    $this->__('Braintree Transaction ID') => $this->getInfo()->getLastTransId(),
                     $this->__('Payment ID')               => $this->getInfo()->getAdditionalInformation('payment_id'),
-                    $this->__('Authorization ID')         => $this->getInfo()->getAdditionalInformation(
-                        'authorization_id'
-                    )
+                    $this->__('Authorization ID')         => $this->getInfo()->getAdditionalInformation('authorization_id')
                 )
             );
 

@@ -71,10 +71,13 @@
 
                                     // Disable the standard credit card form so the values don't get passed through to the checkout
                                     $$('#credit-card-form input, #credit-card-form select').each(function (formElement) {
-                                        if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault' && formElement.id != 'device_data') {
+                                        if (formElement.id != 'creditcard-payment-nonce' && formElement.getAttribute('data-genebraintree-name') != 'cvv' && formElement.id != 'gene_braintree_creditcard_store_in_vault') {
                                             formElement.setAttribute('disabled', 'disabled');
                                         }
                                     });
+
+                                    // Always make sure device data is sent with the request
+                                    $('device_data').removeAttribute('disabled');
 
                                     // No longer running
                                     checkoutRunning = false;
@@ -149,6 +152,9 @@
 
                 // Show the loading thing
                 showLoading();
+
+                // Always make sure device data is sent with the request
+                $('device_data').removeAttribute('disabled');
 
                 // Run the complete checkout method
                 return completeCheckout();
