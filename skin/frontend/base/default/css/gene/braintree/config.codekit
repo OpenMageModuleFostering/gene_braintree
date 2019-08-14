@@ -176,6 +176,15 @@
 		"strictMath": 0,
 		"strictUnits": 0
 		},
+	"\/fancycheckout.css": {
+		"fileType": 16,
+		"ignore": 1,
+		"ignoreWasSetByUser": 0,
+		"inputAbbreviatedPath": "\/fancycheckout.css",
+		"outputAbbreviatedPath": "No Output Path",
+		"outputPathIsOutsideProject": 0,
+		"outputPathIsSetByUser": 0
+		},
 	"\/firecheckout.css": {
 		"fileType": 16,
 		"ignore": 1,
@@ -273,6 +282,26 @@
 		"ignoreWasSetByUser": 0,
 		"inputAbbreviatedPath": "\/integrations\/default.less",
 		"outputAbbreviatedPath": "\/default.css",
+		"outputPathIsOutsideProject": 0,
+		"outputPathIsSetByUser": 1,
+		"outputStyle": 0,
+		"relativeURLS": 0,
+		"shouldRunAutoprefixer": 0,
+		"shouldRunBless": 0,
+		"strictImports": 0,
+		"strictMath": 0,
+		"strictUnits": 0
+		},
+	"\/integrations\/fancycheckout.less": {
+		"allowInsecureImports": 0,
+		"createSourceMap": 0,
+		"disableJavascript": 0,
+		"fileType": 1,
+		"ieCompatibility": 1,
+		"ignore": 0,
+		"ignoreWasSetByUser": 0,
+		"inputAbbreviatedPath": "\/integrations\/fancycheckout.less",
+		"outputAbbreviatedPath": "\/fancycheckout.css",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 1,
 		"outputStyle": 0,

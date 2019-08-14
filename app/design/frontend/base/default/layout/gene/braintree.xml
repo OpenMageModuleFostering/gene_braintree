@@ -241,6 +241,25 @@
         </reference>
     </anattadesign_awesomecheckout_onepage_index>
 
+    <!-- Support for FancyCheckout -->
+    <fancycheckout_index_index>
+        <update handle="gene_braintree_assets" />
+        <reference name="head">
+            <action method="addCss"><file>css/gene/braintree/fancycheckout.css</file></action>
+        </reference>
+        <reference name="before_body_end">
+            <block type="gene_braintree/js" name="gene_braintree_js" template="gene/braintree/js/fancycheckout.phtml" />
+
+            <!-- We include device data at the end of the larger form -->
+            <block type="gene_braintree/js" name="gene_braintree_data" template="gene/braintree/js/data.phtml">
+                <action method="setData">
+                    <key>payment_form_id</key>
+                    <value>fancycheckout_orderform</value>
+                </action>
+            </block>
+        </reference>
+    </fancycheckout_index_index>
+
     <!-- Add in support for Magento's mutli shipping checkout -->
     <checkout_multishipping_billing>
         <update handle="gene_braintree_assets" />

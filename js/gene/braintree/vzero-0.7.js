@@ -118,7 +118,7 @@ vZero.prototype = {
      * @param callbackFn
      */
     teardownHostedFields: function (callbackFn) {
-        if (this._hostedIntegration !== false) {
+        if (typeof this._hostedIntegration !== 'undefined' && this._hostedIntegration !== false) {
             this._hostedIntegration.teardown(function () {
                 this._hostedIntegration = false;
 
@@ -258,16 +258,10 @@ vZero.prototype = {
                 parameters: parameters,
                 onSuccess: function (transport) {
                     // Verify we have some response text
-                    if (transport && transport.responseText) {
+                    if (transport && (transport.responseJSON || transport.responseText)) {
 
                         // Parse as an object
-                        var response;
-                        try {
-                            response = eval('(' + transport.responseText + ')');
-                        }
-                        catch (e) {
-                            response = {};
-                        }
+                        var response = this._parseTransportAsJson(transport);
 
                         if (response.success && response.nonce) {
                             callback(response.nonce);
@@ -407,7 +401,8 @@ vZero.prototype = {
         if (
             typeof response.message !== 'undefined' &&
             response.message.indexOf('Cannot place two elements in') == -1 &&
-            response.message.indexOf('Unable to find element with selector') == -1
+            response.message.indexOf('Unable to find element with selector') == -1 &&
+            response.message.indexOf('User did not enter a payment method') == -1
         ) {
             // Let the user know what went wrong
             alert(response.message);
@@ -768,12 +763,7 @@ vZero.prototype = {
                     if (transport && (transport.responseJSON || transport.responseText)) {
 
                         // Parse the response from the server
-                        var response;
-                        if (transport.responseJSON && typeof transport.responseJSON === 'object') {
-                            response = transport.responseJSON;
-                        } else if (transport.responseText) {
-                            response = JSON.decode(transport.responseText);
-                        }
+                        var response = this._parseTransportAsJson(transport);
 
                         if (response.billingName != undefined) {
                             this.billingName = response.billingName;
@@ -864,15 +854,10 @@ vZero.prototype = {
                         onSuccess: function (transport) {
 
                             // Verify we have some response text
-                            if (transport && transport.responseText) {
+                            if (transport && (transport.responseJSON || transport.responseText)) {
 
                                 // Parse as an object
-                                try {
-                                    response = eval('(' + transport.responseText + ')');
-                                }
-                                catch (e) {
-                                    response = {};
-                                }
+                                var response = this._parseTransportAsJson(transport);
 
                                 // Check the response was successful
                                 if (response.success) {
@@ -1208,12 +1193,43 @@ vZero.prototype = {
         }
     },
 
+    /**
+     * Called on Credit Card loading
+     *
+     * @returns {boolean}
+     */
     creditCardLoaded: function () {
         return false;
     },
 
+    /**
+     * Called on PayPal loading
+     *
+     * @returns {boolean}
+     */
     paypalLoaded: function () {
         return false;
+    },
+
+    /**
+     * Parse a transports response into JSON
+     *
+     * @param transport
+     * @returns {*}
+     * @private
+     */
+    _parseTransportAsJson: function (transport) {
+        if (transport.responseJSON && typeof transport.responseJSON === 'object') {
+            return transport.responseJSON;
+        } else if (transport.responseText) {
+            if (typeof JSON === 'object' && typeof JSON.parse === 'function') {
+                return JSON.parse(transport.responseText);
+            } else {
+                return eval('(' + transport.responseText + ')');
+            }
+        }
+
+        return {};
     }
 
 };
@@ -1249,6 +1265,8 @@ vZeroPayPalButton.prototype = {
 
         this._rebuildTimer = false;
         this._rebuildCount = 0;
+
+        this.integration = false;
     },
 
     /**
@@ -1310,9 +1328,14 @@ vZeroPayPalButton.prototype = {
      * Inject the PayPal button into the document
      *
      * @param options Object containing onSuccess method
-     * @param integration Object the integration class
+     * @param checkoutIntegration Object the integration class
      */
     addPayPalButton: function (options, checkoutIntegration) {
+
+        // Store the integration in the class
+        if (!this.integration && typeof checkoutIntegration === 'object') {
+            this.integration = checkoutIntegration;
+        }
 
         // If the container isn't present on the page we can't add the button
         if ($('paypal-container') === null || $('braintree-paypal-button') === null) {
@@ -1365,7 +1388,7 @@ vZeroPayPalButton.prototype = {
             },
             onReady: function (integration) {
                 this._paypalIntegration = integration;
-                this._attachPayPalButtonEvent(checkoutIntegration);
+                this._attachPayPalButtonEvent();
                 if (typeof options.onReady === 'function') {
                     options.onReady(integration);
                 }
@@ -1404,7 +1427,7 @@ vZeroPayPalButton.prototype = {
     /**
      * Attach the click event to the paypal button
      *
-     * @param integration
+     * @param checkoutIntegration
      *
      * @private
      */
@@ -1416,8 +1439,8 @@ vZeroPayPalButton.prototype = {
             Event.stopObserving(this._paypalButton, 'click');
             Event.observe(this._paypalButton, 'click', function (event) {
                 Event.stop(event);
-                if (typeof checkoutIntegration == 'object' && typeof checkoutIntegration.validateAll === 'function') {
-                    if (checkoutIntegration.validateAll()) {
+                if (typeof this.integration == 'object' && typeof this.integration.validateAll === 'function') {
+                    if (this.integration.validateAll()) {
                         // Fire the integration
                         this._paypalIntegration.paypal.initAuthFlow();
                     }
