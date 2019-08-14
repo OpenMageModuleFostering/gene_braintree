@@ -38,7 +38,7 @@ vZeroIntegration.prototype = {
 
         this.paypalWrapperMarkUp = paypalWrapperMarkUp || false;
         this.paypalButtonClass = paypalButtonClass || false;
-        this.submitButtonClass = this.paypalButtonClass;
+        this.submitButtonClass = this.paypalButtonClass; /* Used for other integrations */
 
         this.isOnepage = isOnepage || false;
 
@@ -48,11 +48,15 @@ vZeroIntegration.prototype = {
 
         this._methodSwitchTimeout = false;
 
-        // Hosted fields hasn't been initialized yet
-        this._hostedFieldsInit = false;
+        this._originalSubmitFn = false;
 
         // Wait for the DOM to finish loading before creating observers
         document.observe("dom:loaded", function () {
+
+            // Capture the original submit function
+            if (this.captureOriginalSubmitFn()) {
+                this.observeSubmissionOverride();
+            }
 
             // Call the function which is going to intercept the submit event
             this.prepareSubmitObserver();
@@ -86,8 +90,73 @@ vZeroIntegration.prototype = {
             }
         }.bind(this));
 
+        // Initialize device data events
+        this._deviceDataInit = false;
+        this.vzero.observeEvent([
+            'onHandleAjaxRequest',
+            'integration.onInitSavedMethods'
+        ], this.initDeviceData, this);
+        this.vzero.observeEvent('integration.onBeforeSubmit', function () {
+            if ($('braintree-device-data') != null) {
+                $('braintree-device-data').writeAttribute('disabled', false);
+            }
+        }, this);
+
         // Fire our onInit event
         this.vzero.fireEvent(this, 'integration.onInit', {integration: this});
+    },
+
+    /**
+     * Add device_data into the session
+     */
+    initDeviceData: function (params, self) {
+        if ($('credit-card-form') != null) {
+            var form = $('credit-card-form').up('form');
+            if (form != undefined) {
+                if (form.select('#braintree-device-data').length == 0) {
+                    if (self._deviceDataInit === true) {
+                        return false;
+                    }
+                    self._deviceDataInit = true;
+
+                    // Create a new element and insert it into the DOM
+                    var input = new Element('input', {
+                        type: 'hidden',
+                        name: 'payment[device_data]',
+                        id: 'braintree-device-data'
+                    });
+                    form.insert(input);
+
+                    // Populate the new input with the device data
+                    self.populateDeviceData(input);
+                }
+            }
+        }
+    },
+
+    /**
+     * Populate device data using the data collector
+     *
+     * @param input
+     */
+    populateDeviceData: function (input) {
+        this.vzero.getClient(function (clientInstance) {
+            braintree.dataCollector.create({
+                client: clientInstance,
+                kount: true,
+                paypal: true
+            }, function (err, dataCollectorInstance) {
+                if (err) {
+                    // Handle error in creation of data collector
+                    console.warn(err);
+                    return;
+                }
+
+                input.value = dataCollectorInstance.deviceData;
+                input.writeAttribute('disabled', false);
+                this._deviceDataInit = false;
+            }.bind(this));
+        }.bind(this));
     },
 
     /**
@@ -116,6 +185,7 @@ vZeroIntegration.prototype = {
 
         }.bind(this));
 
+        this.vzero.fireEvent(this, 'integration.onInitSavedMethods');
     },
 
     /**
@@ -183,9 +253,14 @@ vZeroIntegration.prototype = {
             this.showHideOtherMethod(parentElement, targetElement);
         }
 
-        this.vzero.fireEvent(this, 'integration.checkSavedOther');
+        this.vzero.fireEvent(this, 'integration.onCheckSavedOther');
     },
 
+    /**
+     * After the payment methods have switched run this
+     *
+     * @returns {boolean}
+     */
     afterPaymentMethodSwitch: function () {
         return true;
     },
@@ -203,9 +278,6 @@ vZeroIntegration.prototype = {
 
                 // Verify this checkout has a form (would be weird to have a formless checkout, but you never know!)
                 if ($('braintree-hosted-submit').up('form') !== undefined) {
-
-                    // Flag hosted fields being init
-                    this._hostedFieldsInit = true;
 
                     // Store the form in the integration class
                     this.form = $('braintree-hosted-submit').up('form');
@@ -300,6 +372,26 @@ vZeroIntegration.prototype = {
     },
 
     /**
+     * Capture the original submit function
+     *
+     * @returns {boolean}
+     */
+    captureOriginalSubmitFn: function () {
+        return false;
+    },
+
+    /**
+     * Start an interval to ensure the submit function has been correctly overidden
+     */
+    observeSubmissionOverride: function () {
+        setInterval(function () {
+            if (this._originalSubmitFn) {
+                this.prepareSubmitObserver();
+            }
+        }.bind(this), 500);
+    },
+
+    /**
      * Set the submit function to be used
      *
      * This should be overridden within each checkouts .phtml file
@@ -357,6 +449,10 @@ vZeroIntegration.prototype = {
      * @param validateFailedCallback
      */
     submit: function (type, successCallback, failedCallback, validateFailedCallback) {
+
+        // Set the token being generated back to false on a new submission
+        this.vzero._hostedFieldsTokenGenerated = false;
+        this.hostedFieldsGenerated = false;
 
         // Check we actually want to intercept this credit card transaction?
         if (this.shouldInterceptSubmit(type)) {

@@ -31,13 +31,21 @@ $_code = $this->getMethodCode()
                 <label for="cvv"><?php echo $this->__('CVV'); ?></label>
                 <div id="cvv" class="braintree-input-field braintree-cvv"></div>
             </li>
+            <?php if ($this->canSaveCard()) : ?>
+                <li id="<?php echo $_code ?>_store_in_vault_div">
+                    <input type="checkbox" title="<?php echo $this->__('Save card against customers account') ?>"
+                           class="input-checkbox" id="<?php echo $_code ?>_store_in_vault" name="payment[save_card]"
+                           value="1" style="display: inline-block;"/>
+                    <label for="<?php echo $_code ?>_store_in_vault" style="display: inline-block;margin-left: 2px;">
+                        <?php echo $this->__('Save card against customers account') ?>
+                    </label>
+                </li>
+            <?php endif; ?>
         </ul>
     </div>
 
     <?php /* Do not remove or modify this code, the div is hidden and used to fire the hosted fields tokenization */ ?>
     <div id="braintree-hosted-submit">
-        <button type="submit" data-blockCapture="true"></button>
-
         <!-- Fields for the payment method -->
         <input type="text" name="payment[payment_method_nonce]" value="" id="creditcard-payment-nonce" class="validate-fire-hosted" />
     </div>

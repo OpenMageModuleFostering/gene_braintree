@@ -17,9 +17,9 @@
     <adminhtml_sales_order_create_index>
         <reference name="head">
             <action method="addCss"><file>css/gene/braintree/adminhtml.css</file></action>
-            <action method="addJs"><file>gene/braintree/vzero-min.js</file></action>
-            <action method="addJs"><file>gene/braintree/vzero-paypal-min.js</file></action>
-            <action method="addJs"><file>gene/braintree/vzero-integration-min.js</file></action>
+            <action method="addJs"><file>gene/braintree/2.1.3/vzero-min.js</file></action>
+            <action method="addJs"><file>gene/braintree/2.1.3/vzero-paypal-min.js</file></action>
+            <action method="addJs"><file>gene/braintree/2.1.3/vzero-integration-min.js</file></action>
 
             <!-- If Braintree_Payments is enabled remove the JS -->
             <action method="removeItem"><type>js</type><name>braintree/braintree-1.3.4.js</name></action>

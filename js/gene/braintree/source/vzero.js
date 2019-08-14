@@ -18,9 +18,8 @@ vZero.prototype = {
      * @param billingPostcode Billing postcode also needed to verify the card
      * @param quoteUrl The URL to update the quote totals
      * @param tokenizeUrl The URL to re-tokenize 3D secure cards
-     * @param vaultToNonceUrl The end point to vault a nonce then return a new nonce - deprecated
      */
-    initialize: function (code, clientToken, threeDSecure, hostedFields, billingName, billingPostcode, quoteUrl, tokenizeUrl, vaultToNonceUrl) {
+    initialize: function (code, clientToken, threeDSecure, hostedFields, billingName, billingPostcode, quoteUrl, tokenizeUrl) {
         this.code = code;
         this.clientToken = clientToken;
         this.threeDSecure = threeDSecure;
@@ -32,6 +31,7 @@ vZero.prototype = {
         if (billingPostcode) {
             this.billingPostcode = billingPostcode;
         }
+        this.billingCountryId = false;
         if (quoteUrl) {
             this.quoteUrl = quoteUrl;
         }
@@ -53,6 +53,9 @@ vZero.prototype = {
 
         this.client = false;
 
+        this.threeDSpecificCountries = false;
+        this.threeDCountries = [];
+
         this.initEvents();
     },
 
@@ -67,6 +70,7 @@ vZero.prototype = {
             integration: {
                 onInit: [],
                 onInitDefaultMethod: [],
+                onInitSavedMethods: [],
                 onShowHideOtherMethod: [],
                 onCheckSavedOther: [],
                 onPaymentMethodSwitch: [],
@@ -79,19 +83,39 @@ vZero.prototype = {
     },
 
     /**
+     * Set the 3D secure specific countries
+     *
+     * @param countries
+     */
+    setThreeDCountries: function (countries) {
+        if (typeof countries === 'string') {
+            countries = countries.split(',');
+        }
+        this.threeDSpecificCountries = true;
+        this.threeDCountries = countries;
+    },
+
+    /**
      * Add an event into the system
      *
-     * @param path
+     * @param paths
      * @param eventFn
      * @param params
      */
-    observeEvent: function (path, eventFn, params) {
-        var event = this._resolveEvent(path);
-        if (event === undefined) {
-            console.warn('Event for ' + path + ' does not exist.');
-        } else {
-            event.push({fn: eventFn, params: params});
+    observeEvent: function (paths, eventFn, params) {
+        if (!Array.isArray(paths)) {
+            paths = [paths];
         }
+
+        // Handle multiple paths
+        paths.each(function (path) {
+            var event = this._resolveEvent(path);
+            if (event === undefined) {
+                console.warn('Event for ' + path + ' does not exist.');
+            } else {
+                event.push({fn: eventFn, params: params});
+            }
+        }.bind(this));
     },
 
     /**
@@ -105,13 +129,13 @@ vZero.prototype = {
         var events = this._resolveEvent(path);
         if (events !== undefined) {
             if (events.length > 0) {
-                events.each(function (item) {
-                    if (typeof item.fn === 'function') {
+                events.each(function (event) {
+                    if (typeof event.fn === 'function') {
                         var arguments = [params];
-                        if (typeof item.params === 'object') {
-                            arguments.push(item.params);
+                        if (typeof event.params === 'object') {
+                            arguments.push(event.params);
                         }
-                        item.fn.apply(caller, arguments);
+                        event.fn.apply(caller, arguments);
                     }
                 });
             }
@@ -148,7 +172,7 @@ vZero.prototype = {
             }, function (clientErr, clientInstance) {
                 if (clientErr) {
                     // Handle error in client creation
-                    console.log(clientErr);
+                    console.error(clientErr);
                     return;
                 }
 
@@ -270,8 +294,13 @@ vZero.prototype = {
             braintree.hostedFields.create(options, function (hostedFieldsErr, hostedFieldsInstance) {
                 // Handle hosted fields errors
                 if (hostedFieldsErr) {
+                    // Duplicate IFRAME error can occur with certain checkouts implementations
+                    if (hostedFieldsErr.code == 'HOSTED_FIELDS_FIELD_DUPLICATE_IFRAME') {
+                        return;
+                    }
+
                     // Handle error in Hosted Fields creation
-                    console.log(hostedFieldsErr);
+                    console.error(hostedFieldsErr);
                     return;
                 }
 
@@ -367,6 +396,43 @@ vZero.prototype = {
     },
 
     /**
+     * Retrieve the billing country ID
+     *
+     * @returns {*}
+     */
+    getBillingCountryId: function () {
+        if ($('billing-address-select') == null || $('billing-address-select').value == '') {
+            var billing = this.getBillingAddress();
+            if (typeof billing['billing[country_id]'] !== 'undefined') {
+                return billing['billing[country_id]'];
+            }
+        }
+
+        if (this.billingCountryId) {
+            return this.billingCountryId;
+        }
+
+        return false;
+    },
+
+    /**
+     * Should we invoke the 3Ds flow
+     *
+     * @returns {*}
+     */
+    shouldInvokeThreeDSecure: function () {
+        // Are we invoking 3D secure for specific countries only?
+        if (this.threeDSpecificCountries && this.threeDCountries.length > 0) {
+            var countryId;
+            if (countryId = this.getBillingCountryId()) {
+                return this.threeDCountries.indexOf(countryId) !== -1;
+            }
+        }
+
+        return this.threeDSecure;
+    },
+
+    /**
      * Once the nonce has been received update the field
      *
      * @param nonce
@@ -374,7 +440,7 @@ vZero.prototype = {
      */
     hostedFieldsNonceReceived: function (nonce, options) {
 
-        if (this.threeDSecure) {
+        if (this.shouldInvokeThreeDSecure()) {
             // Show the loading state
             if (typeof this.integration.setLoading === 'function') {
                 this.integration.setLoading();
@@ -464,8 +530,8 @@ vZero.prototype = {
      */
     usingSavedCard: function () {
         return ($('creditcard-saved-accounts') != undefined
-        && $$('#creditcard-saved-accounts input:checked[type=radio]').first() != undefined
-        && $$('#creditcard-saved-accounts input:checked[type=radio]').first().value !== 'other');
+            && $$('#creditcard-saved-accounts input:checked[type=radio]').first() != undefined
+            && $$('#creditcard-saved-accounts input:checked[type=radio]').first().value !== 'other');
     },
 
     /**
@@ -728,7 +794,7 @@ vZero.prototype = {
         // Check the transport object has a URL and that it wasn't to our own controller
         if (url && url.indexOf('/braintree/') == -1) {
 
-            this.fireEvent(this, 'integration.onHandleAjaxRequest', {url: url});
+            this.fireEvent(this, 'onHandleAjaxRequest', {url: url});
 
             // Some checkout implementations may require custom callbacks
             if (callback) {
@@ -777,6 +843,9 @@ vZero.prototype = {
                         }
                         if (response.billingPostcode != undefined) {
                             this.billingPostcode = response.billingPostcode;
+                        }
+                        if (response.billingCountryId != undefined) {
+                            this.billingCountryId = response.billingCountryId;
                         }
                         if (response.grandTotal != undefined) {
                             this.amount = response.grandTotal;
@@ -903,7 +972,7 @@ vZero.prototype = {
                 client: clientInstance
             }, function (threeDSecureError, threeDSecureInstance) {
                 if (threeDSecureError) {
-                    console.log(threeDSecureError);
+                    console.error(threeDSecureError);
                     return;
                 }
 

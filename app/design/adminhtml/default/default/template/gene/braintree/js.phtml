@@ -43,15 +43,33 @@
         },
 
         /**
+         * Capture the original submit function
+         */
+        captureOriginalSubmitFn: function () {
+            this._originalSubmitFn = AdminOrder.prototype.submit;
+
+            // On dom load init hosted fields if it's enabled
+            document.observe("dom:loaded", function () {
+                this.paymentMethodSwitch();
+                this.initSavedMethods();
+            }.bind(this));
+
+            // Intercept any area of the checkout being updated
+            this.vzero.observeAjaxRequests(function() {
+                this.paymentMethodSwitch();
+                this.initSavedMethods();
+            }.bind(this));
+
+            return true;
+        },
+
+        /**
          * Attach observer events for the submission of the page
          */
         prepareSubmitObserver: function () {
 
             // Store a pointer to the vZero integration
             var vzeroIntegration = this;
-
-            // Store the original payment method
-            var _originalAdminOrderSubmit = AdminOrder.prototype.submit;
 
             // Intercept the save function
             AdminOrder.prototype.submit = function() {
@@ -65,26 +83,14 @@
 
                     // If everything was a success on the checkout end, let's submit the vZero integration
                     vzeroIntegration.submit('creditcard', function () {
-                        return _originalAdminOrderSubmit.apply(paymentThis, paymentArguments);
+                        return vzeroIntegration._originalSubmitFn.apply(paymentThis, paymentArguments);
                     });
 
                 } else {
-                    return _originalAdminOrderSubmit.apply(this, arguments);
+                    return vzeroIntegration._originalSubmitFn.apply(this, arguments);
                 }
 
             };
-
-            // On dom load init hosted fields if it's enabled
-            document.observe("dom:loaded", function () {
-                vzeroIntegration.paymentMethodSwitch();
-                vzeroIntegration.initSavedMethods();
-            }.bind(this));
-
-            // Intercept any area of the checkout being updated
-            this.vzero.observeAjaxRequests(function() {
-                vzeroIntegration.paymentMethodSwitch();
-                vzeroIntegration.initSavedMethods();
-            });
 
         },
 

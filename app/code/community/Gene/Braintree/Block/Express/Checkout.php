@@ -35,5 +35,4 @@ class Gene_Braintree_Block_Express_Checkout extends Mage_Core_Block_Template
     {
         return $this->getData('quote');
     }
-
 }

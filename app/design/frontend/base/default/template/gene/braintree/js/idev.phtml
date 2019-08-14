@@ -61,6 +61,14 @@
         },
 
         /**
+         * Capture the original submit function
+         */
+        captureOriginalSubmitFn: function () {
+            this._originalSubmitFn = $('onestepcheckout-form').submit;
+            return true;
+        },
+
+        /**
          * Attach an observer to the submit action of the checkout to tokenize the card details
          */
         prepareSubmitObserver: function() {
@@ -69,7 +77,6 @@
             var vzeroIntegration = this;
 
             // Observe the click event
-            var _originalSubmitEvent = $('onestepcheckout-form').submit;
             $('onestepcheckout-form').submit = function braintreeOverride(forceOriginal) {
                 forceOriginal = forceOriginal || false;
 
@@ -77,11 +84,11 @@
 
                     // If everything was a success on the checkout end, let's submit the vZero integration
                     vzeroIntegration.submit('creditcard', function () {
-                        return _originalSubmitEvent.call($('onestepcheckout-form'), arguments);
+                        return vzeroIntegration._originalSubmitFn.call($('onestepcheckout-form'), arguments);
                     });
 
                 } else {
-                    return _originalSubmitEvent.call($('onestepcheckout-form'), arguments);
+                    return vzeroIntegration._originalSubmitFn.call($('onestepcheckout-form'), arguments);
                 }
 
             };

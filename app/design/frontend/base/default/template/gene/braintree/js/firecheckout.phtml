@@ -18,15 +18,20 @@
         },
 
         /**
+         * Capture the original submit function
+         */
+        captureOriginalSubmitFn: function () {
+            this._originalSubmitFn = FireCheckout.prototype.save;
+            return true;
+        },
+
+        /**
          * Attach an observer to the submit action of the checkout to tokenize the card details
          */
         prepareSubmitObserver: function() {
 
             // Store a pointer to the vZero integration
             var vzeroIntegration = this;
-
-            // Store the old complete checkout function
-            var _originalSave = FireCheckout.prototype.save;
 
             // Re-define the original method so we can do some jazz with it
             FireCheckout.prototype.save = function () {
@@ -37,14 +42,17 @@
                     var paymentThis = this;
                     var paymentArguments = arguments;
 
+                    // Store last arguments to make a proper request from submitCheckout method
+                    vzeroIntegration.fireCheckoutArguments = arguments;
+
                     // If everything was a success on the checkout end, let's submit the vZero integration
                     vzeroIntegration.submit('creditcard', function () {
-                        return _originalSave.apply(paymentThis, paymentArguments);
+                        return vzeroIntegration._originalSubmitFn.apply(paymentThis, paymentArguments);
                     });
 
                 } else {
                     // If not run the original code
-                    return _originalSave.apply(this, arguments);
+                    return vzeroIntegration._originalSubmitFn.apply(this, arguments);
                 }
 
             };
@@ -56,7 +64,8 @@
          */
         submitCheckout: function() {
             // Run the original checkouts submit action
-            return checkout.save();
+            var fireCheckoutArguments = this.fireCheckoutArguments || [];
+            return checkout.save.apply(checkout, fireCheckoutArguments);
         },
 
         /**
@@ -87,7 +96,7 @@
         (window.vzeroPaypal || false),
         '<div id="paypal-complete"><div id="paypal-container"></div></div>',
         '#review-buttons-container .btn-checkout',
-        true,
+        $$('.firecheckout-set.onecolumn').length === 0,
         {
             ignoreAjax: ['firecheckout/index/saveOrder']
         }

@@ -46,15 +46,20 @@
         },
 
         /**
+         * Capture the original submit function
+         */
+        captureOriginalSubmitFn: function () {
+            this._originalSubmitFn = AWOnestepcheckoutForm.prototype._sendPlaceOrderRequest;
+            return true;
+        },
+
+        /**
          * Attach an observer to the submit action of the checkout to tokenize the card details
          */
         prepareSubmitObserver: function() {
 
             // Store a pointer to the vZero integration
             var vzeroIntegration = this;
-
-            // Store the original payment method
-            var _originalSendPlaceOrderRequest = AWOnestepcheckoutForm.prototype._sendPlaceOrderRequest;
 
             // Intercept the save function
             AWOnestepcheckoutForm.prototype._sendPlaceOrderRequest = function () {
@@ -67,12 +72,12 @@
 
                     // If everything was a success on the checkout end, let's submit the vZero integration
                     vzeroIntegration.submit('creditcard', function () {
-                        return _originalSendPlaceOrderRequest.apply(paymentThis, paymentArguments);
+                        return vzeroIntegration._originalSubmitFn.apply(paymentThis, paymentArguments);
                     });
 
                 } else {
                     // If not run the original code
-                    return _originalSendPlaceOrderRequest.apply(this, arguments);
+                    return vzeroIntegration._originalSubmitFn.apply(this, arguments);
                 }
 
             };

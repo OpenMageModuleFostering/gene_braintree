@@ -192,17 +192,21 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
         $quote = $this->_getQuote();
         $quote->setTotalsCollectedFlag(false)->collectTotals()->save();
 
-        // collect shipping rates
-        $quote->getShippingAddress()->removeAllShippingRates();
-        $quote->getShippingAddress()->setCollectShippingRates(true)->collectShippingRates();
+        // Recollect all totals for the quote
+        $quote->setTotalsCollectedFlag(false);
+        $quote->getBillingAddress();
+        $quote->getShippingAddress()->setCollectShippingRates(true);
+        $quote->collectTotals();
+        $quote->save();
 
-        // Get the shipping rates
-        $shippingRates = $quote->getShippingAddress()->getShippingRatesCollection();
+        // Pull out the shipping rates
+        $shippingRates = $quote->getShippingAddress()
+            ->collectShippingRates()
+            ->getAllShippingRates();
 
         // Save the shipping method
         $submitShipping = $this->getRequest()->getParam('submit_shipping');
         if (!empty($submitShipping)) {
-
             // If the quote is virtual process the order without a shipping method
             if ($quote->isVirtual()) {
                 return $this->_redirect("braintree/express/process");
@@ -221,9 +225,6 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
             // Missing a valid shipping method
             Mage::getSingleton('core/session')->addWarning(Mage::helper('gene_braintree')->__('Please select a shipping method.'));
         }
-
-        // Recollect the totals
-        $quote->setTotalsCollectedFlag(false)->collectTotals();
 
         // Build up the totals block
         /* @var $totals Mage_Checkout_Block_Cart_Totals */
@@ -258,7 +259,6 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
         // Save the shipping method
         $submitShipping = $this->getRequest()->getParam('submit_shipping');
         if (!empty($submitShipping)) {
-
             // Check the shipping rate we want to use is available
             $method = $this->getRequest()->getParam('shipping_method');
             if (!empty($method) && $quote->getShippingAddress()->getShippingRateByCode($method)) {
@@ -452,5 +452,4 @@ class Gene_Braintree_ExpressController extends Mage_Core_Controller_Front_Action
 
         return $this;
     }
-
 }

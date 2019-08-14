@@ -120,24 +120,33 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             return false;
         }
 
-        // Is 3Ds enabled within the configuration?
-        if ($this->_getConfig('threedsecure')) {
-            // Do we have a requirement on the threshold
-            if ($this->_getConfig('threedsecure_threshold') > 0) {
-                // Check to see if the base grand total is bigger then the threshold
-                if (Mage::getSingleton('checkout/cart')->getQuote()->collectTotals()->getBaseGrandTotal() >
-                    $this->_getConfig('threedsecure_threshold')
-                ) {
-                    return true;
-                }
+        /* @var $quote Mage_Sales_Model_Quote */
+        $quote = Mage::getSingleton('checkout/cart')->getQuote();
 
-                return false;
-            }
+        // Is 3D secure currently enabled?
+        $result = $this->_getConfig('threedsecure');
 
-            return true;
+        // Do we have a requirement on the threshold
+        if ($result && $this->_getConfig('threedsecure_threshold') > 0) {
+            // Check to see if the base grand total is bigger then the threshold
+            $result = $quote->collectTotals()->getBaseGrandTotal() >
+                $this->_getConfig('threedsecure_threshold');
         }
 
-        return false;
+        // Do we only want to enable 3Ds for specific countries?
+        if ($result && $this->_getConfig('threedsecure_allowspecific') ==
+            Gene_Braintree_Model_System_Config_Source_Payment_Threedsecurecountries::SPECIFIC_COUNTRIES
+        ) {
+            $countries = $this->_getConfig('threedsecure_specificcountry');
+            if ($countries) {
+                $countriesArray = explode(',', $countries);
+                if (count($countriesArray) >= 1) {
+                    $result = in_array($quote->getBillingAddress()->getCountryId(), $countriesArray);
+                }
+            }
+        }
+
+        return ($result == 1 ? true : false);
     }
 
     /**
@@ -275,6 +284,11 @@ class Gene_Braintree_Model_Paymentmethod_Creditcard extends Gene_Braintree_Model
             );
 
         } catch (Exception $e) {
+            // If we're in developer mode return the message error
+            if (Mage::getIsDeveloperMode()) {
+                return $this->_processFailedResult($e->getMessage());
+            }
+
             // Handle an exception being thrown
             Mage::dispatchEvent('gene_braintree_creditcard_failed_exception', array(
                 'payment' => $payment,

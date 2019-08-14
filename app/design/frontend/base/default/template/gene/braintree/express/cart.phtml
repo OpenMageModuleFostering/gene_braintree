@@ -1,4 +1,8 @@
-<?php if (!$this->isEnabled() || !$this->isEnabledCart()) return; ?>
+<?php
+if (!$this->isEnabledCart()) {
+    return;
+}
+?>
 
 <script type="text/javascript">
     if (typeof Translator !== 'object' && typeof Translate == 'object') {

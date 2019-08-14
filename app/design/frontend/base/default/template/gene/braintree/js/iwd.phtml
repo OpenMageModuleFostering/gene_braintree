@@ -81,6 +81,17 @@
         },
 
         /**
+         * Capture the original submit function
+         */
+        captureOriginalSubmitFn: function () {
+            this._originalSavePaymentFn = IWD.OPC.savePayment;
+            this._originalSubmitFn = IWD.OPC.saveOrder;
+            this._originalBindChangePaymentFieldsFn = IWD.OPC.bindChangePaymentFields;
+            this._originalValidatePaymentFn = IWD.OPC.validatePayment;
+            return true;
+        },
+
+        /**
          * Attach an observer to the submit action of the checkout to tokenize the card details
          */
         prepareSubmitObserver: function() {
@@ -88,7 +99,6 @@
             // Store a pointer to the vZero integration
             var vzeroIntegration = this;
 
-            var _originalSavePayment = IWD.OPC.savePayment;
             IWD.OPC.savePayment = function () {
 
                 // Never call this bizarre function for our method
@@ -115,12 +125,11 @@
                 }
 
                 // Run the original method
-                return _originalSavePayment.apply(this, arguments);
+                return vzeroIntegration._originalSavePaymentFn.apply(this, arguments);
 
             };
 
             // Intercept the save order to process the credit card
-            var _originalSaveOrder = IWD.OPC.saveOrder;
             IWD.OPC.saveOrder = function() {
 
                 if (vzeroIntegration.shouldInterceptSubmit('creditcard')) {
@@ -131,30 +140,26 @@
 
                     // If everything was a success on the checkout end, let's submit the vZero integration
                     vzeroIntegration.submit('creditcard', function () {
-                        return _originalSaveOrder.apply(paymentThis, paymentArguments);
+                        return vzeroIntegration._originalSubmitFn.apply(paymentThis, paymentArguments);
                     });
 
                 } else {
                     // If not run the original code
-                    return _originalSaveOrder.apply(this, arguments);
+                    return vzeroIntegration._originalSubmitFn.apply(this, arguments);
                 }
 
             };
 
             // When IWD binds payment fields we wanna init
-            var _originalBindChangePaymentFields = IWD.OPC.bindChangePaymentFields;
             IWD.OPC.bindChangePaymentFields = function() {
-
                 vzeroIntegration.paymentMethodSwitch();
-
-                return _originalBindChangePaymentFields.apply(this, arguments);
+                return vzeroIntegration._originalBindChangePaymentFieldsFn.apply(this, arguments);
             };
 
             // Stop the system from validating the credit card hosted fields form for hosted fields
-            var _originalValidatePayment = IWD.OPC.validatePayment;
             IWD.OPC.validatePayment = function() {
                 if (IWD.OPC.saveOrderStatus === true || vzeroIntegration.getPaymentMethod() != 'gene_braintree_creditcard' || (vzeroIntegration.getPaymentMethod() == 'gene_braintree_creditcard' && !vzeroIntegration.vzero.hostedFields)) {
-                    return _originalValidatePayment.apply(this, arguments);
+                    return vzeroIntegration._originalValidatePaymentFn.apply(this, arguments);
                 }
             };
 
@@ -182,7 +187,6 @@
         '.opc-btn-checkout',
         true,
         {
-            /* This checkout performs a number of Ajax requests that shouldn't cause Braintree to need a new quote total */
             ignoreAjax: [
                 'onepage/json/saveOrder',
                 'onepage/json/review'

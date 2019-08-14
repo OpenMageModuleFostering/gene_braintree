@@ -18,6 +18,14 @@
         },
 
         /**
+         * Capture the original submit function
+         */
+        captureOriginalSubmitFn: function () {
+            this._originalSubmitFn = Review.prototype.save;
+            return true;
+        },
+
+        /**
          * Attach observer events for saving the payment step, alongside the review step
          */
         prepareSubmitObserver: function() {
@@ -25,8 +33,8 @@
             // Store a pointer to the vZero integration
             var vzeroIntegration = this;
 
-            // As the default checkout submits more data on the review step, we need to make sure various elements are disabled
-            var _originalReviewSave = Review.prototype.save;
+            // As the default checkout submits more data on the review step, we need to make sure various elements are
+            // disabled
             Review.prototype.save = function () {
 
                 if (vzeroIntegration.shouldInterceptSubmit('creditcard')) {
@@ -37,12 +45,12 @@
 
                     // If everything was a success on the checkout end, let's submit the vZero integration
                     vzeroIntegration.submit('creditcard', function () {
-                        return _originalReviewSave.apply(paymentThis, paymentArguments);
+                        return vzeroIntegration._originalSubmitFn.apply(paymentThis, paymentArguments);
                     });
 
                 } else {
                     // If not run the original code
-                    return _originalReviewSave.apply(this, arguments);
+                    return vzeroIntegration._originalSubmitFn.apply(this, arguments);
                 }
             };
 

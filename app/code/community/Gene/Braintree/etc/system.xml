@@ -4,16 +4,23 @@
         <payment>
             <groups>
                 <gene_braintree translate="label comment" module="gene_braintree">
-                    <label>Braintree v.zero - Configuration</label>
+                    <label>Braintree Payments - Configuration</label>
                     <sort_order>1498</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
                     <show_in_store>1</show_in_store>
-                    <comment><![CDATA[<img src="https://i.imgur.com/JR1BJTr.png" style="margin: 4px 0 8px 0;" border="0"/><br />To use this module you will need an existing production or sandbox Braintree account. You can apply at <a href="https://www.braintreepayments.com">braintreepayments.com</a>.<br />Braintree v.zero integration provided by <a href="http://gene.co.uk/" target="_blank">Gene Commerce</a>.]]></comment>
+                    <comment><![CDATA[
+                        <div class="braintree-logos" style="float: left;width: 100%;margin: 8px 0 24px 0;">
+                            <img src="https://www.braintreepayments.com/images/bt-logo-black-d9116046.png" height="36" style="display: inline-block; vertical-align: middle;" border="0" />
+                            <div style="display: inline-block;padding: 0 14px;vertical-align: middle;opacity: 0.7;">by</div>
+                            <a href="http://gene.co.uk/" title="Gene Commerce" target="_blank"><img src="https://i.imgur.com/OAXtYNg.png" style="display: inline-block;vertical-align: middle;" height="36" /></a>
+                        </div>
+                        To use this module you will need an existing production or sandbox Braintree account. You can apply at <a href="https://www.braintreepayments.com">braintreepayments.com</a>.<br />Braintree Payments integration provided by <a href="http://gene.co.uk/" target="_blank">Gene Commerce</a>.
+                    ]]></comment>
                     <fields>
 
                         <module_version translate="label">
-                            <label>Magento Braintree v.zero Version</label>
+                            <label>Magento Braintree Payments Version</label>
                             <frontend_model>gene_braintree/adminhtml_system_config_braintree_moduleversion</frontend_model>
                             <sort_order>20</sort_order>
                             <show_in_default>1</show_in_default>
@@ -248,12 +255,15 @@
                 </gene_braintree>
 
                 <gene_braintree_paypal translate="label comment" module="gene_braintree">
-                    <label>Braintree v.zero - PayPal</label>
+                    <label>Braintree Payments - PayPal</label>
                     <sort_order>1499</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
                     <show_in_store>1</show_in_store>
-                    <comment><![CDATA[<img src="https://i.imgur.com/sitDbHA.png" style="margin: 6px 0;" /><br />You must first configure the <strong>Braintree v.zero - Configuration</strong> section with your Braintree account details.]]></comment>
+                    <comment><![CDATA[
+                        <img alt="PayPal powered by Braintree" width="220" src="https://s3-us-west-1.amazonaws.com/bt-partner-assets/paypal-braintree.png" style="margin: 8px 0 10px 0;" /><br />
+                        You must first configure the <strong>Braintree Payments - Configuration</strong> section with your Braintree account details.]]>
+                    </comment>
                     <fields>
 
                         <active translate="label">
@@ -274,7 +284,6 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </title>
-
 
                         <express_heading translate="label">
                             <label>Paypal Express</label>
@@ -381,6 +390,34 @@
                             <show_in_store>1</show_in_store>
                         </order_status>
 
+                        <!--<payee_email_active translate="label comment">-->
+                            <!--<label>Enable Custom Payee Email</label>-->
+                            <!--<frontend_type>select</frontend_type>-->
+                            <!--<source_model>adminhtml/system_config_source_yesno</source_model>-->
+                            <!--<sort_order>111</sort_order>-->
+                            <!--<show_in_default>1</show_in_default>-->
+                            <!--<show_in_website>1</show_in_website>-->
+                            <!--<show_in_store>1</show_in_store>-->
+                            <!--<comment><![CDATA[-->
+                                <!--This allows you to have PayPal payments paid into a specific PayPal account different from the one connected to your Braintree account. This feature requires specific permissions to be enabled on your Braintree account, please contact your Braintree account manager if you're interested in this feature.-->
+                            <!--]]></comment>-->
+                        <!--</payee_email_active>-->
+
+                        <!--<payee_email translate="label comment">-->
+                            <!--<label>Payee Email</label>-->
+                            <!--<frontend_type>text</frontend_type>-->
+                            <!--<sort_order>112</sort_order>-->
+                            <!--<show_in_default>1</show_in_default>-->
+                            <!--<show_in_website>1</show_in_website>-->
+                            <!--<show_in_store>1</show_in_store>-->
+                            <!--<comment><![CDATA[-->
+                                <!--The PayPal email address for PayPal payments to be deposited into.-->
+                            <!--]]></comment>-->
+                            <!--<depends>-->
+                                <!--<payee_email_active>1</payee_email_active>-->
+                            <!--</depends>-->
+                        <!--</payee_email>-->
+
                         <features_heading translate="label">
                             <label>Features</label>
                             <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
@@ -420,6 +457,23 @@
                                 Storing the customers PayPal in the vault will allow them to instantly purchase any product without having to login to PayPal again.
                             ]]></comment>
                         </use_vault>
+
+                        <use_vault_only_on_vault translate="label comment">
+                            <label>Vault Flow only for Vault Requests</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>145</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <depends>
+                                <payment_type>future</payment_type>
+                                <use_vault>1</use_vault>
+                            </depends>
+                            <comment><![CDATA[
+                                Use the checkout flow for all transactions that the customer has not opted into having their PayPal account saved. This can improve conversion rates as the Vault flow requests the customer setup a billing agreement.
+                            ]]></comment>
+                        </use_vault_only_on_vault>
 
                         <locale translate="label comment">
                             <label>Locale</label>
@@ -476,12 +530,18 @@
                 </gene_braintree_paypal>
 
                 <gene_braintree_creditcard translate="label comment" module="gene_braintree">
-                    <label>Braintree v.zero - Credit Card</label>
+                    <label>Braintree Payments - Credit Card</label>
                     <sort_order>1500</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
                     <show_in_store>1</show_in_store>
-                    <comment><![CDATA[You must first configure the <strong>Braintree v.zero - Configuration</strong> section with your Braintree account details.]]></comment>
+                    <comment>
+                        <![CDATA[
+                            <img src="https://www.braintreepayments.com/images/bt-logo-black-d9116046.png" height="30" style="margin-top: 6px; display: inline-block; vertical-align: middle;" border="0" /><br />
+                            <img src="https://s3-us-west-1.amazonaws.com/bt-partner-assets/payment-method-cards.png" style="margin: 12px 0 10px 0;" alt="Accept Visa, Mastercard, Discover, and American Express payments" width="140"><br />
+                            You must first configure the <strong>Braintree Payments - Configuration</strong> section with your Braintree account details.
+                        ]]>
+                    </comment>
                     <fields>
 
                         <active translate="label">
@@ -612,34 +672,6 @@
                             ]]></comment>
                         </use_vault>
 
-                        <threedsecure translate="label comment">
-                            <label>Enable 3D Secure</label>
-                            <frontend_type>select</frontend_type>
-                            <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>76</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                            <comment><![CDATA[
-                                The 3D Secure feature enables the shopper to enter a password to confirm their identity with the card issuer. If accepted they then complete their order, and when received by you, you have much more confidence that is genuine and real.<br /><strong>Notice:</strong> To use 3D secure your checkout must run over HTTPs, this is required for both production and sandbox configurations.
-                            ]]></comment>
-                        </threedsecure>
-
-                        <threedsecure_threshold translate="label comment">
-                            <label>3D Secure Threshold</label>
-                            <frontend_type>text</frontend_type>
-                            <sort_order>77</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                            <comment><![CDATA[
-                                The threshold which requires a transaction to be passed through 3D secure. Set this to 0 to pass all transactions through 3D secure.
-                            ]]></comment>
-                            <depends>
-                                <threedsecure>1</threedsecure>
-                            </depends>
-                        </threedsecure_threshold>
-
                         <useccv translate="label comment">
                             <label>CVV Verification</label>
                             <frontend_type>select</frontend_type>
@@ -710,6 +742,73 @@
                                 <!--<strong>Note:</strong> You must have this enabled on your account, you can find out more information <a href="https://developers.braintreepayments.com/javascript+php/sdk/server/transaction-processing/dynamic-descriptors">here</a>.-->
                             <!--]]></comment>-->
                         <!--</dynamic_descriptors>-->
+
+                        <threedsecure_heading translate="label">
+                            <label>3D Secure</label>
+                            <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
+                            <sort_order>99</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </threedsecure_heading>
+
+                        <threedsecure translate="label comment">
+                            <label>Enable 3D Secure</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>100</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                The 3D Secure feature enables the shopper to enter a password to confirm their identity with the card issuer. If accepted they then complete their order, and when received by you, you have much more confidence that is genuine and real.<br /><strong>Notice:</strong> To use 3D secure your checkout must run over HTTPs, this is required for both production and sandbox configurations.
+                            ]]></comment>
+                        </threedsecure>
+
+                        <threedsecure_threshold translate="label comment">
+                            <label>3D Secure Threshold</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>101</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[
+                                The threshold which requires a transaction to be passed through 3D secure. Set this to 0 to pass all transactions through 3D secure.
+                            ]]></comment>
+                            <depends>
+                                <threedsecure>1</threedsecure>
+                            </depends>
+                        </threedsecure_threshold>
+
+                        <threedsecure_allowspecific translate="label comment">
+                            <label>3D Secure for Applicable Countries</label>
+                            <frontend_type>allowspecific</frontend_type>
+                            <sort_order>102</sort_order>
+                            <source_model>gene_braintree/system_config_source_payment_threedsecurecountries</source_model>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <comment><![CDATA[
+                                Determine when 3D secure should display based on the customers billing country. Cards vaulted using 3D secure will ignore this option.
+                            ]]></comment>
+                            <depends>
+                                <threedsecure>1</threedsecure>
+                            </depends>
+                        </threedsecure_allowspecific>
+
+                        <threedsecure_specificcountry translate="label">
+                            <label>3D Secure for Specific Countries</label>
+                            <frontend_type>multiselect</frontend_type>
+                            <sort_order>103</sort_order>
+                            <source_model>adminhtml/system_config_source_country</source_model>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <threedsecure>1</threedsecure>
+                                <threedsecure_allowspecific>1</threedsecure_allowspecific>
+                            </depends>
+                        </threedsecure_specificcountry>
 
                         <kount translate="label">
                             <label>Kount</label>

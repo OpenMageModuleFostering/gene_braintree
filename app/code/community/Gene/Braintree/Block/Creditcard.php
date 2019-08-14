@@ -9,6 +9,7 @@ class Gene_Braintree_Block_Creditcard extends Mage_Payment_Block_Form_Cc
 {
     /**
      * We can use the same token twice
+     *
      * @var bool
      */
     protected $_token = false;
@@ -34,8 +35,13 @@ class Gene_Braintree_Block_Creditcard extends Mage_Payment_Block_Form_Cc
         // Validate that the vault is enabled and that the user is either logged in or registering
         if ($this->getMethod()->isVaultEnabled()
             && (Mage::getSingleton('customer/session')->isLoggedIn()
-                || Mage::getSingleton('checkout/type_onepage')->getCheckoutMethod() == Mage_Checkout_Model_Type_Onepage::METHOD_REGISTER))
-        {
+                || Mage::getSingleton('checkout/type_onepage')->getCheckoutMethod() == Mage_Checkout_Model_Type_Onepage::METHOD_REGISTER)
+        ) {
+            return true;
+        }
+
+        // Is the vault enabled, and is the transaction occuring in the admin?
+        if ($this->getMethod()->isVaultEnabled() && Mage::app()->getStore()->isAdmin()) {
             return true;
         }
 
@@ -54,6 +60,7 @@ class Gene_Braintree_Block_Creditcard extends Mage_Payment_Block_Form_Cc
                 return sizeof($this->getSavedDetails());
             }
         }
+
         return false;
     }
 
@@ -64,9 +71,10 @@ class Gene_Braintree_Block_Creditcard extends Mage_Payment_Block_Form_Cc
      */
     public function getSavedDetails()
     {
-        if(!$this->_savedDetails) {
+        if (!$this->_savedDetails) {
             $this->_savedDetails = Mage::getSingleton('gene_braintree/saved')->getSavedMethodsByType(Gene_Braintree_Model_Saved::SAVED_CREDITCARD_ID);
         }
+
         return $this->_savedDetails;
     }
 
@@ -79,6 +87,7 @@ class Gene_Braintree_Block_Creditcard extends Mage_Payment_Block_Form_Cc
     {
         $html = $this->getChildHtml('saved', false);
         $this->unsetChild('saved');
+
         return $html;
     }
 
@@ -126,29 +135,29 @@ class Gene_Braintree_Block_Creditcard extends Mage_Payment_Block_Form_Cc
     static public function getCardIcon($cardType)
     {
         // Convert the card type to lower case, no spaces
-        switch(str_replace(' ', '', strtolower($cardType))) {
+        switch (str_replace(' ', '', strtolower($cardType))) {
             case 'mastercard':
                 return 'MC.png';
-            break;
+                break;
             case 'visa':
                 return 'VI.png';
-            break;
+                break;
             case 'americanexpress':
             case 'amex':
                 return 'AE.png';
-            break;
+                break;
             case 'discover':
                 return 'DI.png';
-            break;
+                break;
             case 'jcb':
                 return 'JCB.png';
-            break;
+                break;
             case 'maestro':
                 return 'ME.png';
-            break;
+                break;
             case 'paypal':
                 return 'PP.png';
-            break;
+                break;
         }
 
         // Otherwise return the standard card image
@@ -162,14 +171,16 @@ class Gene_Braintree_Block_Creditcard extends Mage_Payment_Block_Form_Cc
      */
     protected function getClientToken()
     {
-        if(!$this->_token) {
+        if (!$this->_token) {
             $this->_token = Mage::getSingleton('gene_braintree/wrapper_braintree')->init()->generateToken();
         }
+
         return $this->_token;
     }
 
     /**
      * Config setting to show accepted cards on the checkout
+     *
      * @return boolean
      */
     protected function showAcceptedCards()
@@ -179,6 +190,7 @@ class Gene_Braintree_Block_Creditcard extends Mage_Payment_Block_Form_Cc
 
     /**
      * Allowed payment cards
+     *
      * @return array
      */
     protected function getAllowedCards()
@@ -205,7 +217,7 @@ class Gene_Braintree_Block_Creditcard extends Mage_Payment_Block_Form_Cc
      */
     protected function getHostedDescriptor()
     {
-        if( Mage::getModel('gene_braintree/paymentmethod_creditcard')->getConfigData('form_integration') == Gene_Braintree_Model_Source_Creditcard_FormIntegration::INTEGRATION_HOSTED ) {
+        if (Mage::getModel('gene_braintree/paymentmethod_creditcard')->getConfigData('form_integration') == Gene_Braintree_Model_Source_Creditcard_FormIntegration::INTEGRATION_HOSTED) {
             return Mage::getModel('gene_braintree/paymentmethod_creditcard')->getConfigData('hostedfields_descriptor');
         }
 

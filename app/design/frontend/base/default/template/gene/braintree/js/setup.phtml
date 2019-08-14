@@ -17,22 +17,24 @@
             false,
             false,
             '<?php echo Mage::getUrl('braintree/checkout/quoteTotal', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>',
-            '<?php echo Mage::getUrl('braintree/checkout/tokenizeCard', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>',
-            '<?php echo Mage::getUrl('braintree/checkout/vaultToNonce', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>'
+            '<?php echo Mage::getUrl('braintree/checkout/tokenizeCard', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())); ?>'
         );
 
-        <?php if ($this->isPayPalActive()) : ?>
-            // Pass some data through to the PayPal integration
-            var vzeroPaypal = new vZeroPayPalButton(
-                '<?php echo $this->getClientToken(); ?>',
-                '<?php echo Mage::app()->getStore()->getFrontendName(); ?>',
-                <?php echo $this->getSingleUse(); ?>,
-                '<?php echo $this->getLocale(); ?>',
-                <?php echo $this->getSingleFutureUse(); ?>,
-                vzero
-            );
+        <?php if ($this->isThreeDSpecificCountries()) : ?>
+        vzero.setThreeDCountries('<?php echo $this->getThreeDSpecificCountries(); ?>');
         <?php endif; ?>
 
+        <?php if ($this->isPayPalActive()) : ?>
+        // Pass some data through to the PayPal integration
+        var vzeroPaypal = new vZeroPayPalButton(
+            '<?php echo $this->getClientToken(); ?>',
+            '<?php echo Mage::app()->getStore()->getFrontendName(); ?>',
+            <?php echo $this->getSingleUse(); ?>,
+            '<?php echo $this->getLocale(); ?>',
+            <?php echo $this->getSingleFutureUse(); ?>,
+            <?php echo $this->shouldOnlyVaultOnVault() ? $this->shouldOnlyVaultOnVault() : 'false'; ?>
+        );
+        <?php endif; ?>
     }
 </script>
 

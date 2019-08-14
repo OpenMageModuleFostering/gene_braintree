@@ -40,7 +40,7 @@ class Gene_Braintree_Block_Paypal extends Mage_Payment_Block_Form
     public function getSingleUse()
     {
         // We prefer to do future payments, so anything else is future
-        if(Mage::getSingleton('gene_braintree/paymentmethod_paypal')->getPaymentType() == Gene_Braintree_Model_Source_Paypal_Paymenttype::GENE_BRAINTREE_PAYPAL_SINGLE_PAYMENT) {
+        if (Mage::getSingleton('gene_braintree/paymentmethod_paypal')->getPaymentType() == Gene_Braintree_Model_Source_Paypal_Paymenttype::GENE_BRAINTREE_PAYPAL_SINGLE_PAYMENT) {
             return 'true';
         }
 
@@ -54,11 +54,12 @@ class Gene_Braintree_Block_Paypal extends Mage_Payment_Block_Form
      */
     public function hasSavedDetails()
     {
-        if(Mage::getSingleton('customer/session')->isLoggedIn() || Mage::app()->getStore()->isAdmin()) {
-            if($this->getSavedDetails()) {
+        if (Mage::getSingleton('customer/session')->isLoggedIn() || Mage::app()->getStore()->isAdmin()) {
+            if ($this->getSavedDetails()) {
                 return sizeof($this->getSavedDetails());
             }
         }
+
         return false;
     }
 
@@ -69,9 +70,10 @@ class Gene_Braintree_Block_Paypal extends Mage_Payment_Block_Form
      */
     public function getSavedDetails()
     {
-        if(!$this->_savedDetails) {
+        if (!$this->_savedDetails) {
             $this->_savedDetails = Mage::getSingleton('gene_braintree/saved')->getSavedMethodsByType(Gene_Braintree_Model_Saved::SAVED_PAYPAL_ID);
         }
+
         return $this->_savedDetails;
     }
 
@@ -84,6 +86,7 @@ class Gene_Braintree_Block_Paypal extends Mage_Payment_Block_Form
     {
         $html = $this->getChildHtml('saved', false);
         $this->unsetChild('saved');
+
         return $html;
     }
 
@@ -96,8 +99,8 @@ class Gene_Braintree_Block_Paypal extends Mage_Payment_Block_Form
     {
         if ($this->getMethod()->isVaultEnabled()
             && (Mage::getSingleton('customer/session')->isLoggedIn()
-                || Mage::getSingleton('checkout/type_onepage')->getCheckoutMethod() == Mage_Checkout_Model_Type_Onepage::METHOD_REGISTER))
-        {
+                || Mage::getSingleton('checkout/type_onepage')->getCheckoutMethod() == Mage_Checkout_Model_Type_Onepage::METHOD_REGISTER)
+        ) {
             return true;
         }
 

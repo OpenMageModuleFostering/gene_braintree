@@ -231,12 +231,22 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
                 $this->shouldSaveMethod($payment)
             );
 
+            // Detect a custom payee email from the configuration
+            if ($email = $this->hasCustomPayeeEmail()) {
+                $saleArray['options']['payeeEmail'] = $email;
+            }
+
             // Attempt to make the sale, firstly dispatching an event
             $result = $this->_getWrapper()->makeSale(
                 $this->_dispatchSaleArrayEvent('gene_braintree_paypal_sale_array', $saleArray, $payment)
             );
 
         } catch (Exception $e) {
+            // If we're in developer mode return the message error
+            if (Mage::getIsDeveloperMode()) {
+                return $this->_processFailedResult($e->getMessage());
+            }
+
             // Dispatch an event for when a payment fails
             Mage::dispatchEvent('gene_braintree_paypal_failed_exception', array('payment' => $payment, 'exception' => $e));
 
@@ -257,6 +267,20 @@ class Gene_Braintree_Model_Paymentmethod_Paypal extends Gene_Braintree_Model_Pay
         $this->_processSuccessResult($payment, $result, $amount);
 
         return $this;
+    }
+
+    /**
+     * Does the current store have a custom payee email attached?
+     *
+     * @return bool|mixed
+     */
+    protected function hasCustomPayeeEmail()
+    {
+        if ($this->_getConfig('payee_email_active') && ($email = $this->_getConfig('payee_email'))) {
+            return $email;
+        }
+
+        return false;
     }
 
     /**

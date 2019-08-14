@@ -15,8 +15,9 @@ vZeroPayPalButton.prototype = {
      * @param singleUse Should the system attempt to open in single payment mode?
      * @param locale The locale for the payment
      * @param futureSingleUse When using future payments should we process the transaction as a single payment?
+     * @param onlyVaultOnVault Should we only show the Vault flow if the customer has opted into saving their details?
      */
-    initialize: function (clientToken, storeFrontName, singleUse, locale, futureSingleUse) {
+    initialize: function (clientToken, storeFrontName, singleUse, locale, futureSingleUse, onlyVaultOnVault) {
         this.clientToken = clientToken;
         this.storeFrontName = storeFrontName;
         this.singleUse = singleUse;
@@ -27,6 +28,8 @@ vZeroPayPalButton.prototype = {
         this.currency = false;
 
         this.client = false;
+
+        this.onlyVaultOnVault = onlyVaultOnVault || false;
     },
 
     /**
@@ -246,7 +249,8 @@ vZeroPayPalButton.prototype = {
             displayName: this.storeFrontName,
             amount: this.amount,
             currency: this.currency,
-            useraction: 'commit' /* The user is committing to the order on submission of PayPal */
+            useraction: 'commit', /* The user is committing to the order on submission of PayPal */
+            flow: this._getFlow()
         };
 
         // Pass over the locale
@@ -254,13 +258,35 @@ vZeroPayPalButton.prototype = {
             options.locale = this.locale;
         }
 
+        return options;
+    },
+
+    /**
+     * Determine the flow for the PayPal window
+     *
+     * @returns {*}
+     * @private
+     */
+    _getFlow: function () {
+        var flow;
+
         // Determine the flow based on the singleUse parameter
         if (this.singleUse === true) {
-            options.flow = 'checkout';
+            flow = 'checkout';
         } else {
-            options.flow = 'vault';
+            flow = 'vault';
         }
 
-        return options;
+        // Determine if the user should be forced back to the checkout flow
+        if ($('gene_braintree_paypal_store_in_vault') !== null) {
+            if (this.onlyVaultOnVault && /* Are we set to only vault when the customer requests */
+                flow == 'vault' && /* Has the flow been set to vault already? */
+                !$('gene_braintree_paypal_store_in_vault').checked /* The user has opted not to save their details */
+            ) {
+                flow = 'checkout';
+            }
+        }
+
+        return flow;
     }
 };

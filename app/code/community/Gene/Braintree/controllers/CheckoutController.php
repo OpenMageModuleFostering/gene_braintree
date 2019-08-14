@@ -15,11 +15,13 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
     public function quoteTotalAction()
     {
         // Grab the quote
+        /* @var $quote Mage_Sales_Model_Quote */
         $quote = Mage::getSingleton('checkout/type_onepage')->getQuote();
 
         // Retrieve the billing information from the quote
         $billingName = $quote->getBillingAddress()->getName();
         $billingPostcode = $quote->getBillingAddress()->getPostcode();
+        $billingCountryId = $quote->getBillingAddress()->getCountryId();
 
         // Has the request supplied the billing address ID?
         if ($addressId = $this->getRequest()->getParam('addressId') &&
@@ -32,6 +34,7 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
             if ($billingAddress && $billingAddress->getId()) {
                 $billingName = $billingAddress->getName();
                 $billingPostcode = $billingAddress->getPostcode();
+                $billingCountryId = $billingAddress->getCountryId();
             }
 
         }
@@ -47,11 +50,12 @@ class Gene_Braintree_CheckoutController extends Mage_Core_Controller_Front_Actio
 
         // Build up our JSON response
         $jsonResponse = array(
-            'billingName'     => $billingName,
-            'billingPostcode' => $billingPostcode,
-            'grandTotal'      => Mage::helper('gene_braintree')->formatPrice($grandTotal),
-            'currencyCode'    => $currencyCode,
-            'threeDSecure'    => Mage::getSingleton('gene_braintree/paymentmethod_creditcard')->is3DEnabled()
+            'billingName'      => $billingName,
+            'billingPostcode'  => $billingPostcode,
+            'billingCountryId' => $billingCountryId,
+            'grandTotal'       => Mage::helper('gene_braintree')->formatPrice($grandTotal),
+            'currencyCode'     => $currencyCode,
+            'threeDSecure'     => Mage::getSingleton('gene_braintree/paymentmethod_creditcard')->is3DEnabled()
         );
 
         return $this->_returnJson($jsonResponse);

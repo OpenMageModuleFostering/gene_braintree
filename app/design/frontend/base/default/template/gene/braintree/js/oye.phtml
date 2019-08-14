@@ -26,15 +26,21 @@
         },
 
         /**
+         * Capture the original submit function
+         */
+        captureOriginalSubmitFn: function () {
+            this._originalSubmitFn = Checkout.prototype.saveOrder;
+            this._originalUpdateContents = Checkout.prototype.updateContents;
+            return true;
+        },
+
+        /**
          * Attach an observer to the submit action of the checkout to tokenize the card details
          */
         prepareSubmitObserver: function() {
 
             // Store a pointer to the vZero integration
             var vzeroIntegration = this;
-
-            // Store the old complete checkout function
-            var _originalSaveOrder = Checkout.prototype.saveOrder;
 
             // Re-define the original method so we can do some jazz with it
             Checkout.prototype.saveOrder = function () {
@@ -47,12 +53,12 @@
 
                     // If everything was a success on the checkout end, let's submit the vZero integration
                     vzeroIntegration.submit('creditcard', function () {
-                        return _originalSaveOrder.apply(paymentThis, paymentArguments);
+                        return vzeroIntegration._originalSubmitFn.apply(paymentThis, paymentArguments);
                     });
 
                 } else {
                     // If not run the original code
-                    return _originalSaveOrder.apply(this, arguments);
+                    return vzeroIntegration._originalSubmitFn.apply(this, arguments);
                 }
 
             };
@@ -61,10 +67,9 @@
             Review.prototype.save = function() { return false; };
 
             // Fix the system that updates the contents
-            var _originalUpdateContents = Checkout.prototype.updateContents;
             Checkout.prototype.updateContents =  function(contents, updateError){
 
-                var response = _originalUpdateContents.apply(this, arguments);
+                var response = vzeroIntegration._originalUpdateContents.apply(this, arguments);
 
                 // Only run these functions if we're updating the review block
                 if (typeof contents.blocks == 'object' && 'review' in contents.blocks) {

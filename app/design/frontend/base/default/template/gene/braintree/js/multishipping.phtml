@@ -22,6 +22,14 @@
         },
 
         /**
+         * Capture the original submit function
+         */
+        captureOriginalSubmitFn: function () {
+            this._originalSubmitFn = $('multishipping-billing-form').submit;
+            return true;
+        },
+
+        /**
          * Attach an observer to the submit action of the checkout to tokenize the card details
          */
         prepareSubmitObserver: function() {
@@ -30,7 +38,6 @@
             var vzeroIntegration = this;
 
             // Observe the click event
-            var _originalSubmitEvent = $('multishipping-billing-form').submit;
             $('multishipping-billing-form').onsubmit = function braintreeOverride(event) {
 
                 // Stop the event
@@ -40,11 +47,11 @@
 
                     // If everything was a success on the checkout end, let's submit the vZero integration
                     vzeroIntegration.submit('creditcard', function () {
-                        return _originalSubmitEvent.call($('multishipping-billing-form'), arguments);
+                        return vzeroIntegration._originalSubmitFn.call($('multishipping-billing-form'), arguments);
                     });
 
                 } else {
-                    return _originalSubmitEvent.call($('multishipping-billing-form'), arguments);
+                    return vzeroIntegration._originalSubmitFn.call($('multishipping-billing-form'), arguments);
                 }
 
             };
