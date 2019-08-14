@@ -762,7 +762,7 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                             <comment><![CDATA[
-                                The 3D Secure feature enables the shopper to enter a password to confirm their identity with the card issuer. If accepted they then complete their order, and when received by you, you have much more confidence that is genuine and real.<br /><strong>Notice:</strong> To use 3D secure your checkout must run over HTTPs, this is required for both production and sandbox configurations.
+                                The 3D Secure feature enables the shopper to enter a password to confirm their identity with the card issuer. If accepted they then complete their order, and when received by you, you have much more confidence that is genuine and real.<br /><strong>Notice:</strong> To use 3D secure in production your checkout must run over HTTPs.
                             ]]></comment>
                         </threedsecure>
 
@@ -776,7 +776,7 @@
                             <show_in_store>1</show_in_store>
                             <comment><![CDATA[
                                 Action to complete if the liability shift fails after the 3D secure. If the liability cannot be shifted the merchant is liable for charge backs.<br />
-                                <strong>Request Alternative Payment Method</strong> - Block the payment and inform the customer to choose a different payment method. This will also block any cards that do not support 3DSecure excluding American Express.<br />
+                                <strong>Request Alternative Payment Method</strong> - Block the payment and inform the customer to choose a different payment method. This will also block any cards that do not support 3DSecure.<br />
                                 <strong>Accept & Mark as Fraud</strong> - Will accept the payment but mark as fraudulent within Magento for manual inspection.<br />
                                 <strong>Accept</strong> - Will accept the payment and be processed as a normal order (this setting is not recommended).
                             ]]></comment>
